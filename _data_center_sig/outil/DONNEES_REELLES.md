@@ -12,6 +12,25 @@ python run.py --no-generate           # exécute le pipeline sur le réel
 L'adapter est **tolérant** : il devine les colonnes (plusieurs noms candidats),
 clippe sur l'AOI si fournie, et ignore proprement toute source absente.
 
+## Scripts de téléchargement prêts à l'emploi
+
+Deux sources sont déjà automatisées (sortie directe en GeoParquet EPSG:2154
+dans `Data_alba/`) :
+
+```bash
+python telecharge_arcep.py     # fibre ARCEP -> Data_alba/fibre.parquet
+python telecharge_ebc.py       # EBC (GPU)   -> Data_alba/ebc.parquet
+```
+
+- **`telecharge_arcep.py`** : « Ma connexion internet » (data.arcep.fr). Joint la
+  base immeuble (`base_imb_{dept}`) et l'éligibilité (`actuel_{dept}`) pour donner,
+  par immeuble, le **statut fibre** (`Déployé` si techno `FO` présente) + le type
+  (PA pavillon / IM immeuble). Options `--dept` / `--insee`.
+- **`telecharge_ebc.py`** : Espaces Boisés Classés via le WFS du Géoportail de
+  l'Urbanisme (`wfs_du:prescription_surf`, `typepsc='01'`), découpés sur la commune.
+
+> Les fichiers téléchargés dans `Data_alba/` ne sont **pas** versionnés (gitignore).
+
 ## AOI (recommandé en premier)
 
 Dépose un contour de commune nommé `commune*.geojson` (ou `aoi*.geojson`) pour
