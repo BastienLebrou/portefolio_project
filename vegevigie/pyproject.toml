@@ -1,0 +1,62 @@
+[project]
+name = "vegevigie"
+version = "0.1.0"
+description = "VegeVigie — NDVI trends & drought stress from Sentinel-2, commune by commune"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Bastien Lebrou" }]
+requires-python = ">=3.11"
+dependencies = [
+    # M0 core — the remote-sensing stack (pystac-client, odc-stac, xarray, dask, ...)
+    # is added milestone by milestone, when the code that uses it lands (CLAUDE.md §6).
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+vegevigie = "vegevigie.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vegevigie"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "N",   # pep8-naming
+]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["vegevigie"]
+mypy_path = "src"
+# Lenient per CLAUDE.md §2 — tighten later if it stays cheap.
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

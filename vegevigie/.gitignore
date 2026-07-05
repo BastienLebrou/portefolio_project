@@ -1,0 +1,19 @@
+# Data — everything the pipeline downloads or produces stays out of git.
+data/
+
+# Datacube / DB artifacts wherever they appear
+*.zarr/
+*.duckdb
+*.duckdb.wal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebooks
+notebooks/.ipynb_checkpoints/
