@@ -9,9 +9,8 @@ from vegevigie.cli import app
 runner = CliRunner()
 
 STAGES = ["aoi", "search", "cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
-# Stages still awaiting implementation; aoi/search (M1), cube/ndvi (M2/M3),
-# trend (M4), drought (M5), zonal (M6) landed.
-STUB_STAGES = ["dashboard", "run"]
+# Only the dashboard (M7) remains a stub; every pipeline stage + `run` has landed.
+STUB_STAGES = ["dashboard"]
 
 
 def test_help_runs() -> None:

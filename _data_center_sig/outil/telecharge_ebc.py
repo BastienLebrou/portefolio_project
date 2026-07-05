@@ -31,7 +31,7 @@ except Exception:
 
 WFS = "https://data.geopf.fr/wfs/ows"
 COUCHE = "wfs_du:prescription_surf"
-TYPEPSC_EBC = "01"                       # code CNIG des EBC
+TYPEPSC_EBC = "01"  # code CNIG des EBC
 DATA_ALBA = C.BASE_DIR.parent / "Data_alba"
 UA = {"User-Agent": "data-center-sig/1.0 (projet perso)"}
 
@@ -55,10 +55,14 @@ def _requete_wfs(bbox, count=5000) -> dict:
     nombre de prescriptions tient largement sous la limite COUNT.
     """
     params = {
-        "SERVICE": "WFS", "VERSION": "2.0.0", "REQUEST": "GetFeature",
-        "TYPENAMES": COUCHE, "SRSNAME": f"EPSG:{C.CRS_METRIQUE}",
+        "SERVICE": "WFS",
+        "VERSION": "2.0.0",
+        "REQUEST": "GetFeature",
+        "TYPENAMES": COUCHE,
+        "SRSNAME": f"EPSG:{C.CRS_METRIQUE}",
         "BBOX": f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]},EPSG:{C.CRS_METRIQUE}",
-        "OUTPUTFORMAT": "application/json", "COUNT": str(count),
+        "OUTPUTFORMAT": "application/json",
+        "COUNT": str(count),
     }
     url = WFS + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers=UA)
@@ -77,8 +81,10 @@ def telecharger(insee: str, out_dir) -> None:
         print("  [!] limite 5000 atteinte — affiner la BBOX si besoin")
 
     if not features:
-        print("  Aucune prescription surfacique sur cette emprise "
-              "(commune sans PLU sur le GPU, ou hors couverture).")
+        print(
+            "  Aucune prescription surfacique sur cette emprise "
+            "(commune sans PLU sur le GPU, ou hors couverture)."
+        )
         return
 
     gdf = gpd.GeoDataFrame.from_features(features, crs=C.CRS_METRIQUE)
@@ -104,7 +110,9 @@ def telecharger(insee: str, out_dir) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     # On garde un identifiant et la géométrie (contrat minimal de l'analyse)
     idc = next((c for c in ebc.columns if c.lower() in ("idpsc", "id", "gid")), None)
-    ebc["id_ebc"] = ebc[idc].astype(str) if idc else [f"EBC{i:04d}" for i in range(len(ebc))]
+    ebc["id_ebc"] = (
+        ebc[idc].astype(str) if idc else [f"EBC{i:04d}" for i in range(len(ebc))]
+    )
     ebc = ebc[["id_ebc", "geometry"]].set_crs(C.CRS_METRIQUE, allow_override=True)
     dest = out_dir / "ebc.parquet"
     ebc.to_parquet(dest, index=False)
@@ -112,9 +120,12 @@ def telecharger(insee: str, out_dir) -> None:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Télécharge les EBC d'une commune (GPU/WFS)")
+    ap = argparse.ArgumentParser(
+        description="Télécharge les EBC d'une commune (GPU/WFS)"
+    )
     ap.add_argument("--insee", default=C.COMMUNE_INSEE if False else "07005")
     ap.add_argument("--out", default=str(DATA_ALBA))
     a = ap.parse_args()
     from pathlib import Path
+
     telecharger(a.insee, Path(a.out))

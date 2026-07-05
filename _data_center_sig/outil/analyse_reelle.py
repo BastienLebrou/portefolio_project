@@ -42,32 +42,35 @@ OUT = C.DATA_DIR / "outputs_reel"
 SIG = OUT / "sig"
 
 # Seuils (repris de config.py pour le métier, + proxy HTA local)
-SURF_LIBRE_MIN = C.SURFACE_LIBRE_MIN_M2     # 50 m²
-BUFFER = C.BUFFER_NUISANCE_M                # 5 m
-USABLE_MIN = C.BUFFER_USABLE_MIN_M2         # 4 m²
-DIST_BATI_MAX = C.DIST_MAX_BATIMENT_M       # 15 m
-FONCIER_REF = C.SCORE_FONCIER_REF_M2        # 400 m² -> score foncier max
-K_FIBRE = C.H3_DISK_K["fibre"]              # rayon H3 recherche fibre
-DIST_HTA_MAX = 150.0                        # proxy énergie (médiane commune)
+SURF_LIBRE_MIN = C.SURFACE_LIBRE_MIN_M2  # 50 m²
+BUFFER = C.BUFFER_NUISANCE_M  # 5 m
+USABLE_MIN = C.BUFFER_USABLE_MIN_M2  # 4 m²
+DIST_BATI_MAX = C.DIST_MAX_BATIMENT_M  # 15 m
+FONCIER_REF = C.SCORE_FONCIER_REF_M2  # 400 m² -> score foncier max
+K_FIBRE = C.H3_DISK_K["fibre"]  # rayon H3 recherche fibre
+DIST_HTA_MAX = 150.0  # proxy énergie (médiane commune)
 AXE = 20.0
 PREMIUM_MIN, BON_MIN = 80.0, 60.0
 
 
 # Couleurs du style QGIS (catégorisé sur etape_rejet)
 ETAPE_COULEURS = {
-    "0-Candidate":     (26, 122, 58),    # vert
-    "1-Foncier":       (210, 210, 210),  # gris
-    "2-Nuisances":     (241, 196, 15),   # jaune
-    "3-Fibre":         (230, 126, 34),   # orange
-    "4-Energie (HTA)": (192, 57, 43),    # rouge
-    "5-EBC":           (142, 68, 173),   # violet
+    "0-Candidate": (26, 122, 58),  # vert
+    "1-Foncier": (210, 210, 210),  # gris
+    "2-Nuisances": (241, 196, 15),  # jaune
+    "3-Fibre": (230, 126, 34),  # orange
+    "4-Energie (HTA)": (192, 57, 43),  # rouge
+    "5-EBC": (142, 68, 173),  # violet
 }
 
 
 def _wkb_gdf(con, sql, crs):
     df = con.execute(sql).fetchdf()
-    return gpd.GeoDataFrame(df.drop(columns=["wkb"]),
-                            geometry=from_wkb([bytes(b) for b in df["wkb"]]), crs=crs)
+    return gpd.GeoDataFrame(
+        df.drop(columns=["wkb"]),
+        geometry=from_wkb([bytes(b) for b in df["wkb"]]),
+        crs=crs,
+    )
 
 
 def _ecrire_qml(path):
@@ -75,22 +78,26 @@ def _ecrire_qml(path):
     Posé à côté du .parquet de même nom, QGIS l'applique automatiquement."""
     cats, syms = [], []
     for i, (val, (r, g, b)) in enumerate(ETAPE_COULEURS.items()):
-        cats.append(f'<category render="true" value="{val}" symbol="{i}" label="{val}"/>')
+        cats.append(
+            f'<category render="true" value="{val}" symbol="{i}" label="{val}"/>'
+        )
         syms.append(
             f'<symbol type="fill" name="{i}" alpha="1" clip_to_extent="1" force_rhr="0">'
             f'<layer class="SimpleFill" enabled="1" locked="0" pass="0">'
             f'<prop k="color" v="{r},{g},{b},255"/>'
             f'<prop k="outline_color" v="60,60,60,180"/>'
             f'<prop k="outline_width" v="0.1"/><prop k="outline_style" v="solid"/>'
-            f'<prop k="style" v="solid"/></layer></symbol>')
+            f'<prop k="style" v="solid"/></layer></symbol>'
+        )
     qml = (
         "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"
         '<qgis version="3.28" styleCategories="Symbology">\n'
         ' <renderer-v2 attr="etape_rejet" type="categorizedSymbol" forceraster="0" '
         'symbollevels="0" enableorderby="0">\n'
-        f'  <categories>{"".join(cats)}</categories>\n'
-        f'  <symbols>{"".join(syms)}</symbols>\n'
-        " </renderer-v2>\n <layerGeometryType>2</layerGeometryType>\n</qgis>\n")
+        f"  <categories>{''.join(cats)}</categories>\n"
+        f"  <symbols>{''.join(syms)}</symbols>\n"
+        " </renderer-v2>\n <layerGeometryType>2</layerGeometryType>\n</qgis>\n"
+    )
     path.write_text(qml, encoding="utf-8")
 
 
@@ -98,7 +105,7 @@ def run():
     raw = str(DATA_ALBA).replace("\\", "/")
     SIG.mkdir(parents=True, exist_ok=True)
     con = connect()
-    setup_macros(con)        # macro h3_of(geom, res)
+    setup_macros(con)  # macro h3_of(geom, res)
 
     # ===================== STAGING =====================
     con.execute(f"""
@@ -136,8 +143,12 @@ def run():
                h3_of(geometry, {C.H3_RES_JOIN}) AS h3_res9
         FROM read_parquet('{raw}/fibre.parquet');
     """)
-    con.execute(f"CREATE OR REPLACE TABLE staging.hta AS SELECT ST_MakeValid(geometry) AS geom FROM read_parquet('{raw}/ligne_hta.parquet');")
-    con.execute(f"CREATE OR REPLACE TABLE staging.ebc AS SELECT ST_MakeValid(geometry) AS geom FROM read_parquet('{raw}/ebc.parquet');")
+    con.execute(
+        f"CREATE OR REPLACE TABLE staging.hta AS SELECT ST_MakeValid(geometry) AS geom FROM read_parquet('{raw}/ligne_hta.parquet');"
+    )
+    con.execute(
+        f"CREATE OR REPLACE TABLE staging.ebc AS SELECT ST_MakeValid(geometry) AS geom FROM read_parquet('{raw}/ebc.parquet');"
+    )
 
     # ===================== INTERMEDIATE =====================
     # Parcelle <-> bâti (préfiltre H3 + intersection exacte)
@@ -281,34 +292,56 @@ def run():
         gdf.to_file(gpkg, layer=layer, driver="GPKG")
 
     # Candidats (éligibles) : parquet + geojson + csv + gpkg
-    cand = _wkb_gdf(con, """
+    cand = _wkb_gdf(
+        con,
+        """
         SELECT id_parcelle, section, numero, aire_m2, surface_libre_m2, fibre_statut,
                dist_hta_m, score_foncier, score_nuisances, score_fibre, score_energie,
                score_reglement, indice, classe, ST_AsWKB(geom) AS wkb
         FROM marts.parcelles_qa_reel WHERE eligible ORDER BY indice DESC
-    """, C.CRS_METRIQUE)
+    """,
+        C.CRS_METRIQUE,
+    )
     cand.to_parquet(OUT / "candidats_reel.parquet", index=False)
     cand.to_crs(C.CRS_GEO).to_file(OUT / "candidats_reel.geojson", driver="GeoJSON")
-    cand.drop(columns="geometry").to_csv(OUT / "candidats_reel.csv", index=False, encoding="utf-8-sig")
+    cand.drop(columns="geometry").to_csv(
+        OUT / "candidats_reel.csv", index=False, encoding="utf-8-sig"
+    )
     _bundle(cand, "candidats")
 
     # Couche de contrôle QA (toutes les parcelles) : parquet (+ style QML auto) + gpkg
-    qa = _wkb_gdf(con, """SELECT id_parcelle, aire_m2, surface_libre_m2, n_resid_indiv, n_immeuble,
+    qa = _wkb_gdf(
+        con,
+        """SELECT id_parcelle, aire_m2, surface_libre_m2, n_resid_indiv, n_immeuble,
         fibre_statut, dist_hta_m, dans_ebc, pass_foncier, pass_nuisances, pass_fibre, pass_energie,
         pass_reglement, eligible, indice, classe, etape_rejet, ST_AsWKB(geom) AS wkb
-        FROM marts.parcelles_qa_reel""", C.CRS_METRIQUE)
+        FROM marts.parcelles_qa_reel""",
+        C.CRS_METRIQUE,
+    )
     qa.to_parquet(SIG / "parcelles_qa_reel.parquet", index=False)
-    _ecrire_qml(SIG / "parcelles_qa_reel.qml")          # style appliqué auto par QGIS
+    _ecrire_qml(SIG / "parcelles_qa_reel.qml")  # style appliqué auto par QGIS
     _bundle(qa, "parcelles_qa")
 
     # Couches de contexte
     for nom, sql, crs in [
         ("commune", "SELECT ST_AsWKB(geom) AS wkb FROM staging.aoi", C.CRS_METRIQUE),
-        ("batiments", "SELECT id_batiment, est_residentiel, est_immeuble, ST_AsWKB(geom) AS wkb FROM staging.batiments", C.CRS_METRIQUE),
-        ("fibre", "SELECT id_locale, statut_deploiement, ST_AsWKB(geom) AS wkb FROM staging.fibre", C.CRS_METRIQUE),
+        (
+            "batiments",
+            "SELECT id_batiment, est_residentiel, est_immeuble, ST_AsWKB(geom) AS wkb FROM staging.batiments",
+            C.CRS_METRIQUE,
+        ),
+        (
+            "fibre",
+            "SELECT id_locale, statut_deploiement, ST_AsWKB(geom) AS wkb FROM staging.fibre",
+            C.CRS_METRIQUE,
+        ),
         ("ligne_hta", "SELECT ST_AsWKB(geom) AS wkb FROM staging.hta", C.CRS_METRIQUE),
         ("ebc", "SELECT ST_AsWKB(geom) AS wkb FROM staging.ebc", C.CRS_METRIQUE),
-        ("heatmap_reel", "SELECT h3_res8, nb_candidats, nb_premium, indice_moyen, ST_AsWKB(geom_wgs84) AS wkb FROM marts.heatmap_reel", C.CRS_GEO),
+        (
+            "heatmap_reel",
+            "SELECT h3_res8, nb_candidats, nb_premium, indice_moyen, ST_AsWKB(geom_wgs84) AS wkb FROM marts.heatmap_reel",
+            C.CRS_GEO,
+        ),
     ]:
         g = _wkb_gdf(con, sql, crs)
         g.to_parquet(SIG / f"{nom}.parquet", index=False)
@@ -317,20 +350,38 @@ def run():
 
     # ===================== RAPPORT + AFFICHAGE =====================
     total = con.execute("SELECT COUNT(*) FROM marts.parcelles_qa_reel").fetchone()[0]
-    rejets = con.execute("SELECT etape_rejet, COUNT(*) FROM marts.parcelles_qa_reel GROUP BY 1 ORDER BY 1").fetchall()
-    classes = con.execute("SELECT classe, COUNT(*), ROUND(AVG(indice),1) FROM marts.parcelles_qa_reel WHERE eligible GROUP BY 1 ORDER BY 3 DESC").fetchall()
-    nb_elig = con.execute("SELECT COUNT(*) FROM marts.parcelles_qa_reel WHERE eligible").fetchone()[0]
+    rejets = con.execute(
+        "SELECT etape_rejet, COUNT(*) FROM marts.parcelles_qa_reel GROUP BY 1 ORDER BY 1"
+    ).fetchall()
+    classes = con.execute(
+        "SELECT classe, COUNT(*), ROUND(AVG(indice),1) FROM marts.parcelles_qa_reel WHERE eligible GROUP BY 1 ORDER BY 3 DESC"
+    ).fetchall()
+    nb_elig = con.execute(
+        "SELECT COUNT(*) FROM marts.parcelles_qa_reel WHERE eligible"
+    ).fetchone()[0]
 
     rapport = {
         "commune": "Alba-la-Romaine (07005 / 07400)",
-        "axes_reels": ["1-Foncier (bati BD TOPO)", "2-Nuisances", "3-Fibre (ARCEP)",
-                       "4-Energie (proxy proximite HTA)", "5-Reglementaire (EBC seulement)"],
-        "axes_manquants": ["ABF (Monuments Historiques)", "PPRI (zones inondables)", "capacite BT Enedis (kVA)"],
-        "parcelles_total": total, "candidats": nb_elig,
+        "axes_reels": [
+            "1-Foncier (bati BD TOPO)",
+            "2-Nuisances",
+            "3-Fibre (ARCEP)",
+            "4-Energie (proxy proximite HTA)",
+            "5-Reglementaire (EBC seulement)",
+        ],
+        "axes_manquants": [
+            "ABF (Monuments Historiques)",
+            "PPRI (zones inondables)",
+            "capacite BT Enedis (kVA)",
+        ],
+        "parcelles_total": total,
+        "candidats": nb_elig,
         "repartition_rejet": {k: v for k, v in rejets},
         "classes": {k: {"n": v, "indice_moyen": s} for k, v, s in classes},
     }
-    (OUT / "rapport_reel.json").write_text(json.dumps(rapport, ensure_ascii=False, indent=2), encoding="utf-8")
+    (OUT / "rapport_reel.json").write_text(
+        json.dumps(rapport, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print("=" * 58)
     print("  ANALYSE RÉELLE MULTI-AXES — Alba-la-Romaine (07005)")
@@ -341,7 +392,7 @@ def run():
     print("\n  ENTONNOIR (motif du 1er rejet)")
     print("  " + "-" * 52)
     for k, v in rejets:
-        print(f"  {k:<22} {v:>5}  {100*v/total:5.1f}%")
+        print(f"  {k:<22} {v:>5}  {100 * v / total:5.1f}%")
     print("  " + "-" * 52)
     print(f"  => CANDIDATS RÉELS : {nb_elig}")
     print("\n  CLASSEMENT")

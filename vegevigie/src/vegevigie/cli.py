@@ -9,6 +9,7 @@ real implementation.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -409,7 +410,36 @@ def dashboard(config: ConfigOpt = None, verbose: VerboseOpt = False) -> None:
 
 
 @app.command()
-def run(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
-    """Run the full pipeline end-to-end (small-AOI smoke run by default)."""
-    _setup(config, verbose)
-    _not_implemented("run", "M8")
+def run(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    small: SmallOpt = True,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
+    """Run the full pipeline end-to-end (small-AOI smoke run by default).
+
+    Chains aoi -> search -> cube -> ndvi -> trend -> drought -> zonal, reusing each
+    stage's caching. Stops with a clear message if a stage fails (e.g. the STAC host
+    is blocked by an egress policy). The dashboard is launched separately (M7).
+    """
+    steps: list[tuple[str, Callable[[], None]]] = [
+        ("aoi", lambda: aoi(config, verbose, force, small)),
+        ("search", lambda: search(config, verbose, force, small, start, end)),
+        ("cube", lambda: cube(config, verbose, force, start, end)),
+        ("ndvi", lambda: ndvi(config, verbose, force, start, end)),
+        ("trend", lambda: trend(config, verbose, force, start, end)),
+        ("drought", lambda: drought(config, verbose, force, start, end)),
+        ("zonal", lambda: zonal(config, verbose, force, start, end)),
+    ]
+    for name, step in steps:
+        typer.echo(f"── vegevigie {name} ──")
+        try:
+            step()
+        except typer.Exit as exc:
+            if exc.exit_code:  # non-zero -> a real failure; stop the pipeline
+                typer.echo(f"Pipeline stopped at '{name}' (exit {exc.exit_code}).")
+                raise
+            # exit code 0 = stage skipped via cache / already done -> keep going
+    typer.echo("Pipeline complete.")

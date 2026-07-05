@@ -124,13 +124,27 @@ def build_staging(con) -> dict:
     # -- Index spatial RTREE sur la grosse table (inutile sur 484 lignes,
     #    mais c'est LE réflexe qui évite l'explosion à l'échelle France).
     try:
-        con.execute("CREATE INDEX IF NOT EXISTS idx_parc_geom ON staging.stg_parcelles USING RTREE (geom);")
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_parc_geom ON staging.stg_parcelles USING RTREE (geom);"
+        )
     except Exception:
         pass  # l'index RTREE n'est pas critique pour le résultat
 
-    return {t: table_count(con, f"staging.{t}") for t in (
-        "stg_parcelles", "stg_batiments", "stg_fibre", "stg_energie",
-        "stg_bornes_ve", "stg_pv", "stg_abf", "stg_ppri", "stg_ebc", "stg_voirie")}
+    return {
+        t: table_count(con, f"staging.{t}")
+        for t in (
+            "stg_parcelles",
+            "stg_batiments",
+            "stg_fibre",
+            "stg_energie",
+            "stg_bornes_ve",
+            "stg_pv",
+            "stg_abf",
+            "stg_ppri",
+            "stg_ebc",
+            "stg_voirie",
+        )
+    }
 
 
 # ===========================================================================
@@ -153,7 +167,7 @@ def build_intermediate(con) -> dict:
                 ST_Intersection(p.geom, b.geom) AS inter
             FROM staging.stg_parcelles p
             JOIN staging.stg_batiments b
-              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['batiment']}), b.h3_res9)
+              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K["batiment"]}), b.h3_res9)
              AND ST_Intersects(p.geom, b.geom)
         )
         SELECT
@@ -184,8 +198,10 @@ def build_intermediate(con) -> dict:
         LEFT JOIN intermediate.int_parcelles_batiments b USING (id_parcelle);
     """)
 
-    return {t: table_count(con, f"intermediate.{t}") for t in
-            ("int_parcelles_batiments", "int_surface_libre")}
+    return {
+        t: table_count(con, f"intermediate.{t}")
+        for t in ("int_parcelles_batiments", "int_surface_libre")
+    }
 
 
 # ===========================================================================
@@ -249,7 +265,7 @@ def build_filters(con) -> dict:
                    ST_Distance(p.geom, f.geom) AS d
             FROM marts.fct_filtre_02_nuisances p
             JOIN staging.stg_fibre f
-              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['fibre']}), f.h3_res9)
+              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K["fibre"]}), f.h3_res9)
         ),
         plus_proche AS (
             SELECT id_parcelle,
@@ -277,7 +293,7 @@ def build_filters(con) -> dict:
                    ST_Distance(p.geom, e.geom) AS d
             FROM marts.fct_filtre_03_fibre p
             JOIN staging.stg_energie e
-              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['energie']}), e.h3_res9)
+              ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K["energie"]}), e.h3_res9)
         ),
         plus_proche AS (
             SELECT id_parcelle,
@@ -314,9 +330,16 @@ def build_filters(con) -> dict:
         WHERE p.id_parcelle NOT IN (SELECT id_parcelle FROM violations);
     """)
 
-    return {t: table_count(con, f"marts.{t}") for t in (
-        "fct_filtre_01_foncier", "fct_filtre_02_nuisances", "fct_filtre_03_fibre",
-        "fct_filtre_04_energie", "fct_filtre_05_reglement")}
+    return {
+        t: table_count(con, f"marts.{t}")
+        for t in (
+            "fct_filtre_01_foncier",
+            "fct_filtre_02_nuisances",
+            "fct_filtre_03_fibre",
+            "fct_filtre_04_energie",
+            "fct_filtre_05_reglement",
+        )
+    }
 
 
 # ===========================================================================
@@ -331,15 +354,15 @@ def build_scoring(con) -> None:
                 -- bonus PV : une installation PV à moins de 500 m ?
                 MAX(CASE WHEN EXISTS (
                     SELECT 1 FROM staging.stg_pv pv
-                    WHERE list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['pv']}), pv.h3_res9)
-                      AND ST_Distance(p.geom, pv.geom) <= {C.PROX_BONUS_M['pv']}
+                    WHERE list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K["pv"]}), pv.h3_res9)
+                      AND ST_Distance(p.geom, pv.geom) <= {C.PROX_BONUS_M["pv"]}
                 ) THEN {C.SCORE_BONUS} ELSE 0.0 END) AS bonus_pv,
                 MAX(CASE WHEN EXISTS (
                     SELECT 1 FROM staging.stg_bornes_ve ve
-                    WHERE list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['borne_ve']}), ve.h3_res9)
-                      AND ST_Distance(p.geom, ve.geom) <= {C.PROX_BONUS_M['borne_ve']}
+                    WHERE list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K["borne_ve"]}), ve.h3_res9)
+                      AND ST_Distance(p.geom, ve.geom) <= {C.PROX_BONUS_M["borne_ve"]}
                 ) THEN {C.SCORE_BONUS} ELSE 0.0 END) AS bonus_ve,
-                MAX(CASE WHEN p.dist_poste_m <= {C.PROX_BONUS_M['poste']}
+                MAX(CASE WHEN p.dist_poste_m <= {C.PROX_BONUS_M["poste"]}
                          THEN {C.SCORE_BONUS} ELSE 0.0 END) AS bonus_poste
             FROM marts.fct_filtre_05_reglement p
             GROUP BY p.id_parcelle

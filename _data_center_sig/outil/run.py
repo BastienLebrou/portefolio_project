@@ -35,10 +35,10 @@ def _print_funnel(stats: dict) -> None:
     base = stats["staging"]["stg_parcelles"]
     etapes = [
         ("Parcelles (base)", base),
-        ("1. Foncier",      stats["filtres"]["fct_filtre_01_foncier"]),
-        ("2. Nuisances",    stats["filtres"]["fct_filtre_02_nuisances"]),
-        ("3. Fibre",        stats["filtres"]["fct_filtre_03_fibre"]),
-        ("4. Énergie",      stats["filtres"]["fct_filtre_04_energie"]),
+        ("1. Foncier", stats["filtres"]["fct_filtre_01_foncier"]),
+        ("2. Nuisances", stats["filtres"]["fct_filtre_02_nuisances"]),
+        ("3. Fibre", stats["filtres"]["fct_filtre_03_fibre"]),
+        ("4. Énergie", stats["filtres"]["fct_filtre_04_energie"]),
         ("5. Réglementaire", stats["filtres"]["fct_filtre_05_reglement"]),
     ]
     print("\n  ENTONNOIR DE FILTRAGE")
@@ -69,24 +69,35 @@ def _export(con) -> dict:
     out = {}
 
     # -- Parcelles éligibles : GeoParquet (2154) + GeoJSON (4326) + CSV --
-    gdf = _wkb_gdf(con, """
+    gdf = _wkb_gdf(
+        con,
+        """
         SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS wkb
         FROM marts.fct_parcelles_eligibles ORDER BY score_total DESC
-    """, C.CRS_METRIQUE)
+    """,
+        C.CRS_METRIQUE,
+    )
     gdf.to_parquet(C.OUTPUTS_DIR / "parcelles_eligibles.parquet", index=False)
     gdf.to_crs(C.CRS_GEO).to_file(
-        C.OUTPUTS_DIR / "parcelles_eligibles.geojson", driver="GeoJSON")
+        C.OUTPUTS_DIR / "parcelles_eligibles.geojson", driver="GeoJSON"
+    )
     gdf.drop(columns="geometry").to_csv(
-        C.OUTPUTS_DIR / "parcelles_eligibles.csv", index=False, encoding="utf-8-sig")
+        C.OUTPUTS_DIR / "parcelles_eligibles.csv", index=False, encoding="utf-8-sig"
+    )
     gdf.head(20).drop(columns="geometry").to_csv(
-        C.OUTPUTS_DIR / "top20_premium.csv", index=False, encoding="utf-8-sig")
+        C.OUTPUTS_DIR / "top20_premium.csv", index=False, encoding="utf-8-sig"
+    )
     out["parcelles_eligibles"] = len(gdf)
 
     # -- Heatmap quartiers : GeoJSON (déjà en WGS84) --
-    gh = _wkb_gdf(con, """
+    gh = _wkb_gdf(
+        con,
+        """
         SELECT * EXCLUDE (geom_wgs84), ST_AsWKB(geom_wgs84) AS wkb
         FROM marts.fct_heatmap_quartiers
-    """, C.CRS_GEO)
+    """,
+        C.CRS_GEO,
+    )
     gh.to_file(C.OUTPUTS_DIR / "heatmap_quartiers.geojson", driver="GeoJSON")
     out["heatmap_cellules"] = len(gh)
 
@@ -103,19 +114,46 @@ def _export_sig(con) -> dict:
     sigdir.mkdir(parents=True, exist_ok=True)
     couches = {
         # LA couche de contrôle : toutes les parcelles + leur étape de rejet
-        "parcelles_qa": ("SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS wkb FROM marts.fct_parcelles_qa", C.CRS_METRIQUE),
+        "parcelles_qa": (
+            "SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS wkb FROM marts.fct_parcelles_qa",
+            C.CRS_METRIQUE,
+        ),
         # Contraintes réglementaires (pour voir QUI elles excluent)
-        "contrainte_abf_500m": ("SELECT id_monument, nom, ST_AsWKB(geom_buffer) AS wkb FROM staging.stg_abf", C.CRS_METRIQUE),
-        "contrainte_ppri": ("SELECT id_ppri, niveau_risque, ST_AsWKB(geom) AS wkb FROM staging.stg_ppri", C.CRS_METRIQUE),
-        "contrainte_ebc": ("SELECT id_ebc, ST_AsWKB(geom) AS wkb FROM staging.stg_ebc", C.CRS_METRIQUE),
+        "contrainte_abf_500m": (
+            "SELECT id_monument, nom, ST_AsWKB(geom_buffer) AS wkb FROM staging.stg_abf",
+            C.CRS_METRIQUE,
+        ),
+        "contrainte_ppri": (
+            "SELECT id_ppri, niveau_risque, ST_AsWKB(geom) AS wkb FROM staging.stg_ppri",
+            C.CRS_METRIQUE,
+        ),
+        "contrainte_ebc": (
+            "SELECT id_ebc, ST_AsWKB(geom) AS wkb FROM staging.stg_ebc",
+            C.CRS_METRIQUE,
+        ),
         # Réseaux (pour contrôler fibre/énergie)
-        "reseau_fibre": ("SELECT id_locale, statut_deploiement, operateur, ST_AsWKB(geom) AS wkb FROM staging.stg_fibre", C.CRS_METRIQUE),
-        "reseau_energie": ("SELECT id_poste_source, puissance_disponible_kva, ST_AsWKB(geom) AS wkb FROM staging.stg_energie", C.CRS_METRIQUE),
-        "reseau_voirie": ("SELECT id_troncon, ST_AsWKB(geom) AS wkb FROM staging.stg_voirie", C.CRS_METRIQUE),
+        "reseau_fibre": (
+            "SELECT id_locale, statut_deploiement, operateur, ST_AsWKB(geom) AS wkb FROM staging.stg_fibre",
+            C.CRS_METRIQUE,
+        ),
+        "reseau_energie": (
+            "SELECT id_poste_source, puissance_disponible_kva, ST_AsWKB(geom) AS wkb FROM staging.stg_energie",
+            C.CRS_METRIQUE,
+        ),
+        "reseau_voirie": (
+            "SELECT id_troncon, ST_AsWKB(geom) AS wkb FROM staging.stg_voirie",
+            C.CRS_METRIQUE,
+        ),
         # Bâti (contexte)
-        "batiments": ("SELECT id_batiment, usage, sous_type, ST_AsWKB(geom) AS wkb FROM staging.stg_batiments", C.CRS_METRIQUE),
+        "batiments": (
+            "SELECT id_batiment, usage, sous_type, ST_AsWKB(geom) AS wkb FROM staging.stg_batiments",
+            C.CRS_METRIQUE,
+        ),
         # Heatmap (WGS84)
-        "heatmap_quartiers": ("SELECT * EXCLUDE (geom_wgs84), ST_AsWKB(geom_wgs84) AS wkb FROM marts.fct_heatmap_quartiers", C.CRS_GEO),
+        "heatmap_quartiers": (
+            "SELECT * EXCLUDE (geom_wgs84), ST_AsWKB(geom_wgs84) AS wkb FROM marts.fct_heatmap_quartiers",
+            C.CRS_GEO,
+        ),
     }
     counts = {}
     for nom, (sql, crs) in couches.items():
@@ -127,8 +165,11 @@ def _export_sig(con) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pipeline Mini Data Center Selector")
-    ap.add_argument("--no-generate", action="store_true",
-                    help="ne pas régénérer les données synthétiques")
+    ap.add_argument(
+        "--no-generate",
+        action="store_true",
+        help="ne pas régénérer les données synthétiques",
+    )
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -201,13 +242,22 @@ def main() -> int:
         json.dump(perf, f, ensure_ascii=False, indent=2)
 
     print("\n  LIVRABLES écrits dans data/outputs/ :")
-    for nom in ("parcelles_eligibles.parquet", "parcelles_eligibles.geojson",
-                "parcelles_eligibles.csv", "top20_premium.csv",
-                "heatmap_quartiers.geojson", "performance.json"):
+    for nom in (
+        "parcelles_eligibles.parquet",
+        "parcelles_eligibles.geojson",
+        "parcelles_eligibles.csv",
+        "top20_premium.csv",
+        "heatmap_quartiers.geojson",
+        "performance.json",
+    ):
         print(f"    - {nom}")
-    print(f"  + {len(exports_sig)} couches de contrôle SIG dans data/outputs/sig/ (GeoParquet)")
-    print(f"\n  Pipeline : {duree_pipe:.2f}s | Total : {duree_totale:.2f}s | "
-          f"Tests : {'TOUS OK' if tous_ok else 'ÉCHEC'}")
+    print(
+        f"  + {len(exports_sig)} couches de contrôle SIG dans data/outputs/sig/ (GeoParquet)"
+    )
+    print(
+        f"\n  Pipeline : {duree_pipe:.2f}s | Total : {duree_totale:.2f}s | "
+        f"Tests : {'TOUS OK' if tous_ok else 'ÉCHEC'}"
+    )
     con.close()
     return 0 if tous_ok else 1
 

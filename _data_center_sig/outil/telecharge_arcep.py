@@ -40,7 +40,7 @@ BASE = "https://data.arcep.fr/fixe/maconnexioninternet"
 URL_IMB = BASE + "/base_imb/last/departement/base_imb_{dept}.csv.gz"
 URL_ELIG = BASE + "/eligibilite/last/departement/actuel_{dept}.csv.gz"
 DATA_ALBA = C.BASE_DIR.parent / "Data_alba"
-CRS_ARCEP = 3857           # imb_x / imb_y sont en Web Mercator
+CRS_ARCEP = 3857  # imb_x / imb_y sont en Web Mercator
 UA = {"User-Agent": "data-center-sig/1.0 (projet perso)"}
 
 
@@ -50,7 +50,7 @@ def _telecharger(url: str, dest: Path) -> Path:
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=300) as r, open(dest, "wb") as f:
         f.write(r.read())
-    print(f"    {dest.stat().st_size/1e6:.1f} Mo")
+    print(f"    {dest.stat().st_size / 1e6:.1f} Mo")
     return dest
 
 
@@ -60,9 +60,20 @@ def telecharger(dept: str, insee: str, out_dir: Path) -> None:
 
     # 1) Base immeuble -> on garde la commune voulue
     f_imb = _telecharger(URL_IMB.format(dept=dept), tmp / "imb.csv.gz")
-    imb = pd.read_csv(f_imb, sep=";", dtype=str, compression="gzip",
-                      usecols=["imb_id", "imb_x", "imb_y", "imb_code_insee",
-                               "imb_type", "imb_nbr_logloc"])
+    imb = pd.read_csv(
+        f_imb,
+        sep=";",
+        dtype=str,
+        compression="gzip",
+        usecols=[
+            "imb_id",
+            "imb_x",
+            "imb_y",
+            "imb_code_insee",
+            "imb_type",
+            "imb_nbr_logloc",
+        ],
+    )
     imb = imb[imb["imb_code_insee"] == insee].copy()
     print(f"  immeubles dans la commune : {len(imb)}")
     if imb.empty:
@@ -72,8 +83,13 @@ def telecharger(dept: str, insee: str, out_dir: Path) -> None:
 
     # 2) Éligibilité -> présence de la fibre (FO) par immeuble de la commune
     f_el = _telecharger(URL_ELIG.format(dept=dept), tmp / "elig.csv.gz")
-    elig = pd.read_csv(f_el, sep=";", dtype=str, compression="gzip",
-                       usecols=["imb_id", "code_techno", "code_operateur"])
+    elig = pd.read_csv(
+        f_el,
+        sep=";",
+        dtype=str,
+        compression="gzip",
+        usecols=["imb_id", "code_techno", "code_operateur"],
+    )
     elig = elig[elig["imb_id"].isin(ids)]
     fo = elig[elig["code_techno"] == "FO"]
     imb_fo = set(fo["imb_id"])
@@ -83,13 +99,15 @@ def telecharger(dept: str, insee: str, out_dir: Path) -> None:
 
     # 3) Construction de la couche de points (EPSG:3857 -> 2154)
     imb["statut_deploiement"] = imb["imb_id"].apply(
-        lambda i: "Déployé" if i in imb_fo else "Non desservi")
+        lambda i: "Déployé" if i in imb_fo else "Non desservi"
+    )
     imb["operateur"] = imb["imb_id"].map(op_fo).fillna("")
     imb["nb_logements"] = pd.to_numeric(imb["imb_nbr_logloc"], errors="coerce")
     gdf = gpd.GeoDataFrame(
         imb.rename(columns={"imb_id": "id_locale"}),
-        geometry=gpd.points_from_xy(pd.to_numeric(imb["imb_x"]),
-                                    pd.to_numeric(imb["imb_y"])),
+        geometry=gpd.points_from_xy(
+            pd.to_numeric(imb["imb_x"]), pd.to_numeric(imb["imb_y"])
+        ),
         crs=CRS_ARCEP,
     ).to_crs(C.CRS_METRIQUE)
 
@@ -103,7 +121,9 @@ def telecharger(dept: str, insee: str, out_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Télécharge les données fibre ARCEP d'une commune")
+    ap = argparse.ArgumentParser(
+        description="Télécharge les données fibre ARCEP d'une commune"
+    )
     ap.add_argument("--dept", default="07")
     ap.add_argument("--insee", default="07005")
     ap.add_argument("--out", default=str(DATA_ALBA))

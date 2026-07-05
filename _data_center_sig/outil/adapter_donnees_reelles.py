@@ -66,15 +66,19 @@ def _lire_vecteur(path: Path) -> gpd.GeoDataFrame:
     else:
         gdf = gpd.read_file(path)
     if gdf.crs is None:
-        gdf = gdf.set_crs(C.CRS_GEO)            # par défaut on suppose WGS84
+        gdf = gdf.set_crs(C.CRS_GEO)  # par défaut on suppose WGS84
     return gdf.to_crs(C.CRS_METRIQUE)
 
 
 def _lire_points_csv(path: Path, lon_cands, lat_cands, sep=";") -> gpd.GeoDataFrame:
     """Lit un CSV de points (lon/lat) -> GeoDataFrame en Lambert-93."""
     df = pd.read_csv(path, sep=sep, low_memory=False)
-    lon = next((c for c in df.columns if c.lower() in [x.lower() for x in lon_cands]), None)
-    lat = next((c for c in df.columns if c.lower() in [x.lower() for x in lat_cands]), None)
+    lon = next(
+        (c for c in df.columns if c.lower() in [x.lower() for x in lon_cands]), None
+    )
+    lat = next(
+        (c for c in df.columns if c.lower() in [x.lower() for x in lat_cands]), None
+    )
     if lon is None or lat is None:
         # certains exports ARCEP/Enedis ont une colonne "geo_point" "lat,lon"
         raise ValueError(f"colonnes lon/lat introuvables dans {path.name}")
@@ -104,8 +108,15 @@ def _ecrire(gdf: gpd.GeoDataFrame, nom: str, cols: list[str]) -> None:
 # ---------------------------------------------------------------------------
 def charger_aoi() -> gpd.GeoDataFrame | None:
     """Charge un contour de commune (fichier 'commune*' ou 'aoi*')."""
-    p = _trouver(["commune*.gpkg", "commune*.geojson", "commune*.json",
-                  "aoi*.gpkg", "aoi*.geojson"])
+    p = _trouver(
+        [
+            "commune*.gpkg",
+            "commune*.geojson",
+            "commune*.json",
+            "aoi*.gpkg",
+            "aoi*.geojson",
+        ]
+    )
     if p is None:
         print("  (pas d'AOI fournie -> aucune restriction spatiale)")
         return None
@@ -119,7 +130,14 @@ def charger_aoi() -> gpd.GeoDataFrame | None:
 # ---------------------------------------------------------------------------
 def adapt_parcelles(aoi):
     """Cadastre Etalab / PCI vecteur (cadastre.data.gouv.fr)."""
-    p = _trouver(["*parcelle*.gpkg", "*parcelle*.geojson", "*parcelle*.json", "cadastre*.parquet"])
+    p = _trouver(
+        [
+            "*parcelle*.gpkg",
+            "*parcelle*.geojson",
+            "*parcelle*.json",
+            "cadastre*.parquet",
+        ]
+    )
     if not p:
         return print("  [parcelles] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
@@ -137,7 +155,9 @@ def adapt_batiments(aoi):
     if not p:
         return print("  [batiments] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
-    g["id_batiment"] = g[_col(g, ["cleabs", "id", "ID", "fid"]) or g.columns[0]].astype(str)
+    g["id_batiment"] = g[_col(g, ["cleabs", "id", "ID", "fid"]) or g.columns[0]].astype(
+        str
+    )
     # BD TOPO : USAGE_1 ('Résidentiel', 'Indifférencié'...) ; NATURE pour le type
     usage = _col(g, ["usage_1", "usage", "USAGE_1"])
     g["usage"] = g[usage].astype(str) if usage else C.USAGE_RESIDENTIEL
@@ -149,16 +169,21 @@ def adapt_batiments(aoi):
 
 def adapt_fibre(aoi):
     """ARCEP — IPE / 'Ma connexion internet' (data.arcep.fr). CSV ou vecteur."""
-    p = _trouver(["*arcep*.csv", "*fibre*.csv", "*ipe*.csv", "*fibre*.geojson", "*fibre*.gpkg"])
+    p = _trouver(
+        ["*arcep*.csv", "*fibre*.csv", "*ipe*.csv", "*fibre*.geojson", "*fibre*.gpkg"]
+    )
     if not p:
         return print("  [fibre] absent")
     if p.suffix.lower() == ".csv":
-        g = _lire_points_csv(p, ["x", "lon", "longitude", "coord_x"],
-                                 ["y", "lat", "latitude", "coord_y"])
+        g = _lire_points_csv(
+            p, ["x", "lon", "longitude", "coord_x"], ["y", "lat", "latitude", "coord_y"]
+        )
     else:
         g = _lire_vecteur(p)
     g = _clip_aoi(g, aoi)
-    g["id_locale"] = g[_col(g, ["id", "id_immeuble", "code", "imb_id"]) or g.columns[0]].astype(str)
+    g["id_locale"] = g[
+        _col(g, ["id", "id_immeuble", "code", "imb_id"]) or g.columns[0]
+    ].astype(str)
     st = _col(g, ["statut_deploiement", "statut", "etat", "eligibilite_fibre"])
     g["statut_deploiement"] = g[st].astype(str) if st else "Déployé"
     g["operateur"] = g[_col(g, ["operateur", "op"]) or "id_locale"]
@@ -168,8 +193,15 @@ def adapt_fibre(aoi):
 
 def adapt_energie(aoi):
     """Enedis Open Data — postes sources / capacités d'accueil (opendata.enedis.fr)."""
-    p = _trouver(["*enedis*.csv", "*poste*source*.csv", "*capacite*.csv",
-                  "*poste*.geojson", "*enedis*.geojson"])
+    p = _trouver(
+        [
+            "*enedis*.csv",
+            "*poste*source*.csv",
+            "*capacite*.csv",
+            "*poste*.geojson",
+            "*enedis*.geojson",
+        ]
+    )
     if not p:
         return print("  [energie] absent")
     if p.suffix.lower() == ".csv":
@@ -177,13 +209,23 @@ def adapt_energie(aoi):
     else:
         g = _lire_vecteur(p)
     g = _clip_aoi(g, aoi)
-    g["id_poste_source"] = g[_col(g, ["code", "id", "nom", "poste"]) or g.columns[0]].astype(str)
+    g["id_poste_source"] = g[
+        _col(g, ["code", "id", "nom", "poste"]) or g.columns[0]
+    ].astype(str)
     pmax = _col(g, ["capacite_max_kva", "puissance_max_kva", "s_max_kva"])
-    pdispo = _col(g, ["capacite_dispo_kva", "puissance_disponible_kva", "capacite_reservee_kva"])
+    pdispo = _col(
+        g, ["capacite_dispo_kva", "puissance_disponible_kva", "capacite_reservee_kva"]
+    )
     g["puissance_max_kva"] = pd.to_numeric(g[pmax], errors="coerce") if pmax else 0.0
-    g["puissance_disponible_kva"] = pd.to_numeric(g[pdispo], errors="coerce") if pdispo else 0.0
+    g["puissance_disponible_kva"] = (
+        pd.to_numeric(g[pdispo], errors="coerce") if pdispo else 0.0
+    )
     g["dept"] = C.DEPT
-    _ecrire(g, "energie", ["id_poste_source", "dept", "puissance_max_kva", "puissance_disponible_kva"])
+    _ecrire(
+        g,
+        "energie",
+        ["id_poste_source", "dept", "puissance_max_kva", "puissance_disponible_kva"],
+    )
 
 
 def adapt_irve(aoi):
@@ -192,18 +234,25 @@ def adapt_irve(aoi):
     if not p:
         return print("  [bornes_ve] absent")
     if p.suffix.lower() == ".csv":
-        g = _lire_points_csv(p, ["x", "lon", "longitude", "consolidated_longitude"],
-                                 ["y", "lat", "latitude", "consolidated_latitude"])
+        g = _lire_points_csv(
+            p,
+            ["x", "lon", "longitude", "consolidated_longitude"],
+            ["y", "lat", "latitude", "consolidated_latitude"],
+        )
     else:
         g = _lire_vecteur(p)
     g = _clip_aoi(g, aoi)
-    g["id_borne"] = g[_col(g, ["id_pdc_local", "id", "id_station"]) or g.columns[0]].astype(str)
+    g["id_borne"] = g[
+        _col(g, ["id_pdc_local", "id", "id_station"]) or g.columns[0]
+    ].astype(str)
     _ecrire(g, "bornes_ve", ["id_borne"])
 
 
 def adapt_pv(aoi):
     """Installations photovoltaïques — registre ODRÉ / Enedis-RTE."""
-    p = _trouver(["*photovolt*.csv", "*pv*.csv", "*installation*.geojson", "*pv*.geojson"])
+    p = _trouver(
+        ["*photovolt*.csv", "*pv*.csv", "*installation*.geojson", "*pv*.geojson"]
+    )
     if not p:
         return print("  [pv] absent")
     if p.suffix.lower() == ".csv":
@@ -217,11 +266,15 @@ def adapt_pv(aoi):
 
 def adapt_abf(aoi):
     """Monuments Historiques — Atlas des patrimoines / Mérimée / GPU."""
-    p = _trouver(["*monument*.geojson", "*mh*.geojson", "*abf*.gpkg", "*patrimoine*.geojson"])
+    p = _trouver(
+        ["*monument*.geojson", "*mh*.geojson", "*abf*.gpkg", "*patrimoine*.geojson"]
+    )
     if not p:
         return print("  [abf] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
-    g["id_monument"] = g[_col(g, ["id", "ref", "reference"]) or g.columns[0]].astype(str)
+    g["id_monument"] = g[_col(g, ["id", "ref", "reference"]) or g.columns[0]].astype(
+        str
+    )
     nom = _col(g, ["nom", "appellation", "titre", "name"])
     g["nom"] = g[nom].astype(str) if nom else "Monument historique"
     _ecrire(g, "abf", ["id_monument", "nom"])
@@ -229,7 +282,9 @@ def adapt_abf(aoi):
 
 def adapt_ppri(aoi):
     """Zones inondables — Géorisques (zonage réglementaire PPRI)."""
-    p = _trouver(["*ppri*.geojson", "*inondation*.geojson", "*risque*.gpkg", "*ppr*.geojson"])
+    p = _trouver(
+        ["*ppri*.geojson", "*inondation*.geojson", "*risque*.gpkg", "*ppr*.geojson"]
+    )
     if not p:
         return print("  [ppri] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
@@ -241,7 +296,9 @@ def adapt_ppri(aoi):
 
 def adapt_ebc(aoi):
     """Espaces Boisés Classés — Géoportail de l'Urbanisme (prescriptions surfaciques)."""
-    p = _trouver(["*ebc*.geojson", "*boise*.geojson", "*prescription*.gpkg", "*ebc*.gpkg"])
+    p = _trouver(
+        ["*ebc*.geojson", "*boise*.geojson", "*prescription*.gpkg", "*ebc*.gpkg"]
+    )
     if not p:
         return print("  [ebc] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
@@ -251,7 +308,9 @@ def adapt_ebc(aoi):
 
 def adapt_voirie(aoi):
     """Voirie — BD TOPO (troncon_de_route) ou OpenStreetMap."""
-    p = _trouver(["*route*.geojson", "*voie*.geojson", "*troncon*.gpkg", "*voirie*.geojson"])
+    p = _trouver(
+        ["*route*.geojson", "*voie*.geojson", "*troncon*.gpkg", "*voirie*.geojson"]
+    )
     if not p:
         return print("  [voirie] absent")
     g = _clip_aoi(_lire_vecteur(p), aoi)
@@ -265,11 +324,21 @@ def adapt_voirie(aoi):
 def convertir_tout() -> None:
     print(f"Adapter données réelles -> data/raw/  (sources : {SOURCES_DIR})")
     aoi = charger_aoi()
-    for fn in (adapt_parcelles, adapt_batiments, adapt_fibre, adapt_energie,
-               adapt_irve, adapt_pv, adapt_abf, adapt_ppri, adapt_ebc, adapt_voirie):
+    for fn in (
+        adapt_parcelles,
+        adapt_batiments,
+        adapt_fibre,
+        adapt_energie,
+        adapt_irve,
+        adapt_pv,
+        adapt_abf,
+        adapt_ppri,
+        adapt_ebc,
+        adapt_voirie,
+    ):
         try:
             fn(aoi)
-        except Exception as e:           # une source mal formée ne bloque pas les autres
+        except Exception as e:  # une source mal formée ne bloque pas les autres
             print(f"  [!] {fn.__name__} : {e}")
     print("\nConversion terminée. Lance ensuite :  python run.py --no-generate")
 
