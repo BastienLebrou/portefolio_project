@@ -10,8 +10,8 @@ runner = CliRunner()
 
 STAGES = ["aoi", "search", "cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
 # Stages still awaiting implementation; aoi/search (M1), cube/ndvi (M2/M3),
-# trend (M4) landed.
-STUB_STAGES = ["drought", "zonal", "dashboard", "run"]
+# trend (M4), drought (M5) landed.
+STUB_STAGES = ["zonal", "dashboard", "run"]
 
 
 def test_help_runs() -> None:

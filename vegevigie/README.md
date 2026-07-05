@@ -8,12 +8,13 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M4 (trend — the headline).** `aoi`/`search` build the footprint and Sentinel-2
-> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` does SCL
-> masking + NDVI + gap-aware monthly composites; `trend` runs a vectorized, NaN-aware
-> per-pixel Mann-Kendall + Theil–Sen (validated against `pymannkendall`) into a
-> greening/browning raster. Config is validated, lint/mypy/tests/CI are green. Later stages
-> land milestone by milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
+> **Status: M5 (drought stress).** `aoi`/`search` build the footprint and Sentinel-2 item
+> list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` does SCL masking
+> + NDVI + gap-aware monthly composites; `trend` runs a vectorized, NaN-aware per-pixel
+> Mann-Kendall + Theil–Sen (validated against `pymannkendall`); `drought` derives NDVI
+> anomalies (z-score) + VCI vs a per-pixel monthly climatology and an AOI drought timeline.
+> Config is validated, lint/mypy/tests/CI are green. Later stages land milestone by
+> milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
 
 ![AOI preview](docs/aoi_preview.png)
 
@@ -38,6 +39,12 @@ unfilled. Regenerate with `uv run python scripts/demo_monthly_ndvi.py`.*
 and the significant greening/browning class map. Regenerate with
 `uv run python scripts/demo_trend_map.py`.*
 
+![Drought demo](docs/drought_demo.png)
+
+*NDVI-anomaly drought stress (synthetic cube, real drought code): z-score anomaly map for a
+dry summer and the AOI-mean drought timeline. Regenerate with
+`uv run python scripts/demo_drought.py`.*
+
 ## Quickstart
 
 ```bash
@@ -55,6 +62,9 @@ uv run vegevigie ndvi --start 2020 --end 2020
 
 # M4 — per-pixel Mann-Kendall + Sen's slope trend raster (needs monthly composites)
 uv run vegevigie trend --start 2020 --end 2020
+
+# M5 — NDVI-anomaly / VCI drought raster + timeline (needs monthly composites)
+uv run vegevigie drought --start 2020 --end 2020
 ```
 
 > **Network note.** `search` needs outbound access to

@@ -300,10 +300,45 @@ def trend(
 
 
 @app.command()
-def drought(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
+def drought(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
     """NDVI anomalies / VCI vs monthly climatology -> drought raster + timeline."""
-    _setup(config, verbose)
-    _not_implemented("drought", "M5")
+    from vegevigie.datacube import open_zarr
+    from vegevigie.drought import drought_dataset, drought_timeline
+
+    settings = _setup(config, verbose)
+    start_year = start or settings.time.start
+    end_year = end or settings.time.end
+
+    monthly_path = settings.paths.interim / f"ndvi_monthly_{start_year}_{end_year}.zarr"
+    if not monthly_path.exists():
+        typer.echo(f"Monthly NDVI not found at {monthly_path} — run `vegevigie ndvi` first.")
+        raise typer.Exit(code=1)
+
+    raster_path = settings.paths.processed / f"drought_{start_year}_{end_year}.zarr"
+    timeline_path = settings.paths.processed / f"drought_timeline_{start_year}_{end_year}.parquet"
+    if raster_path.exists() and not force:
+        typer.echo(f"Drought raster already cached at {raster_path} (use --force to rebuild).")
+        raise typer.Exit(code=0)
+
+    monthly = open_zarr(monthly_path)["ndvi_monthly"]
+    typer.echo(f"Computing NDVI anomalies + VCI over {monthly.sizes['time']} months...")
+    ds = drought_dataset(monthly).compute()
+    timeline = drought_timeline(ds["ndvi_anomaly"]).compute()
+
+    raster_path.parent.mkdir(parents=True, exist_ok=True)
+    ds.to_zarr(raster_path, mode="w")
+    timeline.to_dataframe().reset_index().to_parquet(timeline_path)
+
+    driest = timeline.to_series().idxmin()
+    typer.echo(f"Drought raster cached: {raster_path}")
+    typer.echo(f"Drought timeline cached: {timeline_path}")
+    typer.echo(f"  driest month (lowest AOI-mean anomaly): {driest.date()}")
 
 
 @app.command()

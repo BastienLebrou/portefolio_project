@@ -29,6 +29,11 @@ datacube stack that is new to him.
   significance. **Sen's / Theil–Sen slope** — robust trend magnitude: the median of all
   pairwise slopes (yⱼ−yᵢ)/(j−i), so outliers barely move it. Our vectorized kernel is
   validated against `pymannkendall`. *(M4)*
-- **VCI** (Vegetation Condition Index) — NDVI rescaled against its per-pixel historical
-  min/max to express how the current value compares to the normal range; low VCI flags
+- **Monthly climatology** — the per-pixel, per-calendar-month "normal" NDVI (mean, std,
+  min, max) across all years in the record; the baseline every month is compared to. *(M5)*
+- **NDVI anomaly (z-score)** — (NDVI − climatology_mean) / climatology_std for that
+  pixel-month. Standardized, so comparable across pixels/seasons; ≈ −1.5σ or lower flags
   drought stress. *(M5)*
+- **VCI** (Vegetation Condition Index) — 100 · (NDVI − min) / (max − min) over the
+  pixel-month history, in 0–100. 0 = worst on record, 100 = best; low VCI (< ~35) is the
+  classic drought flag. Complements the z-score. *(M5)*
