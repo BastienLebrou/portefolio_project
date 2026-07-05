@@ -56,16 +56,21 @@ def mk_sen_1d(
     ``min_valid`` valid observations return all-NaN.
     """
     y = np.asarray(y, dtype="float64")
-    n = y.size
-    valid = ~np.isnan(y)
-    m = int(valid.sum())
+    valid_idx = np.flatnonzero(~np.isnan(y))
+    m = valid_idx.size
     if m < min_valid:
         return (np.nan, np.nan, np.nan, np.nan)
 
-    # --- MK on the NaN-skipped series (indices collapsed) ---
-    yv = y[valid]
+    # One pairwise pass over the valid observations serves both statistics:
+    # MK's S uses the sign of each value difference (NaN-skipped series), while
+    # the Theil-Sen slope divides the same differences by the *original* month
+    # spacing (gaps preserved) — pairs involving NaN never enter either.
+    yv = y[valid_idx]
     iu, ju = np.triu_indices(m, k=1)
-    s = float(np.sum(np.sign(yv[ju] - yv[iu])))
+    diffs = yv[ju] - yv[iu]
+
+    # --- MK on the NaN-skipped series ---
+    s = float(np.sum(np.sign(diffs)))
     var_s = _mk_variance(yv, m)
 
     if var_s <= 0:
@@ -78,10 +83,8 @@ def mk_sen_1d(
         z = 0.0
     p = float(2 * norm.sf(abs(z)))
 
-    # --- Theil-Sen slope on original positions (gaps preserved) ---
-    oi, oj = np.triu_indices(n, k=1)
-    slopes = (y[oj] - y[oi]) / (oj - oi)
-    slope = float(np.nanmedian(slopes)) if np.isfinite(slopes).any() else np.nan
+    # --- Theil-Sen slope on original positions ---
+    slope = float(np.median(diffs / (valid_idx[ju] - valid_idx[iu])))
 
     significant = p < alpha
     if significant and z > 0:

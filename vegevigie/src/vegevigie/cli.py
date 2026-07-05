@@ -121,7 +121,9 @@ def search(
         typer.echo(f"AOI not found at {aoi_path} — run `vegevigie aoi` first.")
         raise typer.Exit(code=1)
 
-    bbox = tuple(gpd.read_parquet(aoi_path).total_bounds)  # (minx, miny, maxx, maxy) in WGS84
+    # (minx, miny, maxx, maxy) in WGS84 — as plain floats: numpy scalars from
+    # total_bounds are not JSON-serializable when the search params get cached.
+    bbox = tuple(float(c) for c in gpd.read_parquet(aoi_path).total_bounds)
     start_year = start or settings.time.start
     end_year = end or settings.time.end
 
@@ -190,7 +192,7 @@ def cube(
         typer.echo(f"Missing {items_path} or {aoi_path} — run `vegevigie aoi` and `search` first.")
         raise typer.Exit(code=1)
 
-    bbox = tuple(gpd.read_parquet(aoi_path).total_bounds)
+    bbox = tuple(float(c) for c in gpd.read_parquet(aoi_path).total_bounds)
     items = load_cached_items(items_path)
     zarr_path = settings.paths.interim / f"cube_{start_year}_{end_year}.zarr"
 

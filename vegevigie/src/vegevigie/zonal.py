@@ -49,12 +49,36 @@ def rasterize_zones(communes: gpd.GeoDataFrame, template: xr.DataArray) -> xr.Da
     return xr.DataArray(zones, dims=("y", "x"), coords={"y": template["y"], "x": template["x"]})
 
 
+ZoneGroups = list[np.ndarray]
+
+
+def zone_groups(zones: xr.DataArray, n_zones: int) -> ZoneGroups:
+    """Group flat pixel indices by zone in one stable sort.
+
+    Precomputing this once and reusing it across every statistic replaces one
+    full-raster scan per (zone × statistic) with a single O(N log N) sort — the
+    difference between seconds and minutes at department scale.
+    """
+    z = np.asarray(zones.values).ravel()
+    order = np.argsort(z, kind="stable")
+    sorted_z = z[order]
+    starts = np.searchsorted(sorted_z, np.arange(n_zones), side="left")
+    ends = np.searchsorted(sorted_z, np.arange(n_zones), side="right")
+    return [order[s:e] for s, e in zip(starts, ends, strict=True)]
+
+
 def zonal_reduce(
-    values: xr.DataArray, zones: xr.DataArray, n_zones: int, reducer: str
+    values: xr.DataArray,
+    zones: xr.DataArray,
+    n_zones: int,
+    reducer: str,
+    groups: ZoneGroups | None = None,
 ) -> np.ndarray:
     """Reduce ``values`` per zone with ``reducer`` ('mean'|'min'|'max'), NaN-aware.
 
     Returns an array of length ``n_zones``; zones with no valid pixel yield NaN.
+    Pass precomputed ``groups`` (from :func:`zone_groups`) to amortize the zone
+    lookup across several statistics.
     """
     funcs: dict[str, Callable[[np.ndarray], np.floating]] = {
         "mean": np.nanmean,
@@ -62,25 +86,31 @@ def zonal_reduce(
         "max": np.nanmax,
     }
     fn = funcs[reducer]
-    v = np.asarray(values.values, dtype="float64")
-    z = np.asarray(zones.values)
+    v = np.asarray(values.values, dtype="float64").ravel()
+    if groups is None:
+        groups = zone_groups(zones, n_zones)
     out = np.full(n_zones, np.nan)
-    for idx in range(n_zones):
-        sel = v[z == idx]
+    for idx, group in enumerate(groups):
+        sel = v[group]
         if sel.size and np.isfinite(sel).any():
             out[idx] = fn(sel)
     return out
 
 
 def zonal_class_fraction(
-    classes: xr.DataArray, zones: xr.DataArray, n_zones: int, target: int
+    classes: xr.DataArray,
+    zones: xr.DataArray,
+    n_zones: int,
+    target: int,
+    groups: ZoneGroups | None = None,
 ) -> np.ndarray:
     """Percentage of valid (non-NaN) class pixels equal to ``target``, per zone."""
-    c = np.asarray(classes.values, dtype="float64")
-    z = np.asarray(zones.values)
+    c = np.asarray(classes.values, dtype="float64").ravel()
+    if groups is None:
+        groups = zone_groups(zones, n_zones)
     out = np.full(n_zones, np.nan)
-    for idx in range(n_zones):
-        sel = c[z == idx]
+    for idx, group in enumerate(groups):
+        sel = c[group]
         valid = sel[np.isfinite(sel)]
         if valid.size:
             out[idx] = 100.0 * np.count_nonzero(valid == target) / valid.size
@@ -101,13 +131,14 @@ def commune_stats(
     """
     zones = rasterize_zones(communes, sen_slope)
     n = len(communes)
+    groups = zone_groups(zones, n)  # one sort, shared by every statistic below
 
     out = communes.copy()
-    out["mean_sen_slope"] = zonal_reduce(sen_slope, zones, n, "mean")
-    out["pct_greening"] = zonal_class_fraction(trend_class, zones, n, target=1)
-    out["pct_browning"] = zonal_class_fraction(trend_class, zones, n, target=-1)
+    out["mean_sen_slope"] = zonal_reduce(sen_slope, zones, n, "mean", groups)
+    out["pct_greening"] = zonal_class_fraction(trend_class, zones, n, 1, groups)
+    out["pct_browning"] = zonal_class_fraction(trend_class, zones, n, -1, groups)
     if mean_anomaly is not None:
-        out["mean_anomaly"] = zonal_reduce(mean_anomaly, zones, n, "mean")
+        out["mean_anomaly"] = zonal_reduce(mean_anomaly, zones, n, "mean", groups)
     if min_vci is not None:
-        out["min_vci"] = zonal_reduce(min_vci, zones, n, "min")
+        out["min_vci"] = zonal_reduce(min_vci, zones, n, "min", groups)
     return out
