@@ -254,3 +254,25 @@ Sentinel-2, commune by commune."*
 
 First action: confirm the environment (`python --version`, `uv --version`), then execute
 M0 and stop for review.
+
+## 11. Post-v1 goal — ScruTech QGIS plugin (owner's end target)
+
+**Owner's stated end goal (record — carry across sessions):** once the v1 pipeline
+(M0–M8) is complete, integrate these treatments as an *automated pipeline inside a
+QGIS plugin/extension named **ScruTech***. The pipeline stages (AOI → STAC search →
+datacube → NDVI → monthly composites → MK/Sen trend → drought anomaly/VCI → zonal
+→ outputs) should be drivable from QGIS, not only the CLI.
+
+Design implications to keep in mind while building v1 (do not implement the plugin
+until M0–M8 land, unless asked):
+
+- Keep the science in pure, import-light functions (`indices`, `composite`, `trend`,
+  `drought`, `zonal`) with **no CLI/Streamlit coupling**, so a QGIS Processing
+  provider/algorithm can call them directly. This is already the convention (§7).
+- Keep every stage parameterized through a plain config object, not argv — so a QGIS
+  algorithm dialog can populate the same parameters.
+- Outputs are standard GIS formats (GeoParquet, GeoTIFF/zarr, DuckDB) that QGIS reads.
+- Mind QGIS's bundled Python: prefer widely-available deps; note any that would need
+  a QGIS-side install (odc-stac, xarray, dask) when the plugin phase starts.
+- Likely shape: a QGIS **Processing** plugin ("ScruTech") exposing one algorithm per
+  stage plus a "run all" model, reusing `src/vegevigie` as the engine.

@@ -342,10 +342,63 @@ def drought(
 
 
 @app.command()
-def zonal(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
+def zonal(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
     """Aggregate trend/drought rasters to communes -> DuckDB + GeoParquet."""
-    _setup(config, verbose)
-    _not_implemented("zonal", "M6")
+    import geopandas as gpd
+
+    from vegevigie.datacube import open_zarr
+    from vegevigie.store import rank_communes, write_duckdb, write_geoparquet
+    from vegevigie.zonal import commune_stats
+
+    settings = _setup(config, verbose)
+    start_year = start or settings.time.start
+    end_year = end or settings.time.end
+
+    trend_path = settings.paths.processed / f"trend_{start_year}_{end_year}.zarr"
+    drought_path = settings.paths.processed / f"drought_{start_year}_{end_year}.zarr"
+    communes_path = settings.paths.raw / f"communes_{settings.aoi.departement}.parquet"
+    for required in (trend_path, communes_path):
+        if not required.exists():
+            typer.echo(f"Missing {required} — run the earlier stages first.")
+            raise typer.Exit(code=1)
+
+    out_parquet = settings.paths.processed / f"commune_stats_{start_year}_{end_year}.parquet"
+    duckdb_path = settings.paths.processed / "vegevigie.duckdb"
+    if out_parquet.exists() and not force:
+        typer.echo(f"Commune stats already cached at {out_parquet} (use --force to rebuild).")
+        raise typer.Exit(code=0)
+
+    communes = gpd.read_parquet(communes_path)
+    trend = open_zarr(trend_path)
+    mean_anomaly = min_vci = None
+    if drought_path.exists():
+        drought = open_zarr(drought_path)
+        mean_anomaly = drought["ndvi_anomaly"].mean("time")
+        min_vci = drought["vci"].min("time")
+
+    typer.echo(f"Aggregating trend/drought rasters to {len(communes)} communes...")
+    stats = commune_stats(
+        communes,
+        sen_slope=trend["sen_slope"],
+        trend_class=trend["trend_class"],
+        mean_anomaly=mean_anomaly,
+        min_vci=min_vci,
+    )
+    write_geoparquet(stats, out_parquet)
+    write_duckdb(stats.drop(columns="geometry"), duckdb_path, table="commune_stats")
+
+    typer.echo(f"Commune stats cached: {out_parquet}")
+    typer.echo(f"DuckDB: {duckdb_path} (table commune_stats)")
+    top = rank_communes(duckdb_path, metric="mean_sen_slope", ascending=False, limit=5)
+    typer.echo("Top greening communes (mean Sen slope):")
+    for _, row in top.iterrows():
+        typer.echo(f"  {row['nom']:<28} slope={row['mean_sen_slope']:+.5f}")
 
 
 @app.command()

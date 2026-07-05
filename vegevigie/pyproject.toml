@@ -33,6 +33,8 @@ dependencies = [
     # M4 — trend stats.
     "scipy>=1.13",
     "pymannkendall>=1.4",
+    # M6 — zonal store.
+    "duckdb>=1.0",
 ]
 
 [project.scripts]

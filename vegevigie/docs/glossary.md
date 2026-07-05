@@ -37,3 +37,7 @@ datacube stack that is new to him.
 - **VCI** (Vegetation Condition Index) — 100 · (NDVI − min) / (max − min) over the
   pixel-month history, in 0–100. 0 = worst on record, 100 = best; low VCI (< ~35) is the
   classic drought flag. Complements the z-score. *(M5)*
+- **Zonal statistics** — summarizing a raster inside vector polygons. We rasterize each
+  commune onto the value grid (a zone-index raster) and reduce the pixels inside it (mean
+  slope, % greening/browning, mean anomaly, min VCI), then store the per-commune table in
+  DuckDB + GeoParquet for ranking. *(M6)*

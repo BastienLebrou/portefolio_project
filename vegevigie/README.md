@@ -8,13 +8,11 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M5 (drought stress).** `aoi`/`search` build the footprint and Sentinel-2 item
-> list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` does SCL masking
-> + NDVI + gap-aware monthly composites; `trend` runs a vectorized, NaN-aware per-pixel
-> Mann-Kendall + Theil–Sen (validated against `pymannkendall`); `drought` derives NDVI
-> anomalies (z-score) + VCI vs a per-pixel monthly climatology and an AOI drought timeline.
-> Config is validated, lint/mypy/tests/CI are green. Later stages land milestone by
-> milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
+> **Status: M6 (zonal → DuckDB ranking).** The pixel pipeline (`aoi`/`search`/`cube`/`ndvi`/
+> `trend`/`drought`) feeds `zonal`, which aggregates the trend/drought rasters to communes,
+> writes GeoParquet + DuckDB, and ranks communes by greening/browning and drought
+> exposure. Config is validated, lint/mypy/tests/CI are green. Remaining: M7 dashboard, M8
+> portfolio polish — see `CLAUDE.md` §6.
 
 ![AOI preview](docs/aoi_preview.png)
 
@@ -45,6 +43,12 @@ and the significant greening/browning class map. Regenerate with
 dry summer and the AOI-mean drought timeline. Regenerate with
 `uv run python scripts/demo_drought.py`.*
 
+![Commune ranking](docs/commune_ranking_demo.png)
+
+*Zonal aggregation to the **real** 15 Ardèche communes (synthetic trend raster, real zonal +
+DuckDB code): per-commune mean Sen's slope, ranked by a DuckDB `SELECT ... ORDER BY`.
+Regenerate with `uv run python scripts/demo_zonal_ranking.py`.*
+
 ## Quickstart
 
 ```bash
@@ -65,6 +69,9 @@ uv run vegevigie trend --start 2020 --end 2020
 
 # M5 — NDVI-anomaly / VCI drought raster + timeline (needs monthly composites)
 uv run vegevigie drought --start 2020 --end 2020
+
+# M6 — aggregate to communes -> GeoParquet + DuckDB, print commune ranking
+uv run vegevigie zonal --start 2020 --end 2020
 ```
 
 > **Network note.** `search` needs outbound access to
