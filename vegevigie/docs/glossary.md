@@ -18,6 +18,11 @@ datacube stack that is new to him.
 - **Datacube** — imagery stacked into a single N-dimensional array indexed by
   (time, y, x, band), handled lazily with `xarray` + `dask` so operations are defined once
   and computed in chunks. *(M2)*
+- **Temporal compositing** — collapsing many irregular observations into one value
+  per period. We take the **monthly median** of valid NDVI per pixel: robust to
+  residual haze and turning the ~5-day Sentinel-2 revisit into a regular monthly
+  grid. *Gap-aware*: a month with no clear observation stays NaN rather than being
+  invented; only short gaps are optionally interpolated. *(M3)*
 - **Mann-Kendall (MK)** — non-parametric test for a monotonic trend in a time series;
   gives direction + p-value. **Sen's / Theil–Sen slope** — robust trend magnitude (median
   of pairwise slopes). *(M4)*

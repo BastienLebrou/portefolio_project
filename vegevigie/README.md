@@ -8,10 +8,11 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M2 (datacube + NDVI).** `aoi`/`search` build the footprint and Sentinel-2
-> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac and `ndvi` applies
-> SCL cloud masking + NDVI. Config is validated, lint/mypy/tests/CI are green. Later stages
-> land milestone by milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
+> **Status: M3 (monthly composites).** `aoi`/`search` build the footprint and Sentinel-2
+> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` applies SCL
+> cloud masking, computes NDVI and reduces it to gap-aware monthly median composites.
+> Config is validated, lint/mypy/tests/CI are green. Later stages land milestone by
+> milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
 
 ![AOI preview](docs/aoi_preview.png)
 
@@ -24,6 +25,12 @@ default bbox, over the full département outline.*
 clouds/shadow → SCL classes → masked NDVI with flagged pixels blanked. Regenerate with
 `uv run python scripts/demo_ndvi_masking.py`.*
 
+![Monthly NDVI time series](docs/monthly_ndvi_timeseries.png)
+
+*Gap-aware monthly compositing (synthetic demo): irregular cloud-masked scenes → a clean
+monthly median line, with short gaps interpolated and a genuine winter data gap left
+unfilled. Regenerate with `uv run python scripts/demo_monthly_ndvi.py`.*
+
 ## Quickstart
 
 ```bash
@@ -35,7 +42,7 @@ uv run vegevigie --help
 uv run vegevigie aoi --small
 uv run vegevigie search --small --start 2020 --end 2020
 
-# M2 — build the datacube, then SCL-mask + NDVI (needs the search cache)
+# M2/M3 — datacube, then SCL-mask + NDVI + monthly composites (needs search cache)
 uv run vegevigie cube --start 2020 --end 2020
 uv run vegevigie ndvi --start 2020 --end 2020
 ```

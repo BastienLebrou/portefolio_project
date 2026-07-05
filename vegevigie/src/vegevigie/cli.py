@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
@@ -217,7 +217,8 @@ def ndvi(
     start: StartOpt = None,
     end: EndOpt = None,
 ) -> None:
-    """SCL cloud-mask + NDVI per scene, cached as .zarr (monthly composites land in M3)."""
+    """SCL cloud-mask + NDVI per scene, then gap-aware monthly median composites."""
+    from vegevigie.composite import build_monthly_ndvi
     from vegevigie.datacube import open_zarr
     from vegevigie.indices import masked_ndvi
 
@@ -232,12 +233,22 @@ def ndvi(
 
     cube_ds = open_zarr(cube_path)
     ndvi_da = masked_ndvi(cube_ds["red"], cube_ds["nir"], cube_ds["scl"]).rename("ndvi")
-    out_path = settings.paths.interim / f"ndvi_{start_year}_{end_year}.zarr"
-    if out_path.exists() and not force:
-        typer.echo(f"NDVI already cached at {out_path} (use --force to rebuild).")
+    monthly = build_monthly_ndvi(ndvi_da, fill_max_gap=settings.composite.fill_max_gap)
+
+    ndvi_path = settings.paths.interim / f"ndvi_{start_year}_{end_year}.zarr"
+    monthly_path = settings.paths.interim / f"ndvi_monthly_{start_year}_{end_year}.zarr"
+    if monthly_path.exists() and not force:
+        typer.echo(f"Monthly NDVI already cached at {monthly_path} (use --force to rebuild).")
         raise typer.Exit(code=0)
-    ndvi_da.to_dataset().to_zarr(out_path, mode="w" if force else "w-")
-    typer.echo(f"Masked NDVI cached: {out_path}")
+
+    mode: Literal["w", "w-"] = "w" if force else "w-"
+    ndvi_da.to_dataset().to_zarr(ndvi_path, mode=mode)
+    monthly.to_dataset().to_zarr(monthly_path, mode=mode)
+    typer.echo(f"Masked NDVI cached: {ndvi_path}")
+    typer.echo(
+        f"Monthly composites cached: {monthly_path} "
+        f"({monthly.sizes.get('time', 0)} months, gap-fill={settings.composite.fill_max_gap})"
+    )
 
 
 @app.command()

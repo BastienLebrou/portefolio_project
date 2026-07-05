@@ -28,6 +28,11 @@ raster:
   # Dask chunk edge size (pixels) for the datacube spatial dims.
   chunk_size: 1024
 
+composite:
+  # Fill monthly NDVI gaps of at most this many consecutive months by temporal
+  # linear interpolation; longer gaps stay NaN. 0 disables gap-filling.
+  fill_max_gap: 1
+
 trend:
   # Two-sided significance threshold for the Mann-Kendall test.
   p_value: 0.05

@@ -53,6 +53,12 @@ class RasterConfig(BaseModel):
     chunk_size: int = Field(gt=0, description="Dask chunk edge size in pixels")
 
 
+class CompositeConfig(BaseModel):
+    """Monthly-composite parameters."""
+
+    fill_max_gap: int = Field(ge=0, description="Max consecutive months to gap-fill; 0 disables")
+
+
 class TrendConfig(BaseModel):
     """Per-pixel trend-test parameters."""
 
@@ -84,6 +90,7 @@ class Settings(BaseModel):
     time: TimeConfig
     stac: StacConfig
     raster: RasterConfig
+    composite: CompositeConfig
     trend: TrendConfig
     paths: PathsConfig
 
