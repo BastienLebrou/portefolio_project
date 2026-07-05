@@ -63,6 +63,7 @@ class TrendConfig(BaseModel):
     """Per-pixel trend-test parameters."""
 
     p_value: float = Field(gt=0, lt=1)
+    min_valid_months: int = Field(ge=4, description="Min valid months to attempt a trend")
 
 
 class PathsConfig(BaseModel):

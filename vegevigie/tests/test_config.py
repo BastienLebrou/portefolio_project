@@ -14,6 +14,7 @@ def test_default_config_loads() -> None:
     assert settings.stac.collection == "sentinel-2-l2a"
     assert settings.time.start <= settings.time.end
     assert 0 < settings.trend.p_value < 1
+    assert settings.trend.min_valid_months >= 4
     assert settings.composite.fill_max_gap >= 0
 
 

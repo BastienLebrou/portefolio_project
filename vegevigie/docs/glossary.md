@@ -23,9 +23,12 @@ datacube stack that is new to him.
   residual haze and turning the ~5-day Sentinel-2 revisit into a regular monthly
   grid. *Gap-aware*: a month with no clear observation stays NaN rather than being
   invented; only short gaps are optionally interpolated. *(M3)*
-- **Mann-Kendall (MK)** — non-parametric test for a monotonic trend in a time series;
-  gives direction + p-value. **Sen's / Theil–Sen slope** — robust trend magnitude (median
-  of pairwise slopes). *(M4)*
+- **Mann-Kendall (MK)** — non-parametric test for a monotonic trend in a time series.
+  Sums the sign of every pairwise change (the S statistic), standardizes it with a
+  tie-corrected variance to a z-score, and derives a two-sided p-value. Direction +
+  significance. **Sen's / Theil–Sen slope** — robust trend magnitude: the median of all
+  pairwise slopes (yⱼ−yᵢ)/(j−i), so outliers barely move it. Our vectorized kernel is
+  validated against `pymannkendall`. *(M4)*
 - **VCI** (Vegetation Condition Index) — NDVI rescaled against its per-pixel historical
   min/max to express how the current value compares to the normal range; low VCI flags
   drought stress. *(M5)*

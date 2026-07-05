@@ -252,10 +252,51 @@ def ndvi(
 
 
 @app.command()
-def trend(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
+def trend(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
     """Per-pixel Mann-Kendall + Sen's slope -> greening/browning trend raster."""
-    _setup(config, verbose)
-    _not_implemented("trend", "M4")
+    from vegevigie.datacube import open_zarr
+    from vegevigie.trend import trend_dataset
+
+    settings = _setup(config, verbose)
+    start_year = start or settings.time.start
+    end_year = end or settings.time.end
+
+    monthly_path = settings.paths.interim / f"ndvi_monthly_{start_year}_{end_year}.zarr"
+    if not monthly_path.exists():
+        typer.echo(f"Monthly NDVI not found at {monthly_path} — run `vegevigie ndvi` first.")
+        raise typer.Exit(code=1)
+
+    out_path = settings.paths.processed / f"trend_{start_year}_{end_year}.zarr"
+    if out_path.exists() and not force:
+        typer.echo(f"Trend raster already cached at {out_path} (use --force to rebuild).")
+        raise typer.Exit(code=0)
+
+    monthly = open_zarr(monthly_path)["ndvi_monthly"]
+    typer.echo(
+        f"Running per-pixel Mann-Kendall + Sen's slope over {monthly.sizes['time']} months..."
+    )
+    result = trend_dataset(
+        monthly,
+        alpha=settings.trend.p_value,
+        min_valid=settings.trend.min_valid_months,
+    ).compute()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    result.to_zarr(out_path, mode="w")
+
+    classes = result["trend_class"]
+    n_green = int((classes == 1).sum())
+    n_brown = int((classes == -1).sum())
+    typer.echo(f"Trend raster cached: {out_path}")
+    typer.echo(
+        f"  greening pixels: {n_green} | browning pixels: {n_brown} (p<{settings.trend.p_value})"
+    )
 
 
 @app.command()

@@ -30,6 +30,9 @@ dependencies = [
     "zarr>=2.18,<3",
     "pandas>=2.2",
     "bottleneck>=1.3",
+    # M4 — trend stats.
+    "scipy>=1.13",
+    "pymannkendall>=1.4",
 ]
 
 [project.scripts]

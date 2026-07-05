@@ -36,6 +36,9 @@ composite:
 trend:
   # Two-sided significance threshold for the Mann-Kendall test.
   p_value: 0.05
+  # Minimum valid monthly observations a pixel needs before a trend is computed
+  # (fewer -> NaN). ~half a year of clear months.
+  min_valid_months: 6
 
 paths:
   # All outputs land under here; the whole tree is gitignored.

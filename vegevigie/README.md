@@ -8,11 +8,12 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M3 (monthly composites).** `aoi`/`search` build the footprint and Sentinel-2
-> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` applies SCL
-> cloud masking, computes NDVI and reduces it to gap-aware monthly median composites.
-> Config is validated, lint/mypy/tests/CI are green. Later stages land milestone by
-> milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
+> **Status: M4 (trend — the headline).** `aoi`/`search` build the footprint and Sentinel-2
+> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac; `ndvi` does SCL
+> masking + NDVI + gap-aware monthly composites; `trend` runs a vectorized, NaN-aware
+> per-pixel Mann-Kendall + Theil–Sen (validated against `pymannkendall`) into a
+> greening/browning raster. Config is validated, lint/mypy/tests/CI are green. Later stages
+> land milestone by milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
 
 ![AOI preview](docs/aoi_preview.png)
 
@@ -31,6 +32,12 @@ clouds/shadow → SCL classes → masked NDVI with flagged pixels blanked. Regen
 monthly median line, with short gaps interpolated and a genuine winter data gap left
 unfilled. Regenerate with `uv run python scripts/demo_monthly_ndvi.py`.*
 
+![Trend map](docs/trend_map_demo.png)
+
+*Per-pixel Mann-Kendall + Sen's slope (synthetic cube, real trend code): Sen's slope map
+and the significant greening/browning class map. Regenerate with
+`uv run python scripts/demo_trend_map.py`.*
+
 ## Quickstart
 
 ```bash
@@ -45,6 +52,9 @@ uv run vegevigie search --small --start 2020 --end 2020
 # M2/M3 — datacube, then SCL-mask + NDVI + monthly composites (needs search cache)
 uv run vegevigie cube --start 2020 --end 2020
 uv run vegevigie ndvi --start 2020 --end 2020
+
+# M4 — per-pixel Mann-Kendall + Sen's slope trend raster (needs monthly composites)
+uv run vegevigie trend --start 2020 --end 2020
 ```
 
 > **Network note.** `search` needs outbound access to
