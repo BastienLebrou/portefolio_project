@@ -9,8 +9,8 @@ from vegevigie.cli import app
 runner = CliRunner()
 
 STAGES = ["aoi", "search", "cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
-# Stages still awaiting implementation (M2+); aoi/search landed in M1.
-STUB_STAGES = ["cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
+# Stages still awaiting implementation; aoi/search (M1) and cube/ndvi (M2) landed.
+STUB_STAGES = ["trend", "drought", "zonal", "dashboard", "run"]
 
 
 def test_help_runs() -> None:

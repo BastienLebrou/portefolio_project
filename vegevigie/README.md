@@ -8,15 +8,21 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M1 (AOI + STAC search).** `aoi` builds the analysis footprint from admin
-> boundaries; `search` queries Sentinel-2 on Planetary Computer and caches the item list.
-> Config is validated, lint/tests/CI are green. Later stages land milestone by milestone —
-> see `CLAUDE.md` §6. The full portfolio README (architecture diagram, methodology) is M8.
+> **Status: M2 (datacube + NDVI).** `aoi`/`search` build the footprint and Sentinel-2
+> item list; `cube` loads a lazy (Red, NIR, SCL) datacube via odc-stac and `ndvi` applies
+> SCL cloud masking + NDVI. Config is validated, lint/mypy/tests/CI are green. Later stages
+> land milestone by milestone — see `CLAUDE.md` §6. Full portfolio README is M8.
 
 ![AOI preview](docs/aoi_preview.png)
 
 *Smoke-test AOI: 15 communes of southern Ardèche (incl. Alba-la-Romaine) inside the
 default bbox, over the full département outline.*
+
+![NDVI masking demo](docs/ndvi_masking_demo.png)
+
+*SCL cloud masking (synthetic demo — real scene pending network egress): raw NDVI with
+clouds/shadow → SCL classes → masked NDVI with flagged pixels blanked. Regenerate with
+`uv run python scripts/demo_ndvi_masking.py`.*
 
 ## Quickstart
 
@@ -28,6 +34,10 @@ uv run vegevigie --help
 # M1 — build the AOI and search for scenes (small bbox, one year)
 uv run vegevigie aoi --small
 uv run vegevigie search --small --start 2020 --end 2020
+
+# M2 — build the datacube, then SCL-mask + NDVI (needs the search cache)
+uv run vegevigie cube --start 2020 --end 2020
+uv run vegevigie ndvi --start 2020 --end 2020
 ```
 
 > **Network note.** `search` needs outbound access to

@@ -153,18 +153,91 @@ def search(
         typer.echo(f"  {summary['datetime']}  cloud={summary['cloud_cover']}  {summary['tile']}")
 
 
+def _network_hint(exc: Exception) -> None:
+    """Shared blocked-host guidance for the network-bound datacube stages."""
+    logger.debug("network stage failed", exc_info=True)
+    typer.echo(f"Failed: {exc}")
+    typer.echo(
+        "If this is a proxy 403/407, the egress policy is blocking "
+        "planetarycomputer.microsoft.com — allowlist it (or run outside the "
+        "restricted network) and retry."
+    )
+    raise typer.Exit(code=1) from exc
+
+
 @app.command()
-def cube(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
+def cube(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
     """Build the lazy xarray datacube (Red, NIR, SCL) and cache it as .zarr."""
-    _setup(config, verbose)
-    _not_implemented("cube", "M2")
+    import geopandas as gpd
+
+    from vegevigie.catalog import PlanetaryComputerBackend, load_cached_items
+    from vegevigie.datacube import build_cube, write_zarr
+
+    settings = _setup(config, verbose)
+    start_year = start or settings.time.start
+    end_year = end or settings.time.end
+
+    items_path = settings.paths.raw / f"items_{start_year}_{end_year}.json"
+    aoi_path = settings.paths.raw / "aoi.parquet"
+    if not items_path.exists() or not aoi_path.exists():
+        typer.echo(f"Missing {items_path} or {aoi_path} — run `vegevigie aoi` and `search` first.")
+        raise typer.Exit(code=1)
+
+    bbox = tuple(gpd.read_parquet(aoi_path).total_bounds)
+    items = load_cached_items(items_path)
+    zarr_path = settings.paths.interim / f"cube_{start_year}_{end_year}.zarr"
+
+    typer.echo(f"Building datacube from {len(items)} items at {settings.raster.resolution}m...")
+    try:
+        cube_ds = build_cube(
+            backend=PlanetaryComputerBackend(),
+            item_dicts=items,
+            bbox=bbox,  # type: ignore[arg-type]
+            resolution=settings.raster.resolution,
+            chunk_size=settings.raster.chunk_size,
+        )
+        write_zarr(cube_ds, zarr_path, force=force)
+    except Exception as exc:  # noqa: BLE001
+        _network_hint(exc)
+
+    typer.echo(f"Datacube cached: {zarr_path}")
 
 
 @app.command()
-def ndvi(config: ConfigOpt = None, verbose: VerboseOpt = False, force: ForceOpt = False) -> None:
-    """SCL cloud-mask, compute NDVI and build monthly median composites."""
-    _setup(config, verbose)
-    _not_implemented("ndvi", "M2/M3")
+def ndvi(
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    start: StartOpt = None,
+    end: EndOpt = None,
+) -> None:
+    """SCL cloud-mask + NDVI per scene, cached as .zarr (monthly composites land in M3)."""
+    from vegevigie.datacube import open_zarr
+    from vegevigie.indices import masked_ndvi
+
+    settings = _setup(config, verbose)
+    start_year = start or settings.time.start
+    end_year = end or settings.time.end
+
+    cube_path = settings.paths.interim / f"cube_{start_year}_{end_year}.zarr"
+    if not cube_path.exists():
+        typer.echo(f"Datacube not found at {cube_path} — run `vegevigie cube` first.")
+        raise typer.Exit(code=1)
+
+    cube_ds = open_zarr(cube_path)
+    ndvi_da = masked_ndvi(cube_ds["red"], cube_ds["nir"], cube_ds["scl"]).rename("ndvi")
+    out_path = settings.paths.interim / f"ndvi_{start_year}_{end_year}.zarr"
+    if out_path.exists() and not force:
+        typer.echo(f"NDVI already cached at {out_path} (use --force to rebuild).")
+        raise typer.Exit(code=0)
+    ndvi_da.to_dataset().to_zarr(out_path, mode="w" if force else "w-")
+    typer.echo(f"Masked NDVI cached: {out_path}")
 
 
 @app.command()

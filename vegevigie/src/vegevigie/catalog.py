@@ -74,8 +74,8 @@ class StacBackend(Protocol):
         """Run a STAC search and return items as GeoJSON-like dicts."""
         ...
 
-    def sign(self, item: dict[str, Any]) -> dict[str, Any]:
-        """Return the item with its asset hrefs signed for reading."""
+    def sign(self, item: Any) -> Any:
+        """Return the item (pystac Item or dict) with its asset hrefs signed."""
         ...
 
 
@@ -95,7 +95,7 @@ class PlanetaryComputerBackend:
         logger.info("STAC search returned %d items", len(items))
         return items
 
-    def sign(self, item: dict[str, Any]) -> dict[str, Any]:
+    def sign(self, item: Any) -> Any:
         import planetary_computer
 
         return planetary_computer.sign(item)
