@@ -129,13 +129,22 @@ so the live Sentinel-2 fetch (`search`/`cube`) hasn't run here yet.
 - **Trend model** — Mann-Kendall assumes monotonicity; abrupt regime shifts (fire, clear-cut)
   are trend-detected but not characterized.
 
+## ScruTech — QGIS plugin
+
+The pipeline is also packaged as a **QGIS Processing plugin** ([`qgis_plugin/`](qgis_plugin/)):
+**one algorithm, *Analyze extent*, runs the whole chain over a drawn extent and loads the
+greening/browning trend + drought layers straight into QGIS**. The plugin is a thin front
+end — all the science runs through the shared, UI-agnostic engine
+(`vegevigie.pipeline.run_pipeline`), the same one the CLI uses (CLAUDE.md §11). Build the
+installable zip with `python qgis_plugin/package.py`; see
+[`qgis_plugin/README.md`](qgis_plugin/README.md) for install + dependency notes.
+
 ## Next steps
 
-- **M7–M8** — dashboard, hero imagery, and a full live run once STAC egress is available.
-- **Post-v1 — ScruTech QGIS plugin.** The end goal is to wrap this pipeline as an automated
-  **QGIS Processing plugin** (*ScruTech*): the science lives in CLI/UI-agnostic pure
-  functions (`indices`, `composite`, `trend`, `drought`, `zonal`) precisely so a QGIS
-  algorithm can reuse `src/vegevigie` as its engine. See `CLAUDE.md` §11.
+- **M7** — Streamlit + leafmap dashboard; **M8** — hero imagery and a full live run once STAC
+  egress is available.
+- **ScruTech** — harden the plugin (per-stage algorithms, a Processing model, styled output
+  layers) after a live QGIS test.
 - Alternate data backend (Copernicus CDSE), SAR/ML land-cover — out of v1 scope.
 
 ## Development

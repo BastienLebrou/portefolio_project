@@ -276,3 +276,9 @@ until M0–M8 land, unless asked):
   a QGIS-side install (odc-stac, xarray, dask) when the plugin phase starts.
 - Likely shape: a QGIS **Processing** plugin ("ScruTech") exposing one algorithm per
   stage plus a "run all" model, reusing `src/vegevigie` as the engine.
+
+**Status:** an initial ScruTech plugin now exists in `qgis_plugin/` (built on request):
+a Processing provider with a one-click *Analyze extent* algorithm + a *Load communes*
+helper, driven by the shared `vegevigie.pipeline.run_pipeline` engine. It's validated by
+compile/import here (no QGIS runtime in the build env); needs a live QGIS + the datacube
+stack in QGIS's Python. Next: per-stage algorithms, a "run all" model, styled outputs.
