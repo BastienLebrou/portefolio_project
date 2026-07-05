@@ -19,18 +19,35 @@ just turns a QGIS extent + parameters into an engine call and loads the outputs.
 - **QGIS ≥ 3.28** (Processing framework).
 - **Internet access** to Microsoft Planetary Computer
   (`planetarycomputer.microsoft.com`) for Sentinel-2 imagery.
-- The **VegeVigie datacube stack** installed *into QGIS's own Python*:
-  `pystac-client planetary-computer odc-stac xarray rioxarray rasterio dask
-  geopandas pymannkendall duckdb pydantic pyyaml bottleneck`.
+- The **VegeVigie datacube stack** (`pystac-client planetary-computer odc-stac
+  xarray rioxarray rasterio dask geopandas pymannkendall duckdb pydantic pyyaml
+  bottleneck`) available to the algorithm — in one of two ways:
 
-  The plugin checks these on run and, if any are missing, shows the exact
-  `pip install …` line for your interpreter. On Windows, run it from the
-  **OSGeo4W Shell**:
+### Recommended: an external Python (no QGIS pollution)
 
-  ```
-  python -m pip install pystac-client planetary-computer odc-stac xarray \
-      rioxarray rasterio dask geopandas pymannkendall duckdb pydantic pyyaml bottleneck
-  ```
+Installing rasterio/GDAL into QGIS's bundled Python can clash with QGIS's own
+GDAL. Instead, use a separate venv that already has the stack — e.g. the project's
+`uv` venv created by `cd vegevigie && uv sync` — and set the algorithm's
+**Python executable** parameter to it:
+
+```
+<repo>/vegevigie/.venv/Scripts/python.exe    # Windows
+<repo>/vegevigie/.venv/bin/python            # macOS/Linux
+```
+
+ScruTech then runs the engine in that interpreter (as a subprocess) and only loads
+the resulting layers into QGIS. Nothing is installed into QGIS.
+
+### Alternatively: install into QGIS's Python
+
+Leave *Python executable* empty to run in-process. Then the stack must be in QGIS's
+Python — on Windows install it from the **OSGeo4W Shell** (Start ▸ QGIS ▸ OSGeo4W
+Shell), then restart QGIS:
+
+```
+python -m pip install pystac-client planetary-computer odc-stac xarray \
+    rioxarray rasterio dask geopandas pymannkendall duckdb pydantic pyyaml bottleneck
+```
 
 ## Install
 

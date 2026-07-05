@@ -40,14 +40,20 @@ def missing_dependencies() -> list[str]:
 
 
 def install_hint(missing: list[str]) -> str:
-    """A copy-pasteable message telling the user how to install into QGIS Python."""
+    """Explain how to satisfy the datacube stack, recommending an external venv."""
     pkgs = " ".join(missing)
     return (
-        "ScruTech needs the VegeVigie datacube stack, which is not installed in this "
-        "QGIS Python environment.\n\n"
-        f"Missing: {pkgs}\n\n"
-        "Install it into *this* interpreter (OSGeo4W Shell on Windows, or your QGIS "
-        "Python), for example:\n"
-        f'    "{sys.executable}" -m pip install {pkgs}\n\n'
-        "Then restart QGIS. See the plugin README for details."
+        "ScruTech needs the VegeVigie datacube stack, which is not available in QGIS's "
+        f"Python.\n\nMissing: {pkgs}\n\n"
+        "RECOMMENDED — don't install into QGIS (rasterio/GDAL can clash with QGIS's own "
+        "GDAL). Instead point the algorithm's 'Python executable' parameter at a venv "
+        "that already has the stack, e.g. the project's uv venv:\n"
+        "    <repo>/vegevigie/.venv/Scripts/python.exe   (Windows)\n"
+        "    <repo>/vegevigie/.venv/bin/python            (macOS/Linux)\n"
+        "ScruTech then runs the engine there and only loads the result layers.\n\n"
+        "ALTERNATIVELY, install into QGIS's Python via the OSGeo4W Shell "
+        "(Start ▸ QGIS ▸ OSGeo4W Shell), then restart QGIS:\n"
+        f"    python -m pip install {pkgs}\n\n"
+        f"(This QGIS runtime is: {sys.executable})\n"
+        "See the plugin README for details."
     )
