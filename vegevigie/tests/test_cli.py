@@ -9,6 +9,8 @@ from vegevigie.cli import app
 runner = CliRunner()
 
 STAGES = ["aoi", "search", "cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
+# Stages still awaiting implementation (M2+); aoi/search landed in M1.
+STUB_STAGES = ["cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
 
 
 def test_help_runs() -> None:
@@ -24,7 +26,7 @@ def test_version() -> None:
     assert __version__ in result.output
 
 
-@pytest.mark.parametrize("stage", STAGES)
+@pytest.mark.parametrize("stage", STUB_STAGES)
 def test_stub_stages_report_milestone(stage: str) -> None:
     result = runner.invoke(app, [stage])
     assert result.exit_code == 1

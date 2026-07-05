@@ -8,10 +8,15 @@ Sentinel-2 imagery: NDVI time series, statistically significant greening/brownin
 (Mann-Kendall + Sen's slope), and drought-stress flags — aggregated to the commune level
 for the Ardèche département and served through a small dashboard.
 
-> **Status: M0 (scaffold).** The CLI is wired, config is validated, lint/tests/CI are green.
-> Pipeline stages land milestone by milestone — see `CLAUDE.md` §6 for the roadmap.
-> The full portfolio README (hero images, architecture diagram, methodology) is the M8
-> deliverable.
+> **Status: M1 (AOI + STAC search).** `aoi` builds the analysis footprint from admin
+> boundaries; `search` queries Sentinel-2 on Planetary Computer and caches the item list.
+> Config is validated, lint/tests/CI are green. Later stages land milestone by milestone —
+> see `CLAUDE.md` §6. The full portfolio README (architecture diagram, methodology) is M8.
+
+![AOI preview](docs/aoi_preview.png)
+
+*Smoke-test AOI: 15 communes of southern Ardèche (incl. Alba-la-Romaine) inside the
+default bbox, over the full département outline.*
 
 ## Quickstart
 
@@ -19,7 +24,17 @@ for the Ardèche département and served through a small dashboard.
 cd vegevigie
 uv sync
 uv run vegevigie --help
+
+# M1 — build the AOI and search for scenes (small bbox, one year)
+uv run vegevigie aoi --small
+uv run vegevigie search --small --start 2020 --end 2020
 ```
+
+> **Network note.** `search` needs outbound access to
+> `planetarycomputer.microsoft.com`. Under a restricted egress policy it reports the
+> blocked host and exits cleanly — allowlist that host (or run outside the sandbox) to
+> fetch scenes. The boundary source (`aoi`) uses the reachable `france-geojson` mirror of
+> official IGN data; see `src/vegevigie/aoi.py`.
 
 ## Development
 
