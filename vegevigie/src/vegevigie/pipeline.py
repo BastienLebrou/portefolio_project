@@ -105,6 +105,8 @@ def run_pipeline(
 
     # Imported here so the module (and QGIS plugin load) don't pay for the heavy
     # datacube stack until an analysis actually runs.
+    import rioxarray  # noqa: F401 — registers the .rio accessor used below
+
     from vegevigie.catalog import (
         PlanetaryComputerBackend,
         build_search_params,
@@ -145,6 +147,8 @@ def run_pipeline(
         chunk_size=settings.raster.chunk_size,
     )
     crs = cube.rio.crs
+    if crs is None and hasattr(cube, "odc"):
+        crs = cube.odc.geobox.crs  # odc-stac always attaches a geobox
 
     report(45, "Cloud-masking + NDVI + monthly composites…")
     ndvi = masked_ndvi(cube["red"], cube["nir"], cube["scl"]).rename("ndvi")
