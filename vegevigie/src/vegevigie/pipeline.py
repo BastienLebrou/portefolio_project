@@ -188,7 +188,7 @@ def run_pipeline(
     if zones is not None and len(zones):
         report(92, f"Zonal aggregation over {len(zones)} zones…")
         result.zonal_parquet, result.duckdb_path = _run_zonal(
-            settings, zones, trend, mean_anomaly, min_vci, start, end
+            settings, zones, trend, mean_anomaly, min_vci, start, end, crs
         )
 
     result.written = [
@@ -213,16 +213,21 @@ def _run_zonal(
     min_vci: xr.DataArray,
     start: int,
     end: int,
+    crs: object,
 ) -> tuple[Path, Path]:
+    import rioxarray  # noqa: F401 — registers .rio (may run in a fresh process)
+
     from vegevigie.store import write_duckdb, write_geoparquet
     from vegevigie.zonal import commune_stats
 
+    # The trend/drought arrays can lose their CRS through apply_ufunc/reductions;
+    # stamp it back so rasterize_zones can reproject the zones onto the grid.
     stats = commune_stats(
         zones,
-        sen_slope=trend["sen_slope"],
-        trend_class=trend["trend_class"],
-        mean_anomaly=mean_anomaly,
-        min_vci=min_vci,
+        sen_slope=trend["sen_slope"].rio.write_crs(crs),
+        trend_class=trend["trend_class"].rio.write_crs(crs),
+        mean_anomaly=mean_anomaly.rio.write_crs(crs),
+        min_vci=min_vci.rio.write_crs(crs),
     )
     parquet = settings.paths.processed / f"zonal_stats_{start}_{end}.parquet"
     duckdb_path = settings.paths.processed / "vegevigie.duckdb"
