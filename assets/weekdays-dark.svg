@@ -21,6 +21,7 @@
 <text x="217" y="228" font-size="11" fill="#898781" text-anchor="middle">Jeu</text>
 <path d="M 253.86 206.00 V 197.67 Q 253.86 193.67 257.86 193.67 H 273.86 Q 277.86 193.67 277.86 197.67 V 206.00 Z" fill="#3987e5"/>
 <text x="265.857" y="228" font-size="11" fill="#898781" text-anchor="middle">Ven</text>
+<path d="M 302.71 206.00 V 197.67 Q 302.71 193.67 306.71 193.67 H 322.71 Q 326.71 193.67 326.71 197.67 V 206.00 Z" fill="#3987e5"/>
 <text x="314.714" y="228" font-size="11" fill="#898781" text-anchor="middle">Sam</text>
 <path d="M 351.57 206.00 V 62.00 Q 351.57 58.00 355.57 58.00 H 371.57 Q 375.57 58.00 375.57 62.00 V 206.00 Z" fill="#3987e5"/>
 <text x="363.571" y="52" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">12</text>
