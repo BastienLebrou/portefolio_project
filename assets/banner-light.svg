@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="190" viewBox="0 0 840 190" role="img" aria-label="Bannière du portfolio de Bastien Lebrou — géomatique et données géospatiales" font-family="system-ui, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif">
+<title>Bannière du portfolio de Bastien Lebrou — géomatique et données géospatiales</title>
+<rect x="0.5" y="0.5" width="839" height="189" rx="12" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
+<text x="32" y="78" font-size="34" fill="#0b0b0b" font-weight="700">Bastien Lebrou</text>
+<text x="32" y="106" font-size="14" fill="#52514e">Géomatique · Ingénierie de données géospatiales · Télédétection</text>
+<rect x="32" y="126" width="62" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="63" y="143" font-size="12" fill="#898781" text-anchor="middle">Python</text>
+<rect x="102" y="126" width="48" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="126" y="143" font-size="12" fill="#898781" text-anchor="middle">QGIS</text>
+<rect x="158" y="126" width="68" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="192" y="143" font-size="12" fill="#898781" text-anchor="middle">PostGIS</text>
+<rect x="234" y="126" width="62" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="265" y="143" font-size="12" fill="#898781" text-anchor="middle">DuckDB</text>
+<rect x="304" y="126" width="88" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="348" y="143" font-size="12" fill="#898781" text-anchor="middle">GeoParquet</text>
+<rect x="400" y="126" width="62" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="431" y="143" font-size="12" fill="#898781" text-anchor="middle">xarray</text>
+<rect x="470" y="126" width="88" height="26" rx="13" fill="none" stroke="rgba(11,11,11,0.10)"/>
+<text x="514" y="143" font-size="12" fill="#898781" text-anchor="middle">Sentinel-2</text>
+<circle cx="610" cy="36" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="610" cy="60" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="610" cy="84" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="610" cy="108" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<circle cx="610" cy="132" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="610" cy="156" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<circle cx="634" cy="36" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="634" cy="60" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="634" cy="84" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="634" cy="108" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<circle cx="634" cy="132" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="634" cy="156" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<circle cx="658" cy="36" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="658" cy="60" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="658" cy="84" r="3.6" fill="#3987e5" opacity="0.9"/>
+<circle cx="658" cy="108" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="658" cy="132" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="658" cy="156" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="682" cy="36" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="682" cy="60" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="682" cy="84" r="3.6" fill="#3987e5" opacity="0.9"/>
+<circle cx="682" cy="108" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="682" cy="132" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="682" cy="156" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="706" cy="36" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="706" cy="60" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="706" cy="84" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="706" cy="108" r="3.6" fill="#184f95" opacity="0.9"/>
+<circle cx="706" cy="132" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="706" cy="156" r="3.6" fill="#184f95" opacity="0.9"/>
+<circle cx="730" cy="36" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="730" cy="60" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="730" cy="84" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="730" cy="108" r="3.6" fill="#184f95" opacity="0.9"/>
+<circle cx="730" cy="132" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="730" cy="156" r="3.6" fill="#184f95" opacity="0.9"/>
+<circle cx="754" cy="36" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="754" cy="60" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="754" cy="84" r="3.6" fill="#3987e5" opacity="0.9"/>
+<circle cx="754" cy="108" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="754" cy="132" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="754" cy="156" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="778" cy="36" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="778" cy="60" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="778" cy="84" r="3.6" fill="#3987e5" opacity="0.9"/>
+<circle cx="778" cy="108" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="778" cy="132" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="778" cy="156" r="3.6" fill="#6da7ec" opacity="0.9"/>
+<circle cx="802" cy="36" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="802" cy="60" r="3.6" fill="#0d366b" opacity="0.9"/>
+<circle cx="802" cy="84" r="3.6" fill="#256abf" opacity="0.9"/>
+<circle cx="802" cy="108" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<circle cx="802" cy="132" r="3.6" fill="#cde2fb" opacity="0.9"/>
+<circle cx="802" cy="156" r="3.6" fill="#9ec5f4" opacity="0.9"/>
+<path d="M 608 172 L 652 166 L 696 168 L 740 156 L 784 150 L 816 142" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="816" cy="142" r="6.5" fill="#fcfcfb"/>
+<circle cx="816" cy="142" r="4.5" fill="#2a78d6"/>
+</svg>
