@@ -121,7 +121,12 @@ def write_zarr(cube: xr.Dataset, path: Path, force: bool = False) -> Path:
 
 
 def open_zarr(path: Path) -> xr.Dataset:
-    """Open a cached datacube written by :func:`write_zarr` (lazy)."""
+    """Open a cached datacube written by :func:`write_zarr` (lazy).
+
+    ``decode_coords="all"`` re-attaches CF grid-mapping variables (``spatial_ref``)
+    as coordinates, so ``.rio.crs`` survives the zarr round-trip regardless of
+    whether the writer recorded the CRS via attrs or encoding.
+    """
     import xarray as xr
 
-    return xr.open_zarr(path)
+    return xr.open_zarr(path, decode_coords="all")

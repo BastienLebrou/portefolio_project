@@ -27,6 +27,15 @@ def write_geoparquet(gdf: gpd.GeoDataFrame, path: Path) -> Path:
     return path
 
 
+def write_gpkg(gdf: gpd.GeoDataFrame, path: Path, layer: str = "stats") -> Path:
+    """Write a GeoDataFrame to a GeoPackage — the QGIS-facing twin of the
+    GeoParquet output (every QGIS build reads GPKG; Parquet needs a GDAL driver
+    that not all builds ship)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    gdf.to_file(path, driver="GPKG", layer=layer)
+    return path
+
+
 def write_duckdb(df: pd.DataFrame, db_path: Path, table: str) -> Path:
     """Write a (geometry-free) DataFrame to a DuckDB table, replacing it if present."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
