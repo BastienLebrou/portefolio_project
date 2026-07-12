@@ -277,11 +277,14 @@ until M0–M8 land, unless asked):
 - Likely shape: a QGIS **Processing** plugin ("ScruTech") exposing one algorithm per
   stage plus a "run all" model, reusing `src/vegevigie` as the engine.
 
-**Status:** an initial ScruTech plugin now exists in `qgis_plugin/` (built on request):
-a Processing provider with a one-click *Analyze extent* algorithm + a *Load communes*
-helper, driven by the shared `vegevigie.pipeline.run_pipeline` engine. It's validated by
-compile/import here (no QGIS runtime in the build env); needs a live QGIS + the datacube
-stack in QGIS's Python. Next: per-stage algorithms, a "run all" model, styled outputs.
-The detailed analysis, feature proposals and function-interconnection plan (stage
-functions + run manifest + `qgis_runner --stage` + algorithm base class, milestones
-S1–S5) live in `qgis_plugin/ROADMAP.md` — follow that document.
+**Status:** ScruTech v0.2.0 lives in `qgis_plugin/`: the one-click *Analyze extent*
+plus the pipeline exposed **stage by stage** (search / composites / trend / drought /
+zonal / rank) with declared outputs chainable in the Model Designer. The engine spine
+behind it is `src/vegevigie/stages.py` — idempotent stage functions + a run manifest
+(`scrutech_run.json`) — with `qgis_runner` dispatching single stages to an external
+interpreter and the plugin's `protocol.py`/`base.py` sharing one payload contract for
+both execution modes. Result layers auto-style from bundled QMLs; communes load
+QGIS-natively for every département. Everything is compile/offline-test validated here
+(no QGIS runtime in this env) — a live-QGIS pass is still pending. The findings,
+remaining features (model3 file, HTML report, CDSE, i18n…) and the interconnection
+architecture live in `qgis_plugin/ROADMAP.md` — follow that document.

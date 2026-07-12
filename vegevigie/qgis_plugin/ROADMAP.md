@@ -4,6 +4,26 @@
 ScruTech QGIS plugin (CLAUDE.md §11 says to carry this plan across sessions).
 Language is English per repo convention (§7); the owner discussion happened in French.*
 
+## Status (updated July 2026, implementation session)
+
+**Landed** — S1 and S2 in full, plus slices of S3/S4: stage functions +
+`RunManifest` (`vegevigie/stages.py`), `run_pipeline` recomposed on the stages,
+`qgis_runner` stage dispatch + heartbeat, plugin `protocol.py` + `base.py`, the
+six per-stage algorithms with declared outputs, *Analyze extent* refactored and
+surfacing every product (findings 1–3, 6–11 fixed), bundled QML styles (N3),
+QGIS-native commune loader for all départements (N8, findings 4–5), interpreter
+persistence/auto-detection (N11→done). Engine spine covered by offline tests
+(`test_stages.py`, `test_qgis_runner.py`, `test_scrutech_protocol.py`).
+
+**Still open** — prebuilt `.model3` file (N2; per-stage chaining works, the
+shipped model is pending a live-QGIS session to author/validate it), HTML run
+report (N5), time-series probe (N6), Check/Bootstrap environment algorithms
+(N7), pre-flight cost estimate (N9), polygon AOI masking (N10), CDSE backend
+(N11), French i18n (N12), rewiring the CLI commands onto the stage functions
+(they still carry their own zarr-based contracts), finding 12's plugin-side
+tests beyond the protocol, and a live-QGIS validation pass of the new
+algorithms + QMLs (this environment has no QGIS runtime).
+
 ---
 
 ## 1. Where things stand
