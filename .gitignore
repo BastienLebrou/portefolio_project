@@ -6,6 +6,8 @@
 !/.github/
 !/_data_center_sig/
 !/vegevigie/
+!/assets/
+!/scripts/
 
 # Données réelles (téléchargées via les scripts, ou fournies) — non versionnées
 _data_center_sig/Data_alba/

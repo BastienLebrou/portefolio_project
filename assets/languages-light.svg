@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="408" height="240" viewBox="0 0 408 240" role="img" aria-label="Répartition des langages du dépôt en pourcentage d'octets" font-family="system-ui, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif">
+<title>Répartition des langages du dépôt en pourcentage d'octets</title>
+<rect x="0.5" y="0.5" width="407" height="239" rx="12" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
+<text x="24" y="30" font-size="15" fill="#0b0b0b" font-weight="600">Langages</text>
+<text x="24" y="47" font-size="12" fill="#52514e">Part des octets sources suivis par Git</text>
+<clipPath id="strip"><rect x="24" y="92" width="360" height="12" rx="6"/></clipPath>
+<g clip-path="url(#strip)">
+<rect x="24.00" y="92" width="232.65" height="12" fill="#2a78d6"/>
+<rect x="258.65" y="92" width="115.94" height="12" fill="#1baf7a"/>
+<rect x="376.59" y="92" width="1.83" height="12" fill="#eda100"/>
+<rect x="380.42" y="92" width="1.50" height="12" fill="#008300"/>
+<rect x="382.26" y="92" width="1.50" height="12" fill="#e34948"/>
+<rect x="383.62" y="92" width="1.50" height="12" fill="#898781"/>
+</g>
+<rect x="24" y="124" width="10" height="10" rx="3" fill="#2a78d6"/>
+<text x="41" y="134" font-size="12" fill="#52514e">Python</text>
+<text x="190" y="134" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">65,2 %</text>
+<rect x="204" y="124" width="10" height="10" rx="3" fill="#1baf7a"/>
+<text x="221" y="134" font-size="12" fill="#52514e">Markdown</text>
+<text x="370" y="134" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">32,8 %</text>
+<rect x="24" y="154" width="10" height="10" rx="3" fill="#eda100"/>
+<text x="41" y="164" font-size="12" fill="#52514e">YAML</text>
+<text x="190" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">1,1 %</text>
+<rect x="204" y="154" width="10" height="10" rx="3" fill="#008300"/>
+<text x="221" y="164" font-size="12" fill="#52514e">TOML</text>
+<text x="370" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,5 %</text>
+<rect x="24" y="184" width="10" height="10" rx="3" fill="#e34948"/>
+<text x="41" y="194" font-size="12" fill="#52514e">Texte</text>
+<text x="190" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,4 %</text>
+<rect x="204" y="184" width="10" height="10" rx="3" fill="#898781"/>
+<text x="221" y="194" font-size="12" fill="#52514e">Autres</text>
+<text x="370" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,1 %</text>
+</svg>

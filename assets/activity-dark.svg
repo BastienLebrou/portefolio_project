@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="240" viewBox="0 0 840 240" role="img" aria-label="Histogramme des commits par semaine sur les 26 dernières semaines" font-family="system-ui, 'Segoe UI', Ubuntu, Helvetica, Arial, sans-serif">
+<title>Histogramme des commits par semaine sur les 26 dernières semaines</title>
+<rect x="0.5" y="0.5" width="839" height="239" rx="12" fill="#1a1a19" stroke="rgba(255,255,255,0.10)"/>
+<text x="24" y="30" font-size="15" fill="#ffffff" font-weight="600">Activité du dépôt</text>
+<text x="24" y="47" font-size="12" fill="#c3c2b7">Commits par semaine — 26 dernières semaines</text>
+<line x1="46" y1="206.0" x2="820" y2="206.0" stroke="#383835" stroke-width="1"/>
+<text x="38" y="210" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">0</text>
+<line x1="46" y1="169.0" x2="820" y2="169.0" stroke="#2c2c2a" stroke-width="1"/>
+<text x="38" y="173" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">3</text>
+<line x1="46" y1="132.0" x2="820" y2="132.0" stroke="#2c2c2a" stroke-width="1"/>
+<text x="38" y="136" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">6</text>
+<line x1="46" y1="95.0" x2="820" y2="95.0" stroke="#2c2c2a" stroke-width="1"/>
+<text x="38" y="99" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">9</text>
+<line x1="46" y1="58.0" x2="820" y2="58.0" stroke="#2c2c2a" stroke-width="1"/>
+<text x="38" y="62" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">12</text>
+<text x="60.8846" y="228" font-size="11" fill="#898781" text-anchor="middle">janv.</text>
+<text x="150.192" y="228" font-size="11" fill="#898781" text-anchor="middle">févr.</text>
+<text x="269.269" y="228" font-size="11" fill="#898781" text-anchor="middle">mars</text>
+<text x="418.115" y="228" font-size="11" fill="#898781" text-anchor="middle">avr.</text>
+<text x="537.192" y="228" font-size="11" fill="#898781" text-anchor="middle">mai</text>
+<text x="656.269" y="228" font-size="11" fill="#898781" text-anchor="middle">juin</text>
+<path d="M 676.81 206.00 V 197.67 Q 676.81 193.67 680.81 193.67 H 691.27 Q 695.27 193.67 695.27 197.67 V 206.00 Z" fill="#3987e5"/>
+<path d="M 736.35 206.00 V 148.33 Q 736.35 144.33 740.35 144.33 H 750.81 Q 754.81 144.33 754.81 148.33 V 206.00 Z" fill="#3987e5"/>
+<path d="M 766.12 206.00 V 62.00 Q 766.12 58.00 770.12 58.00 H 780.57 Q 784.57 58.00 784.57 62.00 V 206.00 Z" fill="#3987e5"/>
+<text x="775.346" y="52" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">12</text>
+<path d="M 795.89 206.00 V 185.33 Q 795.89 181.33 799.89 181.33 H 810.34 Q 814.34 181.33 814.34 185.33 V 206.00 Z" fill="#3987e5"/>
+<text x="805.115" y="175.333" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">2</text>
+<text x="805.115" y="228" font-size="11" fill="#898781" text-anchor="middle">juil.</text>
+</svg>
