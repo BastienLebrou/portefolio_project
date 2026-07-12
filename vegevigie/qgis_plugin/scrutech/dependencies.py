@@ -18,6 +18,7 @@ REQUIRED: dict[str, str] = {
     "rioxarray": "rioxarray",
     "rasterio": "rasterio",
     "dask": "dask",
+    "bottleneck": "bottleneck",
     "geopandas": "geopandas",
     "pymannkendall": "pymannkendall",
     "duckdb": "duckdb",

@@ -56,7 +56,7 @@ class _Heartbeat:
         self._stop.set()
 
 
-def _settings_for(spec: dict[str, Any]) -> Any:
+def settings_for_spec(spec: dict[str, Any]) -> Any:
     """Build Settings from the spec (entry stages) or the run-folder manifest."""
     from vegevigie.pipeline import build_settings
     from vegevigie.stages import STAGE_SEARCH, load_manifest_settings
@@ -84,14 +84,21 @@ def _load_zones(spec: dict[str, Any]) -> Any:
     return gpd.read_file(spec["zones_path"])
 
 
-def _run_all(spec: dict[str, Any], settings: Any) -> dict[str, Any]:
+def run_all_payload(
+    spec: dict[str, Any], settings: Any, progress: Any = _progress
+) -> dict[str, Any]:
+    """Run the full pipeline for ``spec`` and shape the result payload.
+
+    Public because the ScruTech base algorithm reuses it for in-process runs, so
+    both execution modes hand the plugin the exact same payload shape.
+    """
     from vegevigie.pipeline import run_pipeline
 
     result = run_pipeline(
         settings,
         zones=_load_zones(spec),
         force=bool(spec.get("force")),
-        progress=_progress,
+        progress=progress,
     )
     return {
         "stage": STAGE_ALL,
@@ -108,7 +115,10 @@ def _run_all(spec: dict[str, Any], settings: Any) -> dict[str, Any]:
     }
 
 
-def _run_single(spec: dict[str, Any], settings: Any, stage: str) -> dict[str, Any]:
+def run_stage_payload(
+    spec: dict[str, Any], settings: Any, stage: str, progress: Any = _progress
+) -> dict[str, Any]:
+    """Run one stage for ``spec`` and shape the result payload (see run_all_payload)."""
     from vegevigie.stages import run_stage
 
     outcome = run_stage(
@@ -116,7 +126,7 @@ def _run_single(spec: dict[str, Any], settings: Any, stage: str) -> dict[str, An
         settings,
         zones=_load_zones(spec),
         force=bool(spec.get("force")),
-        progress=_progress,
+        progress=progress,
         metric=spec.get("metric", "mean_sen_slope"),
         ascending=bool(spec.get("ascending", False)),
         limit=int(spec.get("limit", 10)),
@@ -139,12 +149,12 @@ def main(argv: list[str] | None = None) -> int:
     stage = spec.get("stage", STAGE_ALL)
     heartbeat = float(spec.get("heartbeat", DEFAULT_HEARTBEAT_SECONDS))
     try:
-        settings = _settings_for(spec)
+        settings = settings_for_spec(spec)
         with _Heartbeat(heartbeat):
             payload = (
-                _run_all(spec, settings)
+                run_all_payload(spec, settings)
                 if stage == STAGE_ALL
-                else _run_single(spec, settings, stage)
+                else run_stage_payload(spec, settings, stage)
             )
     except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
         print("RESULT " + json.dumps({"error": str(exc), "stage": stage}), flush=True)
