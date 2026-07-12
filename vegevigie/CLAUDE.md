@@ -282,3 +282,6 @@ a Processing provider with a one-click *Analyze extent* algorithm + a *Load comm
 helper, driven by the shared `vegevigie.pipeline.run_pipeline` engine. It's validated by
 compile/import here (no QGIS runtime in the build env); needs a live QGIS + the datacube
 stack in QGIS's Python. Next: per-stage algorithms, a "run all" model, styled outputs.
+The detailed analysis, feature proposals and function-interconnection plan (stage
+functions + run manifest + `qgis_runner --stage` + algorithm base class, milestones
+S1–S5) live in `qgis_plugin/ROADMAP.md` — follow that document.
