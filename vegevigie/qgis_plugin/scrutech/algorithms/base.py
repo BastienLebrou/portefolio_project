@@ -24,6 +24,8 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingLayerPostProcessorInterface,
+    QgsProcessingParameterBoolean,
+    QgsProcessingParameterDefinition,
     QgsProcessingParameterFile,
     QgsProcessingParameterFolderDestination,
     QgsProcessingUtils,
@@ -77,6 +79,7 @@ class ScruTechAlgorithmBase(QgsProcessingAlgorithm):
     PYTHON_EXE = "PYTHON_EXE"
     RUN_FOLDER = "RUN_FOLDER"
     OUTPUT_FOLDER = "OUTPUT_FOLDER"
+    FORCE = "FORCE"
 
     def tr(self, string: str) -> str:
         return QCoreApplication.translate("ScruTech", string)
@@ -111,6 +114,21 @@ class ScruTechAlgorithmBase(QgsProcessingAlgorithm):
                 behavior=QgsProcessingParameterFile.Folder,
             )
         )
+
+    def add_force_parameter(self) -> None:
+        param = QgsProcessingParameterBoolean(
+            self.FORCE,
+            self.tr("Force recompute (ignore cached stage outputs)"),
+            defaultValue=False,
+        )
+        param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(param)
+
+    def init_downstream_parameters(self) -> None:
+        """The parameter trio every post-search stage shares."""
+        self.add_run_folder_parameter()
+        self.add_python_parameter()
+        self.add_force_parameter()
 
     def default_python(self) -> str:
         """Best-effort interpreter default: QgsSettings > env var > repo venv."""
@@ -197,6 +215,28 @@ class ScruTechAlgorithmBase(QgsProcessingAlgorithm):
         if python_exe:
             return self._run_external(spec, python_exe, out_folder, feedback)
         return self._run_in_process(spec, feedback)
+
+    def run_downstream(
+        self,
+        stage: str,
+        parameters: dict,
+        context: QgsProcessingContext,
+        feedback: QgsProcessingFeedback,
+        **extra: object,
+    ) -> tuple[dict, Path]:
+        """Run a post-search stage against a run folder; returns (payload, folder)."""
+        run_folder = self.resolve_run_folder(parameters, context)
+        python_exe = self.resolve_python(parameters, context)
+        spec = protocol.build_spec(
+            stage,
+            str(run_folder),
+            force=self.parameterAsBoolean(parameters, self.FORCE, context),
+            **extra,
+        )
+        payload = self.run_spec(spec, python_exe, run_folder, feedback)
+        if payload.get("skipped"):
+            feedback.pushInfo(self.tr("Stage was up to date — reused cached outputs."))
+        return payload, run_folder
 
     def _run_in_process(self, spec: dict, feedback: QgsProcessingFeedback) -> dict:
         from ..dependencies import install_hint, missing_dependencies
