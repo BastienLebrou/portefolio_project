@@ -1,0 +1,16 @@
+[general]
+name=EUDR & Climate Risk Analyzer
+description=Assess mock EUDR deforestation risk and 2050 climate stress for supplier locations.
+version=0.1.0
+qgisMinimumVersion=3.28
+author=Harog
+email=
+category=Vector
+tags=EUDR,climate risk,deforestation,supply chain,ESG
+homepage=
+tracker=
+repository=
+experimental=True
+deprecated=False
+
+about=Foundational QGIS 3.x plugin for loading supplier coordinate CSV files, creating temporary point layers, generating mock EUDR and climate risk scores, styling risk outputs, and displaying supplier-level results.
