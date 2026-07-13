@@ -1,14 +1,14 @@
 [general]
 name=ScruTech
 qgisMinimumVersion=3.28
-description=One-click vegetation trend & drought analysis over an extent, from Sentinel-2 (VegeVigie engine).
-about=ScruTech wraps the VegeVigie geodata pipeline as turnkey QGIS Processing tools: search Sentinel-2, build a datacube, mask clouds, compute NDVI monthly composites, run per-pixel Mann-Kendall + Sen's slope trend and NDVI-anomaly drought stress, and aggregate to zones — all from a single "Analyze extent" algorithm. Requires a Python environment with the datacube stack (see the plugin README); needs outbound access to Microsoft Planetary Computer.
-version=0.1.0
+description=Turnkey geodata tools in QGIS: vegetation trend & drought (VegeVigie) and forest/built-up fire interface (PAF).
+about=ScruTech wraps reproducible geodata pipelines as QGIS Processing tools. VegeVigie: search Sentinel-2, build a datacube, mask clouds, compute NDVI monthly composites, run per-pixel Mann-Kendall + Sen's slope trend and NDVI-anomaly drought stress, aggregate to zones. PAF (forest fire): compute the Wildland-Urban Interface — the frontier line and contact band between forest and built-up areas (débroussaillement / defence zone). The VegeVigie datacube tools need a Python environment with the datacube stack (see the plugin README) and outbound access to Microsoft Planetary Computer; the PAF interface tool only needs GeoPandas/Shapely.
+version=0.2.0
 author=Bastien Lebrou
 email=bastienlebrou1@gmail.com
-tracker=https://github.com/JADORLAVIE/portefolio_project/issues
-repository=https://github.com/JADORLAVIE/portefolio_project
-tags=remote sensing,sentinel-2,ndvi,trend,drought,vegetation,mann-kendall,stac,datacube
+tracker=https://github.com/BastienLebrou/portefolio_project/issues
+repository=https://github.com/BastienLebrou/portefolio_project
+tags=remote sensing,sentinel-2,ndvi,trend,drought,vegetation,mann-kendall,stac,datacube,wildfire,wildland-urban interface,forest
 category=Analysis
 icon=icon.svg
 experimental=True
