@@ -19,9 +19,12 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent
+REPO_ROOT = PROJECT.parent  # sibling projects (ecobuage, sdbpi, …) live here
 PLUGIN = HERE / "scrutech"
 ENGINE_SRC = PROJECT / "src" / "vegevigie"
 CONFIG_SRC = PROJECT / "config" / "default.yaml"
+# Single-module engines from sibling projects, bundled flat next to the plugin.
+EXTRA_MODULES = {"ecobuage": REPO_ROOT / "ecobuage" / "ecobuage.py"}
 DIST = HERE / "dist"
 
 
@@ -36,6 +39,16 @@ def bundle_engine() -> None:
     shutil.copy2(CONFIG_SRC, dest_cfg / "default.yaml")
     print(f"Bundled engine -> {dest_pkg}")
     print(f"Bundled config -> {dest_cfg / 'default.yaml'}")
+
+
+def bundle_extras() -> None:
+    """Copy single-module sibling engines (e.g. ecobuage) flat into the plugin."""
+    for name, src in EXTRA_MODULES.items():
+        if not src.exists():
+            print(f"Skipped '{name}' engine (not found at {src}) — its algorithm won't run.")
+            continue
+        shutil.copy2(src, PLUGIN / src.name)
+        print(f"Bundled {name} -> {PLUGIN / src.name}")
 
 
 def make_zip() -> Path:
@@ -54,6 +67,7 @@ def make_zip() -> Path:
 
 def main() -> None:
     bundle_engine()
+    bundle_extras()
     make_zip()
 
 

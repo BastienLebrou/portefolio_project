@@ -10,6 +10,12 @@ Turnkey QGIS Processing tools for the ScruTech pillars, straight from QGIS:
   line and contact band between a forest layer and a built-up layer (the
   débroussaillement / defence zone). Lightweight: GeoPandas/Shapely only, no
   datacube stack, no internet.
+- **Écobuage** — **Aptitude à l'écobuage** scores controlled-burn suitability from
+  aligned criterion rasters into a 0-100 map + 3-class zoning (weighted
+  multi-criteria). GDAL/numpy only (bundled with QGIS), no internet.
+
+ScruTech is a **hub**: one Processing provider gathering the ScruTech projects as
+turnkey tools.
 
 ## How it works
 
@@ -102,6 +108,19 @@ Outputs (GeoTIFF + GeoParquet) are written to the folder and loaded as layers:
 
    Frontier length (km) and band area (ha) are printed in the log. Needs only
    GeoPandas/Shapely (bundled engine) — no internet, no datacube stack.
+
+## Use — écobuage aptitude (multi-criteria)
+
+1. **Processing Toolbox ▸ ScruTech ▸ Écobuage ▸ Aptitude à l'écobuage**.
+2. Provide **aligned** criterion rasters (same grid): combustible, embroussaillement,
+   accessibility and fire history in `[0, 1]`; slope in percent; plus an optional
+   **exclusion** mask (>0 = à exclure).
+3. Adjust the **weights** if needed (default 25/25/20/15/15).
+4. **Run** → two rasters: **Aptitude (0-100)** and **Classes** (0 exclure /
+   1 à étudier / 2 prioritaire). Pixel counts per class are printed in the log.
+
+   Align the criterion rasters first (e.g. *GDAL ▸ Warp* or *Align rasters*). GDAL +
+   numpy only — no internet, no datacube stack.
 
 ## Notes & limits
 
