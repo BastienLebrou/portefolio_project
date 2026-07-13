@@ -8,8 +8,8 @@ Turnkey QGIS Processing tools for the ScruTech pillars, straight from QGIS:
   loads the result layers into your project.
 - **PAF (forest fire)** — **Interface habitat-forêt (WUI)** computes the frontier
   line and contact band between a forest layer and a built-up layer (the
-  débroussaillement / defence zone). Lightweight: GeoPandas/Shapely only, no
-  datacube stack, no internet.
+  débroussaillement / defence zone). Native QGIS geometry only — no extra
+  dependencies, no datacube stack, no internet.
 - **Écobuage** — **Aptitude à l'écobuage** scores controlled-burn suitability from
   aligned criterion rasters into a 0-100 map + 3-class zoning (weighted
   multi-criteria). GDAL/numpy only (bundled with QGIS), no internet.
@@ -106,8 +106,8 @@ Outputs (GeoTIFF + GeoParquet) are written to the folder and loaded as layers:
    - **Interface line** — the forest edge within the contact distance of a building;
    - **Interface zone** — the forest band to defend/clear.
 
-   Frontier length (km) and band area (ha) are printed in the log. Needs only
-   GeoPandas/Shapely (bundled engine) — no internet, no datacube stack.
+   Frontier length (km) and band area (ha) are printed in the log. Native QGIS
+   geometry only — no extra dependencies, no internet, no datacube stack.
 
 ## Use — écobuage aptitude (multi-criteria)
 
