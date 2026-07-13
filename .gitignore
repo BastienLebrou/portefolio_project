@@ -1,0 +1,13 @@
+# ALLOWLIST STRICTE — ne versionner QUE les projets listés ci-dessous.
+# Le reste du portfolio local peut contenir des dossiers à NE PAS publier.
+/*
+!/.gitignore
+!/README.md
+!/.github/
+!/_data_center_sig/
+!/vegevigie/
+!/assets/
+!/scripts/
+
+# Données réelles (téléchargées via les scripts, ou fournies) — non versionnées
+_data_center_sig/Data_alba/

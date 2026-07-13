@@ -1,0 +1,44 @@
+# Mise à jour automatique du portfolio.
+#
+# Toutes les 48 h (et à la demande via « Run workflow ») :
+#   1. régénère les statistiques et les graphiques SVG depuis l'historique Git,
+#   2. committe le résultat — avec un commit vide de « point d'activité » si
+#      rien n'a changé — pour garantir au moins un commit tous les deux jours.
+#
+# Les commits sont signés avec l'identité du propriétaire pour être comptés
+# dans le graphe de contributions (l'e-mail doit être lié au compte GitHub).
+# Rappel : les workflows planifiés ne tournent que sur la branche par défaut.
+
+name: Portfolio
+
+on:
+  schedule:
+    - cron: "47 6 */2 * *" # les jours impairs à 06:47 UTC (~08:47 à Paris l'été)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: portfolio-update
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # historique complet, nécessaire aux stats d'activité
+
+      - name: Régénérer les statistiques et les graphiques
+        run: python3 scripts/generate_stats.py
+
+      - name: Committer et pousser (commit vide si aucun changement)
+        run: |
+          git config user.name "Bastien Lebrou"
+          git config user.email "bastienlebrou1@gmail.com"
+          git add -A
+          git commit -m "chore(portfolio): mise à jour auto des stats du $(date -u +%Y-%m-%d)" \
+            || git commit --allow-empty -m "chore(portfolio): point d'activité du $(date -u +%Y-%m-%d)"
+          git push

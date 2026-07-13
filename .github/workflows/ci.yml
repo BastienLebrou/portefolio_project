@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "vegevigie/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "vegevigie/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  vegevigie:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vegevigie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "vegevigie/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Type-check (mypy)
+        run: uv run mypy
+
+      - name: Tests (pytest)
+        run: uv run pytest
