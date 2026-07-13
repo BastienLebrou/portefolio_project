@@ -8,6 +8,7 @@ from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
 from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
+from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
 
@@ -19,6 +20,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(LoadCommunesAlgorithm())
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
+        self.addAlgorithm(EcobuageAptitudeAlgorithm())
 
     def id(self) -> str:
         return "scrutech"
@@ -27,7 +29,7 @@ class ScruTechProvider(QgsProcessingProvider):
         return "ScruTech"
 
     def longName(self) -> str:  # noqa: N802 — QGIS API name
-        return "ScruTech — vegetation trend & drought (VegeVigie) + forest-fire interface (PAF)"
+        return "ScruTech — geodata hub: VegeVigie, PAF fire interface, écobuage aptitude"
 
     def icon(self) -> QIcon:
         icon_path = Path(__file__).resolve().parent / "icon.svg"
