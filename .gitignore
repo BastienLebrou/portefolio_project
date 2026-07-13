@@ -11,3 +11,7 @@
 
 # Données réelles (téléchargées via les scripts, ou fournies) — non versionnées
 _data_center_sig/Data_alba/
+!/sdbpi/
+!/ecobuage/
+__pycache__/
+*.pyc

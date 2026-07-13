@@ -1,0 +1,9 @@
+# POC détection bâtiments professionnels vacants
+geopandas>=0.14
+shapely>=2.0
+pyproj>=3.5
+pyogrio>=0.7
+pyarrow>=14
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
