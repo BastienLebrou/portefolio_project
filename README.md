@@ -64,6 +64,40 @@ cloud-native.
 
 ➡️ [Méthodologie, prompts SIG et outil](_data_center_sig/)
 
+### 🔥 PAF — protection automatisée des feux de forêt
+
+Pilier « feu » de ScruTech. Le cœur : l'**interface habitat-forêt (WUI)** — la frontière
+entre zones forestières (classées par VegeVigie) et bâti, où se jouent le débroussaillement
+légal (OLD 50 m), la chaleur radiante et les sautes de braises. Le module `interface` calcule
+cette frontière et la bande de contact dans une emprise, en sortie GeoParquet + GeoJSON prête
+pour le WebGIS.
+
+- Conception d'architecture temps réel (capteurs IoT, vent, prédiction du front à T+15)
+- Module `interface` intégré au moteur VegeVigie (`vegevigie/src/vegevigie/interface.py`)
+
+➡️ [Conception, schéma & doc PAF](paff/)
+
+### 🏚️ SDBPi — bâtiments professionnels inoccupés
+
+Croisement **open data BD TOPO (bâti) × SIRENE (activité)** : un bâtiment commercial/industriel
+sans établissement actif géolocalisé à proximité est un **candidat à l'inoccupation** (méthode
+type Cerema). Pipeline reproductible, testé sur Bourg-en-Bresse et une emprise **Grand Lyon**
+(19 572 bâtiments professionnels, analyse de sensibilité au buffer).
+
+- Acquisition paginée WFS + SIRENE (partition NAF anti-plafond, source de masse Grand Lyon)
+- Sortie GeoPackage + GeoParquet (EPSG:2154), statut d'occupation par bâtiment
+
+➡️ [Pipeline & résultats](sdbpi/)
+
+### 🌾 Écobuage — aptitude au brûlage dirigé
+
+Analyse multicritère pour hiérarchiser les zones de **brûlage dirigé** en milieu pastoral :
+végétation combustible, embroussaillement, pente exploitable, accessibilité, historique feux,
+exclusions réglementaires → carte d'aptitude **0-100** et zonage 3 classes
+(prioritaire / à étudier / à exclure), export GeoTIFF.
+
+➡️ [Méthodologie & moteur de scoring](ecobuage/)
+
 ## 🔬 Analyses en images
 
 Figures produites par le vrai code du pipeline VegeVigie (démos sur données synthétiques,

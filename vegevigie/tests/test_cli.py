@@ -1,6 +1,5 @@
-"""CLI wiring tests: every pipeline stage is registered and behaves as an M0 stub."""
+"""CLI wiring tests: every pipeline stage (M0–M7) is registered on the app."""
 
-import pytest
 from typer.testing import CliRunner
 
 from vegevigie import __version__
@@ -9,8 +8,6 @@ from vegevigie.cli import app
 runner = CliRunner()
 
 STAGES = ["aoi", "search", "cube", "ndvi", "trend", "drought", "zonal", "dashboard", "run"]
-# Only the dashboard (M7) remains a stub; every pipeline stage + `run` has landed.
-STUB_STAGES = ["dashboard"]
 
 
 def test_help_runs() -> None:
@@ -24,10 +21,3 @@ def test_version() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert __version__ in result.output
-
-
-@pytest.mark.parametrize("stage", STUB_STAGES)
-def test_stub_stages_report_milestone(stage: str) -> None:
-    result = runner.invoke(app, [stage])
-    assert result.exit_code == 1
-    assert "not implemented yet" in result.output

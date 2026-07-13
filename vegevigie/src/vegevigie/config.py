@@ -13,7 +13,18 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "default.yaml"
+def _find_default_config() -> Path:
+    """``config/default.yaml`` sits two levels up in the ``src/`` layout and one level
+    up in the bundled QGIS-plugin layout; probe both so this file works verbatim in each."""
+    here = Path(__file__).resolve()
+    for parent in (here.parents[2], here.parents[1]):
+        candidate = parent / "config" / "default.yaml"
+        if candidate.exists():
+            return candidate
+    return here.parents[2] / "config" / "default.yaml"
+
+
+DEFAULT_CONFIG_PATH = _find_default_config()
 
 
 class AoiConfig(BaseModel):
@@ -66,6 +77,15 @@ class TrendConfig(BaseModel):
     min_valid_months: int = Field(ge=4, description="Min valid months to attempt a trend")
 
 
+class InterfaceConfig(BaseModel):
+    """Wildland-Urban Interface (forest↔built-up frontier) parameters for the PAFF layer."""
+
+    contact_m: float = Field(
+        gt=0, description="Forest within this distance of a building counts as interface (metres)"
+    )
+    metric_crs: str = Field(description="Projected CRS for all distance/area maths (e.g. L93)")
+
+
 class PathsConfig(BaseModel):
     """Filesystem layout for pipeline outputs (all gitignored)."""
 
@@ -93,6 +113,7 @@ class Settings(BaseModel):
     raster: RasterConfig
     composite: CompositeConfig
     trend: TrendConfig
+    interface: InterfaceConfig
     paths: PathsConfig
 
 

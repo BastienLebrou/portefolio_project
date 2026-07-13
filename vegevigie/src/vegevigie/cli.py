@@ -405,10 +405,78 @@ def zonal(
 
 
 @app.command()
+def interface(
+    forest: Annotated[Path, typer.Argument(help="Forest zones layer (parquet/gpkg/shp/geojson).")],
+    bati: Annotated[Path, typer.Argument(help="Built-up zones layer (parquet/gpkg/shp/geojson).")],
+    config: ConfigOpt = None,
+    verbose: VerboseOpt = False,
+    force: ForceOpt = False,
+    aoi: Annotated[
+        Path | None,
+        typer.Option("--aoi", help="AOI layer (any CRS) to clip to; else the whole extent."),
+    ] = None,
+    bbox: Annotated[
+        str | None,
+        typer.Option("--bbox", help="Emprise 'minx,miny,maxx,maxy' in the config metric CRS."),
+    ] = None,
+    contact_m: Annotated[
+        float | None,
+        typer.Option("--contact-m", help="Override interface distance (m; default: config)."),
+    ] = None,
+) -> None:
+    """Forest/built-up interface (WUI) for the PAFF layer: frontier line + contact band."""
+    from vegevigie.interface import build_interface
+
+    settings = _setup(config, verbose)
+    for required in (forest, bati):
+        if not required.exists():
+            typer.echo(f"Input layer not found: {required}")
+            raise typer.Exit(code=1)
+
+    box_coords: tuple[float, float, float, float] | None = None
+    if bbox is not None:
+        parts = tuple(float(v) for v in bbox.split(","))
+        if len(parts) != 4:
+            typer.echo("--bbox must be 'minx,miny,maxx,maxy' (4 comma-separated numbers).")
+            raise typer.Exit(code=1)
+        box_coords = parts  # type: ignore[assignment]
+
+    line_path, zone_path, metrics = build_interface(
+        forest_path=forest,
+        bati_path=bati,
+        out_dir=settings.paths.processed,
+        metric_crs=settings.interface.metric_crs,
+        contact_m=contact_m if contact_m is not None else settings.interface.contact_m,
+        aoi_path=aoi,
+        bbox=box_coords,
+        force=force,
+    )
+    typer.echo(f"Interface line: {line_path}")
+    typer.echo(f"Interface zone: {zone_path}")
+    if metrics:
+        typer.echo(
+            f"  frontier: {metrics['interface_length_m'] / 1000:.2f} km | "
+            f"band to treat: {metrics['interface_zone_ha']:.1f} ha "
+            f"(contact {metrics['contact_m']:.0f} m)"
+        )
+
+
+@app.command()
 def dashboard(config: ConfigOpt = None, verbose: VerboseOpt = False) -> None:
-    """Launch the Streamlit + leafmap dashboard."""
-    _setup(config, verbose)
-    _not_implemented("dashboard", "M7")
+    """Launch the Streamlit + leafmap dashboard on the pipeline's commune outputs."""
+    import os
+    import subprocess
+    import sys
+
+    settings = _setup(config, verbose)
+    app_path = Path(__file__).resolve().parent / "dashboard" / "app.py"
+    # Pass the resolved output dir so the app finds data/ regardless of Streamlit's CWD.
+    env = os.environ | {"VEGEVIGIE_DATA_DIR": str(settings.paths.processed.resolve())}
+    try:
+        subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)], env=env, check=False)
+    except FileNotFoundError:
+        typer.echo("Streamlit is not installed — run `uv sync` (or `pip install streamlit leafmap`).")
+        raise typer.Exit(code=1) from None
 
 
 @app.command()

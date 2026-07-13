@@ -35,6 +35,9 @@ dependencies = [
     "pymannkendall>=1.4",
     # M6 — zonal store.
     "duckdb>=1.0",
+    # M7 — dashboard (Streamlit charts native; no plotly dependency needed).
+    "streamlit>=1.36",
+    "leafmap>=0.35",
 ]
 
 [project.scripts]
