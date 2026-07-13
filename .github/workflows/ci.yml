@@ -3,11 +3,11 @@ name: CI
 on:
   push:
     paths:
-      - "vegevigie/**"
+      - "scrutech/vegevigie/**"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
-      - "vegevigie/**"
+      - "scrutech/vegevigie/**"
       - ".github/workflows/ci.yml"
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: vegevigie
+        working-directory: scrutech/vegevigie
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "vegevigie/uv.lock"
+          cache-dependency-glob: "scrutech/vegevigie/uv.lock"
 
       - name: Set up Python
         run: uv python install 3.11
