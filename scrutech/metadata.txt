@@ -1,0 +1,18 @@
+[general]
+name=ScruTech
+qgisMinimumVersion=4.0
+description=Pipeline automatisé de traitement d'images satellite cloud-native (STAC, SAR, IA) — projet à double vocation : outil professionnel ET ressource pédagogique sur le backend des SIG.
+version=0.1.0
+author=Bastien Lebrou
+email=bastienlebrou1@gmail.com
+about=ScruTech surveille des zones d'intérêt, détecte automatiquement les nouvelles acquisitions satellite pertinentes (optique, SAR), déclenche des traitements (indices, détection de changement, IA) et alerte sans intervention manuelle. Chaque module est documenté pour enseigner les concepts de geo-data engineering qu'il met en œuvre.
+tracker=
+repository=
+hasProcessingProvider=no
+tags=remote sensing,satellite,STAC,COG,cloud-native,H3,sentinel,earth engine,SAR,pédagogie
+homepage=
+category=Raster
+icon=resources/icons/icon.png
+experimental=True
+deprecated=False
+server=False

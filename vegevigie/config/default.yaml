@@ -40,6 +40,15 @@ trend:
   # (fewer -> NaN). ~half a year of clear months.
   min_valid_months: 6
 
+interface:
+  # Wildland-Urban Interface (forest↔built-up frontier) for the PAFF layer.
+  # Forest within this distance of a building is "at the interface". 50 m is the French
+  # Obligation Légale de Débroussaillement (OLD) default footprint.
+  contact_m: 50
+  # Projected CRS for all distance/area maths. Lambert-93 for metropolitan France;
+  # switch to the local UTM zone for other AOIs.
+  metric_crs: "EPSG:2154"
+
 paths:
   # All outputs land under here; the whole tree is gitignored.
   data_dir: data

@@ -115,12 +115,14 @@ datacube, MK, Sen, VCI, zonal stats).
 
 ## Status & limitations
 
-**Landed:** M0 scaffold → **M6** (aoi, search, cube, ndvi, monthly composites, trend,
-drought, zonal + DuckDB ranking, plus the `run` orchestrator). **In progress:** M7
-Streamlit dashboard. The pure-science stages (masking, NDVI, compositing, MK/Sen, anomaly,
+**Landed:** M0 scaffold → **M7** (aoi, search, cube, ndvi, monthly composites, trend,
+drought, zonal + DuckDB ranking, the `run` orchestrator, and the Streamlit + leafmap
+dashboard). The pure-science stages (masking, NDVI, compositing, MK/Sen, anomaly,
 zonal) are unit-tested offline; the figures above are produced by that same code on
 synthetic inputs, because this build environment's egress policy blocks Planetary Computer —
-so the live Sentinel-2 fetch (`search`/`cube`) hasn't run here yet.
+so the live Sentinel-2 fetch (`search`/`cube`) hasn't run here yet. The dashboard reads the
+pipeline's commune outputs (`vegevigie dashboard`); `python scripts/demo_dashboard_data.py`
+seeds a synthetic dataset so it is navigable without imagery.
 
 - **Resolution vs compute** — department-wide passes run at coarse resolution (config knob)
   to stay laptop-tractable; 10 m is reserved for small AOIs.
@@ -141,8 +143,8 @@ installable zip with `python qgis_plugin/package.py`; see
 
 ## Next steps
 
-- **M7** — Streamlit + leafmap dashboard; **M8** — hero imagery and a full live run once STAC
-  egress is available.
+- **M8** — hero imagery and a full live run once STAC egress is available (dashboard
+  screenshots for the front page).
 - **ScruTech** — harden the plugin (per-stage algorithms, a Processing model, styled output
   layers) after a live QGIS test.
 - Alternate data backend (Copernicus CDSE), SAR/ML land-cover — out of v1 scope.

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+  <title>Schéma d'implantation PAFF : calcul de l'interface habitat-forêt dans scrutech</title>
+  <desc>Deux couches (forêt VégéVigie et bâti) clippées à une emprise sont croisées pour extraire la ligne de frontière et la bande de contact de 50 mètres, qui alimentent la boucle PAFF.</desc>
+
+  <style>
+    .lbl   { fill: #2C2C2A; font-size: 14px; font-weight: 600; }
+    .sub   { fill: #5F5E5A; font-size: 11px; }
+    .mono  { font-family: ui-monospace, monospace; fill: #5F5E5A; font-size: 11px; }
+    .head  { fill: #888780; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+    .card  { fill: #ffffff; stroke: #D3D1C7; rx: 8; }
+    .title { fill: #2C2C2A; font-size: 17px; font-weight: 700; }
+    .flow  { stroke: #B4B2A9; stroke-width: 1.6; fill: none; marker-end: url(#a); }
+  </style>
+
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#888780"/>
+    </marker>
+    <pattern id="band" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#D4537E" stroke-width="2" opacity="0.55"/>
+    </pattern>
+  </defs>
+
+  <text x="34" y="34" class="title">PAFF — Interface habitat-forêt (WUI)</text>
+  <text x="34" y="54" class="sub">La frontière forêt/bâti est la géométrie critique du feu : elle porte le débroussaillement légal, la chaleur radiante et les sautes de braises.</text>
+
+  <text x="34" y="92" class="head">ENTRÉES (tes couches)</text>
+  <g>
+    <rect class="card" x="34" y="104" width="196" height="46"/>
+    <rect x="34" y="104" width="5" height="46" fill="#1D9E75" rx="2"/>
+    <text x="50" y="126" class="lbl">Zones forêt</text>
+    <text x="50" y="142" class="sub">classées VégéVigie</text>
+
+    <rect class="card" x="34" y="160" width="196" height="46"/>
+    <rect x="34" y="160" width="5" height="46" fill="#D85A30" rx="2"/>
+    <text x="50" y="182" class="lbl">Zones bâti</text>
+    <text x="50" y="198" class="sub">habitat exposé</text>
+
+    <rect class="card" x="34" y="216" width="196" height="46"/>
+    <rect x="34" y="216" width="5" height="46" fill="#888780" rx="2"/>
+    <text x="50" y="238" class="lbl">Emprise / canevas</text>
+    <text x="50" y="254" class="sub">bbox ou couche AOI</text>
+  </g>
+  <path class="flow" d="M234,183 L280,183"/>
+
+  <text x="292" y="92" class="head">scrutech · interface</text>
+  <rect class="card" x="292" y="104" width="316" height="300"/>
+  <clipPath id="clip"><rect x="300" y="112" width="300" height="284" rx="6"/></clipPath>
+  <g clip-path="url(#clip)">
+    <rect x="300" y="112" width="300" height="284" fill="#F1EFE8"/>
+    <path d="M300,140 C360,120 430,132 452,180 C470,220 452,270 470,320 C440,360 360,372 320,360 L300,360 Z"
+          fill="#1D9E75" opacity="0.28"/>
+    <path d="M300,140 C360,120 430,132 452,180 C470,220 452,270 470,320 C440,360 360,372 320,360"
+          fill="none" stroke="#1D9E75" stroke-width="1.5" opacity="0.7"/>
+    <path d="M452,180 C470,220 452,270 470,320 L500,320 C486,270 502,220 486,180 Z" fill="url(#band)"/>
+    <path d="M452,180 C470,220 452,270 470,320" fill="none" stroke="#D4537E" stroke-width="3.5" stroke-linecap="round"/>
+    <g fill="#D85A30">
+      <rect x="502" y="196" width="16" height="14" rx="2"/>
+      <rect x="530" y="224" width="16" height="14" rx="2"/>
+      <rect x="500" y="256" width="16" height="14" rx="2"/>
+      <rect x="536" y="292" width="16" height="14" rx="2"/>
+      <rect x="506" y="318" width="16" height="14" rx="2"/>
+    </g>
+  </g>
+  <text x="312" y="386" class="mono">contact_m = 50 m  ·  OLD débroussaillement</text>
+  <path class="flow" d="M612,255 L656,255"/>
+
+  <text x="668" y="92" class="head">SORTIES</text>
+  <rect class="card" x="668" y="104" width="200" height="52"/>
+  <rect x="668" y="104" width="5" height="52" fill="#D4537E" rx="2"/>
+  <text x="684" y="126" class="lbl">interface_line</text>
+  <text x="684" y="144" class="mono">.parquet · .geojson</text>
+
+  <rect class="card" x="668" y="166" width="200" height="52"/>
+  <rect x="668" y="166" width="5" height="52" fill="#D4537E" rx="2"/>
+  <text x="684" y="188" class="lbl">interface_zone</text>
+  <text x="684" y="206" class="mono">bande à traiter (ha)</text>
+
+  <path class="flow" d="M768,220 L768,250"/>
+  <rect class="card" x="628" y="256" width="240" height="128" fill="#F1EFE8"/>
+  <text x="648" y="280" class="head" fill="#D85A30">BOUCLE PAFF (temps réel)</text>
+  <text x="648" y="306" class="lbl">+ vent · capteurs thermiques</text>
+  <text x="648" y="330" class="lbl">→ prédiction du front T+15 min</text>
+  <text x="648" y="354" class="lbl">→ ciblage canons sur la bande</text>
+  <text x="648" y="374" class="sub">l'interface = zone prioritaire de défense</text>
+
+  <g transform="translate(34,436)">
+    <text x="0" y="0" class="head">LÉGENDE</text>
+    <rect x="0" y="12" width="14" height="14" fill="#1D9E75" opacity="0.5" rx="2"/>
+    <text x="22" y="23" class="sub">Forêt (VégéVigie)</text>
+    <rect x="150" y="12" width="14" height="14" fill="#D85A30" rx="2"/>
+    <text x="172" y="23" class="sub">Bâti</text>
+    <line x1="250" y1="19" x2="278" y2="19" stroke="#D4537E" stroke-width="3.5" stroke-linecap="round"/>
+    <text x="286" y="23" class="sub">Ligne d'interface (frontière)</text>
+    <rect x="470" y="12" width="14" height="14" fill="url(#band)" stroke="#D4537E" stroke-opacity="0.4" rx="2"/>
+    <text x="492" y="23" class="sub">Bande de contact 50 m</text>
+  </g>
+  <text x="34" y="506" class="mono">vegevigie interface  forets.gpkg  bati.gpkg  --aoi emprise.parquet  --contact-m 50</text>
+</svg>
