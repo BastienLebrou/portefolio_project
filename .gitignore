@@ -25,3 +25,4 @@ __pycache__/
 
 # Simulations financières — NE JAMAIS publier (privé)
 /analyse_financiere/
+!/PROMPT_audit_reorg.md
