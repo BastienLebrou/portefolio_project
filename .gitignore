@@ -22,3 +22,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 /vegevigie/data/
+
+# Simulations financières — NE JAMAIS publier (privé)
+/analyse_financiere/
