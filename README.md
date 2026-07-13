@@ -25,7 +25,7 @@ géospatiales — imagerie satellite, open data, cadastre — avec un objectif c
 
 ### 🌿 VegeVigie — sentinelle de la végétation
 
-<img align="right" width="380" src="vegevigie/docs/trend_map_demo.png" alt="Carte des tendances de verdissement/brunissement produite par VegeVigie">
+<img align="right" width="380" src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des tendances de verdissement/brunissement produite par VegeVigie">
 
 Pipeline de géo-ingénierie de données **reproductible** qui surveille la santé de la végétation
 en Ardèche à partir d'une décennie d'images **Sentinel-2** : séries temporelles NDVI →
@@ -38,7 +38,7 @@ GeoParquet) → tableau de bord.
 - **60+ tests** hors-ligne, lint et CI sur chaque push
 - 🧩 **ScruTech** : plugin QGIS Processing qui pilote le même moteur en un clic depuis QGIS
 
-➡️ [Code, démos et méthodologie](vegevigie/) · [Plugin QGIS ScruTech](vegevigie/qgis_plugin/)
+➡️ [Code, démos et méthodologie](scrutech/vegevigie/) · [Plugin QGIS ScruTech](scrutech/vegevigie/qgis_plugin/)
 
 ```mermaid
 flowchart LR
@@ -62,7 +62,41 @@ cloud-native.
 - Analyse réelle multi-axes sur la commune d'**Alba-la-Romaine** avec export **GeoPackage + styles QML** prêts pour QGIS
 - Architecture cible : dbt-duckdb spatial → GeoParquet partitionné → index **H3** → PMTiles
 
-➡️ [Méthodologie, prompts SIG et outil](_data_center_sig/)
+➡️ [Méthodologie, prompts SIG et outil](scrutech/mini_dc/)
+
+### 🔥 PAF — protection automatisée des feux de forêt
+
+Pilier « feu » de ScruTech. Le cœur : l'**interface habitat-forêt (WUI)** — la frontière
+entre zones forestières (classées par VegeVigie) et bâti, où se jouent le débroussaillement
+légal (OLD 50 m), la chaleur radiante et les sautes de braises. Le module `interface` calcule
+cette frontière et la bande de contact dans une emprise, en sortie GeoParquet + GeoJSON prête
+pour le WebGIS.
+
+- Conception d'architecture temps réel (capteurs IoT, vent, prédiction du front à T+15)
+- Module `interface` intégré au moteur VegeVigie (`scrutech/vegevigie/src/vegevigie/interface.py`)
+
+➡️ [Conception, schéma & doc PAF](scrutech/paff/)
+
+### 🏚️ SDBPi — bâtiments professionnels inoccupés
+
+Croisement **open data BD TOPO (bâti) × SIRENE (activité)** : un bâtiment commercial/industriel
+sans établissement actif géolocalisé à proximité est un **candidat à l'inoccupation** (méthode
+type Cerema). Pipeline reproductible, testé sur Bourg-en-Bresse et une emprise **Grand Lyon**
+(19 572 bâtiments professionnels, analyse de sensibilité au buffer).
+
+- Acquisition paginée WFS + SIRENE (partition NAF anti-plafond, source de masse Grand Lyon)
+- Sortie GeoPackage + GeoParquet (EPSG:2154), statut d'occupation par bâtiment
+
+➡️ [Pipeline & résultats](scrutech/sdbpi/)
+
+### 🌾 Écobuage — aptitude au brûlage dirigé
+
+Analyse multicritère pour hiérarchiser les zones de **brûlage dirigé** en milieu pastoral :
+végétation combustible, embroussaillement, pente exploitable, accessibilité, historique feux,
+exclusions réglementaires → carte d'aptitude **0-100** et zonage 3 classes
+(prioritaire / à étudier / à exclure), export GeoTIFF.
+
+➡️ [Méthodologie & moteur de scoring](scrutech/ecobuage/)
 
 ## 🔬 Analyses en images
 
@@ -72,21 +106,21 @@ reproductibles via `vegevigie run --small`) :
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="vegevigie/docs/trend_map_demo.png" alt="Carte des tendances NDVI par pixel" width="100%"><br>
+      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des tendances NDVI par pixel" width="100%"><br>
       <sub><b>Tendances par pixel</b> — verdissement/brunissement, Mann-Kendall + pente de Sen</sub>
     </td>
     <td align="center" width="50%">
-      <img src="vegevigie/docs/drought_demo.png" alt="Carte des anomalies de sécheresse" width="100%"><br>
+      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte des anomalies de sécheresse" width="100%"><br>
       <sub><b>Stress hydrique</b> — anomalies NDVI (z-score) et indice VCI</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="vegevigie/docs/commune_ranking_demo.png" alt="Classement des communes" width="100%"><br>
+      <img src="scrutech/vegevigie/docs/commune_ranking_demo.png" alt="Classement des communes" width="100%"><br>
       <sub><b>Classement communal</b> — agrégation zonale et requêtes DuckDB</sub>
     </td>
     <td align="center" width="50%">
-      <img src="vegevigie/docs/monthly_ndvi_timeseries.png" alt="Série temporelle NDVI mensuelle" width="100%"><br>
+      <img src="scrutech/vegevigie/docs/monthly_ndvi_timeseries.png" alt="Série temporelle NDVI mensuelle" width="100%"><br>
       <sub><b>Séries temporelles</b> — composites NDVI mensuels, robustes aux nuages</sub>
     </td>
   </tr>

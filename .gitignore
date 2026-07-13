@@ -1,13 +1,25 @@
-# ALLOWLIST STRICTE — ne versionner QUE les projets listés ci-dessous.
+# ALLOWLIST STRICTE — ne versionner QUE ce qui est listé ci-dessous.
 # Le reste du portfolio local peut contenir des dossiers à NE PAS publier.
 /*
 !/.gitignore
 !/README.md
 !/.github/
-!/_data_center_sig/
-!/vegevigie/
 !/assets/
 !/scripts/
+!/scrutech/
+!/ROADMAP.md
+!/QGIS_PLUGIN.md
+!/PROMPT_audit_reorg.md
 
-# Données réelles (téléchargées via les scripts, ou fournies) — non versionnées
-_data_center_sig/Data_alba/
+# Artefacts / environnements — jamais versionnés
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Données réelles / générées — non versionnées
+/scrutech/vegevigie/data/
+/scrutech/mini_dc/Data_alba/
+
+# Simulations financières — NE JAMAIS publier (privé)
+/analyse_financiere/
