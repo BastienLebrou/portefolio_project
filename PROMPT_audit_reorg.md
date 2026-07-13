@@ -14,7 +14,7 @@ Ce monorepo réunit plusieurs projets SIG : **vegevigie** (télédétection Sent
 tendances NDVI, sécheresse), **paff** (interface habitat-forêt / feux), **sdbpi**
 (bâtiments professionnels inoccupés, BD TOPO × SIRENE), **ecobuage** (scoring
 multicritère de brûlage), **_data_center_sig** (sélection de sites), et un **plugin QGIS
-« ScruTech »** (hub) dans `vegevigie/qgis_plugin/`.
+« ScruTech »** (hub) dans `scrutech/vegevigie/qgis_plugin/`.
 
 **Problème constaté (test QGIS réel).** Les front-ends tentent de faire tourner les
 pipelines lourds (odc-stac, xarray, rasterio, geopandas…) **dans le Python de QGIS** →
@@ -38,7 +38,7 @@ calcul, données et restitution.
 projet : entrées (sources/API), sorties (fichiers/formats), dépendances, point d'entrée,
 et classe chaque partie en `{acquisition | calcul | donnée | restitution}`. Repère les
 duplications, le code mort, les données à ne pas versionner (`analyse_financiere` =
-privé), et ce qui tourne déjà en CI (`vegevigie/**`).
+privé), et ce qui tourne déjà en CI (`scrutech/vegevigie/**`).
 
 **B. CIBLE.** Propose une arbo monorepo, p.ex. :
 `core/` (utils partagés : accès S3, accès BDD, IO COG/GeoParquet) · `pipelines/<projet>/`
