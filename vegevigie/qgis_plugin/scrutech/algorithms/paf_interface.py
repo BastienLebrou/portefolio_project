@@ -3,34 +3,43 @@
 Pick a forest layer and a built-up layer, set the contact distance (default 50 m,
 the French OLD débroussaillement footprint), hit Run — ScruTech computes the
 frontier line where forest meets buildings and the contact band to defend, and
-loads both into the project. Wraps the shared :mod:`vegevigie.interface` engine.
+loads both into the project.
 
-Geometry maths run in a projected CRS (metres); pick the *Metric CRS* to match the
-territory (Lambert-93 for metropolitan France). Inputs in any CRS are reprojected
-by the engine.
+Pure **native QGIS geometry** (QgsGeometry: reproject, dissolve, buffer, boundary,
+intersection) — no GeoPandas, no datacube stack, no internet. Distance/area maths
+run in the chosen metric CRS (Lambert-93 by default); inputs in any CRS are
+reprojected on the fly.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from qgis.core import (
+    QgsCoordinateTransform,
+    QgsFeature,
+    QgsFeatureSink,
+    QgsField,
+    QgsFields,
+    QgsGeometry,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
+    QgsProcessingFeatureSource,
     QgsProcessingFeedback,
     QgsProcessingParameterCrs,
+    QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterVectorDestination,
-    QgsProcessingUtils,
-    QgsVectorFileWriter,
+    QgsProject,
+    QgsWkbTypes,
 )
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
+
+# Buffer smoothness (segments per quarter-circle). 8 is QGIS's default trade-off.
+_BUFFER_SEGMENTS = 8
 
 
 class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
-    """Forest/built-up interface (WUI): frontier line + contact band."""
+    """Forest/built-up interface (WUI): frontier line + contact band — native QGIS."""
 
     FOREST = "FOREST"
     BATI = "BATI"
@@ -58,7 +67,8 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             "building) and the contact band (forest within that distance — the "
             "débroussaillement / defence zone). Distance and area maths run in the chosen "
             "metric CRS (Lambert-93 by default). Frontier length and band area are "
-            "reported in the log."
+            "reported in the log. Native QGIS geometry only — no extra dependencies, no "
+            "internet."
         )
 
     def createInstance(self) -> InterfaceHabitatForetAlgorithm:  # noqa: N802
@@ -68,11 +78,17 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate("ScruTech", string)
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
+        from qgis.core import QgsProcessing
+
         self.addParameter(
-            QgsProcessingParameterFeatureSource(self.FOREST, self.tr("Forest zones"))
+            QgsProcessingParameterFeatureSource(
+                self.FOREST, self.tr("Forest zones"), [QgsProcessing.TypeVectorPolygon]
+            )
         )
         self.addParameter(
-            QgsProcessingParameterFeatureSource(self.BATI, self.tr("Built-up zones"))
+            QgsProcessingParameterFeatureSource(
+                self.BATI, self.tr("Built-up zones"), [QgsProcessing.TypeVectorPolygon]
+            )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -91,13 +107,17 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterVectorDestination(
-                self.LINE_OUTPUT, self.tr("Interface line (frontier)")
+            QgsProcessingParameterFeatureSink(
+                self.LINE_OUTPUT,
+                self.tr("Interface line (frontier)"),
+                QgsProcessing.TypeVectorLine,
             )
         )
         self.addParameter(
-            QgsProcessingParameterVectorDestination(
-                self.ZONE_OUTPUT, self.tr("Interface zone (contact band)")
+            QgsProcessingParameterFeatureSink(
+                self.ZONE_OUTPUT,
+                self.tr("Interface zone (contact band)"),
+                QgsProcessing.TypeVectorPolygon,
             )
         )
 
@@ -107,16 +127,6 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         context: QgsProcessingContext,
         feedback: QgsProcessingFeedback,
     ) -> dict:
-        from ..dependencies import install_hint, missing_dependencies
-
-        missing = missing_dependencies()
-        if missing:
-            raise QgsProcessingException(install_hint(missing))
-
-        import geopandas as gpd
-
-        from vegevigie.interface import forest_bati_interface
-
         contact_m = self.parameterAsDouble(parameters, self.CONTACT_M, context)
         metric_crs = self.parameterAsCrs(parameters, self.METRIC_CRS, context)
         if not metric_crs.isValid() or metric_crs.isGeographic():
@@ -126,57 +136,76 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
                     "distances in degrees are meaningless."
                 )
             )
-        crs_authid = metric_crs.authid() or "EPSG:2154"
 
-        tmp = Path(QgsProcessingUtils.tempFolder()) / "scrutech_paf"
-        tmp.mkdir(parents=True, exist_ok=True)
-        forest_path = self._source_to_gpkg(parameters, self.FOREST, context, tmp / "forest.gpkg")
-        bati_path = self._source_to_gpkg(parameters, self.BATI, context, tmp / "bati.gpkg")
+        forest_src = self.parameterAsSource(parameters, self.FOREST, context)
+        bati_src = self.parameterAsSource(parameters, self.BATI, context)
+        if forest_src is None or bati_src is None:
+            raise QgsProcessingException(self.tr("Forest and built-up layers are required."))
 
-        feedback.pushInfo(f"Computing interface (contact {contact_m:.0f} m, {crs_authid})…")
-        try:
-            result = forest_bati_interface(
-                gpd.read_file(forest_path),
-                gpd.read_file(bati_path),
-                metric_crs=crs_authid,
-                contact_m=contact_m,
-            )
-        except Exception as exc:  # noqa: BLE001
-            raise QgsProcessingException(f"Interface computation failed: {exc}") from exc
+        forest_u = self._dissolve_to_crs(forest_src, metric_crs)
+        bati_u = self._dissolve_to_crs(bati_src, metric_crs)
+        if forest_u.isEmpty() or bati_u.isEmpty():
+            raise QgsProcessingException(self.tr("Forest or built-up layer has no geometry."))
 
-        m = result.metrics
-        feedback.pushInfo(
-            f"Frontier: {m['interface_length_m'] / 1000:.2f} km | "
-            f"contact band: {m['interface_zone_ha']:.1f} ha"
-        )
-        if m["interface_length_m"] == 0:
+        reach = bati_u.buffer(contact_m, _BUFFER_SEGMENTS)
+        zone = forest_u.intersection(reach)
+        boundary = QgsGeometry(forest_u.constGet().boundary())
+        line = boundary.intersection(reach)
+        line.convertToMultiType()
+        zone.convertToMultiType()
+
+        length_m = line.length()
+        area_ha = zone.area() / 10_000.0
+        feedback.pushInfo(f"Frontier: {length_m / 1000:.2f} km | contact band: {area_ha:.1f} ha")
+        if length_m == 0:
             feedback.reportError(
                 self.tr("No interface found: forest and built-up never come within the "
                         "contact distance. Check the layers and the distance.")
             )
 
-        line_out = self.parameterAsOutputLayer(parameters, self.LINE_OUTPUT, context)
-        zone_out = self.parameterAsOutputLayer(parameters, self.ZONE_OUTPUT, context)
-        self._write(result.line, line_out)
-        self._write(result.zone, zone_out)
-        feedback.pushInfo(f"Wrote {line_out} and {zone_out}")
-        return {self.LINE_OUTPUT: line_out, self.ZONE_OUTPUT: zone_out}
+        line_id = self._write_sink(
+            parameters, self.LINE_OUTPUT, context, metric_crs,
+            QgsWkbTypes.MultiLineString, QgsFields(), line,
+        )
+        zone_fields = QgsFields()
+        zone_fields.append(QgsField("area_ha", QVariant.Double))
+        zone_id = self._write_sink(
+            parameters, self.ZONE_OUTPUT, context, metric_crs,
+            QgsWkbTypes.MultiPolygon, zone_fields, zone, attributes=[round(area_ha, 2)],
+        )
+        return {self.LINE_OUTPUT: line_id, self.ZONE_OUTPUT: zone_id}
 
     # --- helpers -------------------------------------------------------------
-    def _source_to_gpkg(self, parameters, name, context, dest: Path) -> str:
-        """Export an input feature source to a GeoPackage the engine can read."""
-        layer = self.parameterAsVectorLayer(parameters, name, context)
-        if layer is None:
-            raise QgsProcessingException(self.tr(f"Input '{name}' is not a valid vector layer."))
-        QgsVectorFileWriter.writeAsVectorFormat(layer, str(dest), "utf-8", layer.crs(), "GPKG")
-        return str(dest)
+    def _dissolve_to_crs(self, source: QgsProcessingFeatureSource, crs) -> QgsGeometry:
+        """Reproject every feature of ``source`` to ``crs`` and dissolve into one geometry."""
+        xform = None
+        if source.sourceCrs() != crs:
+            xform = QgsCoordinateTransform(source.sourceCrs(), crs, QgsProject.instance())
+        geoms: list[QgsGeometry] = []
+        for feat in source.getFeatures():
+            geom = feat.geometry()
+            if geom.isEmpty():
+                continue
+            if xform is not None:
+                geom = QgsGeometry(geom)
+                geom.transform(xform)
+            geoms.append(geom)
+        if not geoms:
+            return QgsGeometry()
+        return QgsGeometry.unaryUnion(geoms)
 
-    @staticmethod
-    def _write(gdf, out_path: str) -> None:
-        """Write a (possibly empty) GeoDataFrame to the Processing output path as GPKG."""
-        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-        if len(gdf) and not gdf.geometry.is_empty.all():
-            gdf.to_file(out_path, driver="GPKG")
-        else:
-            # Keep a valid (empty) layer so the run still produces the declared output.
-            gdf.iloc[0:0].to_file(out_path, driver="GPKG")
+    def _write_sink(
+        self, parameters, name, context, crs, wkb_type, fields, geometry, attributes=None
+    ) -> str:
+        sink, dest_id = self.parameterAsSink(
+            parameters, name, context, fields, wkb_type, crs
+        )
+        if sink is None:
+            raise QgsProcessingException(self.tr(f"Could not create output '{name}'."))
+        if not geometry.isEmpty():
+            feat = QgsFeature(fields)
+            feat.setGeometry(geometry)
+            if attributes is not None:
+                feat.setAttributes(attributes)
+            sink.addFeature(feat, QgsFeatureSink.FastInsert)
+        return dest_id
