@@ -1,11 +1,15 @@
 # ScruTech — QGIS plugin
 
-Turnkey QGIS Processing tools that wrap the **VegeVigie** pipeline: analyze
-vegetation greening/browning trend and drought stress over any extent, straight
-from QGIS. One algorithm, **Analyze extent**, runs the whole chain
-(Sentinel-2 search → datacube → NDVI → monthly composites → Mann-Kendall + Sen's
-slope trend → NDVI-anomaly drought → optional zonal aggregation) and loads the
-result layers into your project.
+Turnkey QGIS Processing tools for the ScruTech pillars, straight from QGIS:
+
+- **VegeVigie** — **Analyze extent** runs the whole vegetation chain over any
+  extent (Sentinel-2 search → datacube → NDVI → monthly composites → Mann-Kendall
+  + Sen's slope trend → NDVI-anomaly drought → optional zonal aggregation) and
+  loads the result layers into your project.
+- **PAF (forest fire)** — **Interface habitat-forêt (WUI)** computes the frontier
+  line and contact band between a forest layer and a built-up layer (the
+  débroussaillement / defence zone). Lightweight: GeoPandas/Shapely only, no
+  datacube stack, no internet.
 
 ## How it works
 
@@ -84,6 +88,20 @@ Outputs (GeoTIFF + GeoParquet) are written to the folder and loaded as layers:
 
 > Tip: to make it a literal one-click button, right-click the algorithm ▸
 > *Add to Favorites*, or build a Processing **model**/toolbar button.
+
+## Use — forest/built-up interface (PAF)
+
+1. **Processing Toolbox ▸ ScruTech ▸ PAF — forest fire ▸ Interface habitat-forêt (WUI)**.
+2. Pick a **Forest zones** layer (e.g. VegeVigie-classified vulnerable vegetation)
+   and a **Built-up zones** layer.
+3. Set the **contact distance** (default 50 m — the French OLD débroussaillement
+   footprint) and the **metric CRS** (Lambert-93 by default).
+4. **Run**. Two layers are produced and loaded:
+   - **Interface line** — the forest edge within the contact distance of a building;
+   - **Interface zone** — the forest band to defend/clear.
+
+   Frontier length (km) and band area (ha) are printed in the log. Needs only
+   GeoPandas/Shapely (bundled engine) — no internet, no datacube stack.
 
 ## Notes & limits
 
