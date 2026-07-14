@@ -25,6 +25,16 @@ ENGINE_SRC = PROJECT / "src" / "vegevigie"
 CONFIG_SRC = PROJECT / "config" / "default.yaml"
 # Single-module engines from sibling projects, bundled flat next to the plugin.
 EXTRA_MODULES = {"ecobuage": REPO_ROOT / "ecobuage" / "ecobuage.py"}
+# Multi-file sibling engines bundled as a folder — code only (data/cache excluded);
+# the plugin runs them in an external Python via subprocess.
+EXTRA_DIRS = {
+    "sdbpi": REPO_ROOT / "sdbpi",
+    "mini_dc": REPO_ROOT / "mini_dc" / "outil",
+}
+_ENGINE_IGNORE = shutil.ignore_patterns(
+    "__pycache__", "*.pyc", "cache", "BDD", "data", ".venv", "dist",
+    "*.gpkg", "*.parquet", "*.zip", "*.shp", "*.dbf", "*.shx", "*.prj", "*.cpg", "*.qmd",
+)
 DIST = HERE / "dist"
 
 
@@ -65,9 +75,23 @@ def make_zip() -> Path:
     return zip_path
 
 
+def bundle_extra_dirs() -> None:
+    """Copy multi-file sibling engines (sdbpi, mini_dc) into the plugin — code only."""
+    for name, src in EXTRA_DIRS.items():
+        if not src.exists():
+            print(f"Skipped '{name}' engine (not found at {src}) — its algorithm won't run.")
+            continue
+        dest = PLUGIN / name
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest, ignore=_ENGINE_IGNORE)
+        print(f"Bundled {name} -> {dest}")
+
+
 def main() -> None:
     bundle_engine()
     bundle_extras()
+    bundle_extra_dirs()
     make_zip()
 
 
