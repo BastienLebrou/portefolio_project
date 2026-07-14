@@ -371,7 +371,9 @@ def zonal(
             typer.echo(f"Missing {required} — run the earlier stages first.")
             raise typer.Exit(code=1)
 
-    out_parquet = settings.paths.processed / f"commune_stats_{start_year}_{end_year}.parquet"
+    # Same name the pipeline and the dashboard use (zonal_stats_*), so `vegevigie zonal`
+    # outputs are discoverable by find_outputs. (B1: was commune_stats_*, invisible.)
+    out_parquet = settings.paths.processed / f"zonal_stats_{start_year}_{end_year}.parquet"
     duckdb_path = settings.paths.processed / "vegevigie.duckdb"
     if out_parquet.exists() and not force:
         typer.echo(f"Commune stats already cached at {out_parquet} (use --force to rebuild).")
