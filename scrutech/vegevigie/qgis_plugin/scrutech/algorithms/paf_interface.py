@@ -74,6 +74,11 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
     def createInstance(self) -> InterfaceHabitatForetAlgorithm:  # noqa: N802
         return InterfaceHabitatForetAlgorithm()
 
+    def icon(self):  # noqa: N802 — QGIS API name
+        from ._icons import algo_icon
+
+        return algo_icon("paf")
+
     def tr(self, string: str) -> str:
         return QCoreApplication.translate("ScruTech", string)
 

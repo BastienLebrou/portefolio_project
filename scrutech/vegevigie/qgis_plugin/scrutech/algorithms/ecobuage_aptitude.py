@@ -72,6 +72,11 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
     def createInstance(self) -> EcobuageAptitudeAlgorithm:  # noqa: N802
         return EcobuageAptitudeAlgorithm()
 
+    def icon(self):  # noqa: N802 — QGIS API name
+        from ._icons import algo_icon
+
+        return algo_icon("ecobuage")
+
     def tr(self, string: str) -> str:
         return QCoreApplication.translate("ScruTech", string)
 

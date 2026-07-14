@@ -46,6 +46,11 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
     def createInstance(self) -> LoadCommunesAlgorithm:  # noqa: N802
         return LoadCommunesAlgorithm()
 
+    def icon(self):  # noqa: N802 — QGIS API name
+        from ._icons import algo_icon
+
+        return algo_icon("data")
+
     def tr(self, string: str) -> str:
         return QCoreApplication.translate("ScruTech", string)
 
