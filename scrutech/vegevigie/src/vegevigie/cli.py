@@ -475,9 +475,13 @@ def dashboard(config: ConfigOpt = None, verbose: VerboseOpt = False) -> None:
     # Pass the resolved output dir so the app finds data/ regardless of Streamlit's CWD.
     env = os.environ | {"VEGEVIGIE_DATA_DIR": str(settings.paths.processed.resolve())}
     try:
-        subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)], env=env, check=False)
+        subprocess.run(
+            [sys.executable, "-m", "streamlit", "run", str(app_path)], env=env, check=False
+        )
     except FileNotFoundError:
-        typer.echo("Streamlit is not installed — run `uv sync` (or `pip install streamlit leafmap`).")
+        typer.echo(
+            "Streamlit is not installed — run `uv sync` (or `pip install streamlit leafmap`)."
+        )
         raise typer.Exit(code=1) from None
 
 
