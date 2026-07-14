@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import geopandas as gpd
+from core.io import read_vector
 from shapely.geometry import base as shp_base
 from shapely.geometry import box
 
@@ -122,19 +123,12 @@ def _empty_result(metric_crs: str) -> InterfaceResult:
     return InterfaceResult(line=empty, zone=empty.copy(), metrics=metrics)
 
 
-def _read_layer(path: Path) -> gpd.GeoDataFrame:
-    """Read any vector layer — GeoParquet by suffix, else GDAL/pyogrio (gpkg/shp/geojson)."""
-    if path.suffix.lower() == ".parquet":
-        return gpd.read_parquet(path)
-    return gpd.read_file(path)
-
-
 def _load_aoi(
     aoi_path: Path | None, bbox: tuple[float, float, float, float] | None, metric_crs: str
 ) -> gpd.GeoDataFrame | shp_base.BaseGeometry | None:
     """Build the AOI from an explicit layer (any CRS) or a ``metric_crs`` bbox, or None."""
     if aoi_path is not None:
-        return _read_layer(aoi_path)
+        return read_vector(aoi_path)
     if bbox is not None:
         return gpd.GeoDataFrame(geometry=[box(*bbox)], crs=metric_crs)
     return None
@@ -164,8 +158,8 @@ def build_interface(
         logger.info("Interface outputs already present in %s; use force to rebuild.", out_dir)
         return line_parquet, zone_parquet, {}
 
-    forest = _read_layer(forest_path)
-    bati = _read_layer(bati_path)
+    forest = read_vector(forest_path)
+    bati = read_vector(bati_path)
     aoi = _load_aoi(aoi_path, bbox, metric_crs)
 
     result = forest_bati_interface(forest, bati, metric_crs, contact_m, aoi)
