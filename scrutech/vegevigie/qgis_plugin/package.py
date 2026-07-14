@@ -32,8 +32,22 @@ EXTRA_DIRS = {
     "mini_dc": REPO_ROOT / "mini_dc" / "outil",
 }
 _ENGINE_IGNORE = shutil.ignore_patterns(
-    "__pycache__", "*.pyc", "cache", "BDD", "data", ".venv", "dist",
-    "*.gpkg", "*.parquet", "*.zip", "*.shp", "*.dbf", "*.shx", "*.prj", "*.cpg", "*.qmd",
+    "__pycache__",
+    "*.pyc",
+    "cache",
+    "BDD",
+    "data",
+    ".venv",
+    "dist",
+    "*.gpkg",
+    "*.parquet",
+    "*.zip",
+    "*.shp",
+    "*.dbf",
+    "*.shx",
+    "*.prj",
+    "*.cpg",
+    "*.qmd",
 )
 DIST = HERE / "dist"
 
