@@ -13,6 +13,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
+
 def _find_default_config() -> Path:
     """``config/default.yaml`` sits two levels up in the ``src/`` layout and one level
     up in the bundled QGIS-plugin layout; probe both so this file works verbatim in each."""

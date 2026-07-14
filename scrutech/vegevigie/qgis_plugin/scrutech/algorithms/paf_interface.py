@@ -159,19 +159,32 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(f"Frontier: {length_m / 1000:.2f} km | contact band: {area_ha:.1f} ha")
         if length_m == 0:
             feedback.reportError(
-                self.tr("No interface found: forest and built-up never come within the "
-                        "contact distance. Check the layers and the distance.")
+                self.tr(
+                    "No interface found: forest and built-up never come within the "
+                    "contact distance. Check the layers and the distance."
+                )
             )
 
         line_id = self._write_sink(
-            parameters, self.LINE_OUTPUT, context, metric_crs,
-            QgsWkbTypes.MultiLineString, QgsFields(), line,
+            parameters,
+            self.LINE_OUTPUT,
+            context,
+            metric_crs,
+            QgsWkbTypes.MultiLineString,
+            QgsFields(),
+            line,
         )
         zone_fields = QgsFields()
         zone_fields.append(QgsField("area_ha", QVariant.Double))
         zone_id = self._write_sink(
-            parameters, self.ZONE_OUTPUT, context, metric_crs,
-            QgsWkbTypes.MultiPolygon, zone_fields, zone, attributes=[round(area_ha, 2)],
+            parameters,
+            self.ZONE_OUTPUT,
+            context,
+            metric_crs,
+            QgsWkbTypes.MultiPolygon,
+            zone_fields,
+            zone,
+            attributes=[round(area_ha, 2)],
         )
         return {self.LINE_OUTPUT: line_id, self.ZONE_OUTPUT: zone_id}
 
@@ -197,9 +210,7 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
     def _write_sink(
         self, parameters, name, context, crs, wkb_type, fields, geometry, attributes=None
     ) -> str:
-        sink, dest_id = self.parameterAsSink(
-            parameters, name, context, fields, wkb_type, crs
-        )
+        sink, dest_id = self.parameterAsSink(parameters, name, context, fields, wkb_type, crs)
         if sink is None:
             raise QgsProcessingException(self.tr(f"Could not create output '{name}'."))
         if not geometry.isEmpty():

@@ -122,10 +122,8 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
         context: QgsProcessingContext,
         feedback: QgsProcessingFeedback,
     ) -> dict:
-        import numpy as np
-        from osgeo import gdal
-
         import ecobuage
+        from osgeo import gdal
 
         comb, gt, proj = self._read(parameters, self.COMBUSTIBLE, context)
         embr, _, _ = self._read(parameters, self.EMBROUSSAILLEMENT, context)
