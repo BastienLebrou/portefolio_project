@@ -5,29 +5,29 @@
 <text x="24" y="47" font-size="12" fill="#52514e">Part des octets sources suivis par Git</text>
 <clipPath id="strip"><rect x="24" y="92" width="360" height="12" rx="6"/></clipPath>
 <g clip-path="url(#strip)">
-<rect x="24.00" y="92" width="232.65" height="12" fill="#2a78d6"/>
-<rect x="258.65" y="92" width="115.94" height="12" fill="#1baf7a"/>
-<rect x="376.59" y="92" width="1.83" height="12" fill="#eda100"/>
-<rect x="380.42" y="92" width="1.50" height="12" fill="#008300"/>
-<rect x="382.26" y="92" width="1.50" height="12" fill="#e34948"/>
-<rect x="383.62" y="92" width="1.50" height="12" fill="#898781"/>
+<rect x="24.00" y="92" width="232.59" height="12" fill="#2a78d6"/>
+<rect x="258.59" y="92" width="108.64" height="12" fill="#1baf7a"/>
+<rect x="369.22" y="92" width="2.56" height="12" fill="#2a78d6"/>
+<rect x="373.78" y="92" width="1.86" height="12" fill="#4a3aa7"/>
+<rect x="377.64" y="92" width="1.50" height="12" fill="#eda100"/>
+<rect x="380.43" y="92" width="3.57" height="12" fill="#898781"/>
 </g>
 <rect x="24" y="124" width="10" height="10" rx="3" fill="#2a78d6"/>
 <text x="41" y="134" font-size="12" fill="#52514e">Python</text>
 <text x="190" y="134" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">65,2 %</text>
 <rect x="204" y="124" width="10" height="10" rx="3" fill="#1baf7a"/>
 <text x="221" y="134" font-size="12" fill="#52514e">Markdown</text>
-<text x="370" y="134" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">32,8 %</text>
-<rect x="24" y="154" width="10" height="10" rx="3" fill="#eda100"/>
-<text x="41" y="164" font-size="12" fill="#52514e">YAML</text>
-<text x="190" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">1,1 %</text>
-<rect x="204" y="154" width="10" height="10" rx="3" fill="#008300"/>
-<text x="221" y="164" font-size="12" fill="#52514e">TOML</text>
-<text x="370" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,5 %</text>
-<rect x="24" y="184" width="10" height="10" rx="3" fill="#e34948"/>
-<text x="41" y="194" font-size="12" fill="#52514e">Texte</text>
-<text x="190" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,4 %</text>
+<text x="370" y="134" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">30,7 %</text>
+<rect x="24" y="154" width="10" height="10" rx="3" fill="#2a78d6"/>
+<text x="41" y="164" font-size="12" fill="#52514e">JSON</text>
+<text x="190" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">1,3 %</text>
+<rect x="204" y="154" width="10" height="10" rx="3" fill="#4a3aa7"/>
+<text x="221" y="164" font-size="12" fill="#52514e">SVG</text>
+<text x="370" y="164" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">1,1 %</text>
+<rect x="24" y="184" width="10" height="10" rx="3" fill="#eda100"/>
+<text x="41" y="194" font-size="12" fill="#52514e">YAML</text>
+<text x="190" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,8 %</text>
 <rect x="204" y="184" width="10" height="10" rx="3" fill="#898781"/>
 <text x="221" y="194" font-size="12" fill="#52514e">Autres</text>
-<text x="370" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">0,1 %</text>
+<text x="370" y="194" font-size="12" fill="#0b0b0b" font-weight="600" text-anchor="end">1,0 %</text>
 </svg>
