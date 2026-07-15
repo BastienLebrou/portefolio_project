@@ -29,8 +29,11 @@ Légende : 🌐 API à la volée · 💾 cache local/BDD (→ S3) · 🧮 dériv
 
 | Donnée SIG | Source | Mode |
 |---|---|---|
-| Bâti | BD TOPO `BDTOPO_V3:batiment` (WFS `data.geopf.fr`) | 💾 |
-| Forêt | BD Forêt IGN (WFS) **ou** couche végétation vulnérable VegeVigie | 💾 / 🧮 |
+| **Zones construites** | **OCS GE** (IGN) — couverture *surfaces artificialisées / bâti* | 💾 |
+| Forêt | **OCS GE** — couverture *zones arborées* (ou couche vulnérable VegeVigie) | 💾 / 🧮 |
+
+> Les deux couches PAF sortent du **même produit OCS GE** (une requête, deux classes de
+> couverture) → AOI seule, plus rien à sélectionner.
 
 ---
 
@@ -42,9 +45,9 @@ Légende : 🌐 API à la volée · 💾 cache local/BDD (→ S3) · 🧮 dériv
 | Combustible / biomasse sèche | NDVI/NBR VegeVigie | 🧮 |
 | Embroussaillement | tendance NDVI VegeVigie | 🧮 |
 | Pente | RGE ALTI (IGN) ou Copernicus DEM GLO-30 | 💾 COG |
-| Accessibilité | routes OpenStreetMap (Overpass) | 🌐 |
-| Historique feux | BDIFF / EFFIS | 💾 |
-| Exclusions | Natura 2000 (INPN), bâti (BD TOPO), occupation du sol CLC/OSO | 💾 |
+| Accessibilité | voirie BD TOPO ou routes OSM (Overpass) | 🌐 / 💾 |
+| Historique feux | BDIFF + EFFIS (périmètres brûlés) | 💾 |
+| Exclusions | Natura 2000 (INPN), zones construites (**OCS GE**), occupation du sol (**OCS GE**) | 💾 |
 
 ---
 
@@ -65,10 +68,10 @@ Légende : 🌐 API à la volée · 💾 cache local/BDD (→ S3) · 🧮 dériv
 | Donnée SIG | Source | Mode |
 |---|---|---|
 | Parcelles cadastrales | `cadastre.data.gouv.fr` (PCI Vecteur) | 🌐 / 💾 |
-| Bâti | BD TOPO | 💾 |
+| **Zones construites** (contexte bâti) | **OCS GE** (IGN) | 💾 |
 | Fibre | ARCEP (open data déploiement fibre) | 💾 |
-| Énergie | Enedis (postes / capacités d'accueil réseau) | 💾 |
-| Voirie | BD TOPO / OpenStreetMap | 💾 / 🌐 |
+| Énergie | Enedis (postes sources / capacités d'accueil réseau) | 💾 |
+| Voirie | BD TOPO `troncon_de_route` / OpenStreetMap | 💾 / 🌐 |
 | Contraintes | ABF/monuments, PPRI (`Géorisques` API), EBC (`GPU` — Géoportail Urbanisme) | 🌐 / 💾 |
 
 ---
@@ -102,3 +105,22 @@ Une couche affichée = `SELECT … FROM <table> WHERE aoi_id = ?` **ou** un chem
 | Écobuage | exige 5 rasters alignés | **AOI seule** ; critères dérivés auto |
 | SDBPi | INSEE + venv externe | **AOI** ; données à la volée / BDD |
 | Mini DC | démo Alba, pas d'AOI | **AOI** réelle |
+
+---
+
+## Sources — accès détaillé
+
+> ⚠️ Endpoints **best-known (2026), non vérifiés sur le web** (recherche plafonnée) —
+> à confirmer au premier run d'ingestion. `geoservices.ign.fr` redirige désormais vers
+> `cartes.gouv.fr` (confirmé).
+
+| Donnée | Fournisseur | Accès |
+|---|---|---|
+| **OCS GE** (zones construites + forêt) | IGN | `cartes.gouv.fr` / `data.geopf.fr` — téléchargement GPKG par département, ou WFS. Couverture bâti = surfaces artificialisées (CS1.1.x). |
+| **Historique feux — BDIFF** | Min. Agriculture | `bdiff.agriculture.gouv.fr` — export CSV (date, INSEE commune, surface parcourue), national, filtrable par département. |
+| **Historique feux — EFFIS** | Copernicus / JRC | `effis.jrc.ec.europa.eu` — périmètres de zones brûlées (shapefile/GeoJSON), filtrable France. |
+| **Fibre — ARCEP** | ARCEP | `data.gouv.fr` (jeux ARCEP « déploiement FTTH » / « Ma connexion internet »), par région/département. |
+| **Énergie — Enedis** | Enedis | `opendata.enedis.fr` — API Opendatasoft : `…/api/explore/v2.1/catalog/datasets/{dataset}/exports/geojson`. Jeux : postes sources, capacités d'accueil réseau, réseau HTA/BT. |
+| **Voirie** | IGN / OSM | BD TOPO `BDTOPO_V3:troncon_de_route` (WFS `data.geopf.fr`, ou GPKG par département) ; ou OSM via Overpass `overpass-api.de/api/interpreter`. |
+| **Natura 2000** | INPN | `inpn.mnhn.fr` / `data.gouv.fr` — shapefiles nationaux SIC/ZSC + ZPS, à clipper sur l'emprise. |
+| **Communes / départements** | Etalab | `geo.api.gouv.fr` (vérifié). |
