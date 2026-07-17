@@ -1,22 +1,13 @@
-"""Area-of-interest construction from official French admin boundaries.
+"""AOI helpers for the vegevigie pipeline.
 
-This stage turns administrative boundaries into two GeoParquet layers under
-``data/raw``:
+Thin façade over :mod:`core.aoi` for commune boundaries — now every French
+département via geo.api.gouv.fr (was Ardèche-only, fixes B3) — plus the
+pipeline-specific bbox clip / dissolve / GeoParquet layer builder used by the
+``aoi`` CLI stage.
 
-- ``communes_<dept>.parquet`` — every commune polygon of the département (reused
-  later for zonal aggregation, CLAUDE.md §M6);
-- ``aoi.parquet`` — the analysis footprint: either the whole département outline
-  (``--full``) or the communes clipped to the smoke-test bbox (``--small``).
-
-Boundary source note: the canonical sources (``geo.api.gouv.fr``, IGN
-``data.geopf.fr``) are unreachable from the CI/web egress policy used here, so we
-read the community ``france-geojson`` mirror (derived from official IGN
-ADMIN-EXPRESS data) over ``raw.githubusercontent.com``. The download lives behind
-:func:`fetch_communes` so swapping back to the official API later is a one-function
-change; the geometry maths below are pure and source-agnostic.
-
-Everything is WGS84 (EPSG:4326) here — reprojection to the Sentinel-2 UTM grid
-happens in the datacube stage (M2), not in the vector layer.
+``fetch_communes`` is re-exported from core; tests still monkeypatch
+``vegevigie.aoi.fetch_communes`` and :func:`build_aoi` picks that up via the module
+global. Everything is WGS84 (EPSG:4326); reprojection happens in the datacube stage.
 """
 
 from __future__ import annotations
@@ -25,50 +16,12 @@ import logging
 from pathlib import Path
 
 import geopandas as gpd
-import requests
+from core.aoi import WGS84, BBox, fetch_communes
 from shapely.geometry import box
 
 logger = logging.getLogger("vegevigie")
 
-WGS84 = "EPSG:4326"
-
-# France-geojson mirror: one GeoJSON of commune polygons per département.
-# Path pattern: departements/<dd>-<slug>/communes-<dd>-<slug>.geojson
-_FRANCE_GEOJSON_BASE = (
-    "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements"
-)
-
-# département code -> url slug (extend as new départements are needed).
-_DEPT_SLUGS = {
-    "07": "07-ardeche",
-}
-
-BBox = tuple[float, float, float, float]
-
-
-def _communes_url(dept: str) -> str:
-    try:
-        slug = _DEPT_SLUGS[dept]
-    except KeyError as exc:
-        known = ", ".join(sorted(_DEPT_SLUGS))
-        msg = f"No boundary URL slug registered for département {dept!r} (known: {known})"
-        raise KeyError(msg) from exc
-    return f"{_FRANCE_GEOJSON_BASE}/{slug}/communes-{slug}.geojson"
-
-
-def fetch_communes(dept: str, timeout: int = 60) -> gpd.GeoDataFrame:
-    """Download the commune polygons of a département as a WGS84 GeoDataFrame.
-
-    Columns: ``code`` (INSEE), ``nom``, ``geometry``. This is the only network I/O
-    in the AOI stage.
-    """
-    url = _communes_url(dept)
-    logger.info("Fetching commune boundaries for dept %s from %s", dept, url)
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    gdf = gpd.GeoDataFrame.from_features(resp.json()["features"], crs=WGS84)
-    logger.info("Loaded %d communes for dept %s", len(gdf), dept)
-    return gdf[["code", "nom", "geometry"]]
+__all__ = ["WGS84", "BBox", "fetch_communes", "clip_to_bbox", "dissolve_boundary", "build_aoi"]
 
 
 def clip_to_bbox(communes: gpd.GeoDataFrame, bbox: BBox) -> gpd.GeoDataFrame:
@@ -114,8 +67,7 @@ def build_aoi(
     communes.to_parquet(communes_path)
 
     if small_bbox is not None:
-        aoi = clip_to_bbox(communes, small_bbox)
-        aoi.to_parquet(aoi_path)
+        clip_to_bbox(communes, small_bbox).to_parquet(aoi_path)
     else:
         dissolve_boundary(communes, name).to_parquet(aoi_path)
 

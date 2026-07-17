@@ -24,3 +24,5 @@ qgis_plugin/scrutech/vegevigie/
 qgis_plugin/scrutech/config/
 qgis_plugin/dist/
 qgis_plugin/scrutech/ecobuage.py
+qgis_plugin/scrutech/sdbpi/
+qgis_plugin/scrutech/mini_dc/

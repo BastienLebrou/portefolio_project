@@ -10,7 +10,9 @@ from qgis.PyQt.QtGui import QIcon
 from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
 from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
+from .algorithms.mini_dc_sites import MiniDcSitesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
+from .algorithms.sdbpi_vacance import SdbpiVacanceAlgorithm
 
 
 class ScruTechProvider(QgsProcessingProvider):
@@ -21,6 +23,8 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(LoadCommunesAlgorithm())
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
+        self.addAlgorithm(SdbpiVacanceAlgorithm())
+        self.addAlgorithm(MiniDcSitesAlgorithm())
 
     def id(self) -> str:
         return "scrutech"
@@ -29,7 +33,10 @@ class ScruTechProvider(QgsProcessingProvider):
         return "ScruTech"
 
     def longName(self) -> str:  # noqa: N802 — QGIS API name
-        return "ScruTech — geodata hub: VegeVigie, PAF fire interface, écobuage aptitude"
+        return (
+            "ScruTech — geodata hub: VegeVigie, PAF fire interface, écobuage, "
+            "SDBPi vacant buildings, mini data centers"
+        )
 
     def icon(self) -> QIcon:
         icon_path = Path(__file__).resolve().parent / "icon.svg"

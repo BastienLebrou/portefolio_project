@@ -89,6 +89,11 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
     def createInstance(self) -> AnalyzeExtentAlgorithm:  # noqa: N802
         return AnalyzeExtentAlgorithm()
 
+    def icon(self):  # noqa: N802 — QGIS API name
+        from ._icons import algo_icon
+
+        return algo_icon("vegevigie")
+
     def tr(self, string: str) -> str:
         return QCoreApplication.translate("ScruTech", string)
 

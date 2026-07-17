@@ -81,6 +81,8 @@ class PipelineResult:
 
 def _write_band(da: xr.DataArray, crs: object, path: Path, name: str) -> Path:
     """Write a single 2D DataArray to a GeoTIFF with an explicit CRS + band name."""
+    import rioxarray  # noqa: F401 — side effect: registers the .rio accessor
+
     path.parent.mkdir(parents=True, exist_ok=True)
     band = da.rio.write_crs(crs)
     band.rio.to_raster(path)
@@ -105,6 +107,10 @@ def run_pipeline(
 
     # Imported here so the module (and QGIS plugin load) don't pay for the heavy
     # datacube stack until an analysis actually runs.
+    # rioxarray is imported for its side effect: it registers the ``.rio`` accessor on
+    # xarray objects (used below and in _write_band / zonal). Without it: AttributeError.
+    import rioxarray  # noqa: F401
+
     from vegevigie.catalog import (
         PlanetaryComputerBackend,
         build_search_params,

@@ -3491,6 +3491,34 @@ wheels = [
 ]
 
 [[package]]
+name = "scrutech-core"
+version = "0.1.0"
+source = { editable = "../core" }
+dependencies = [
+    { name = "duckdb" },
+    { name = "geopandas" },
+    { name = "pyarrow" },
+    { name = "requests" },
+    { name = "shapely" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "duckdb", specifier = ">=1.0" },
+    { name = "geopandas", specifier = ">=1.0" },
+    { name = "pyarrow", specifier = ">=16.0" },
+    { name = "requests", specifier = ">=2.32" },
+    { name = "shapely", specifier = ">=2.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.10" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "shapely"
 version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3813,6 +3841,7 @@ dependencies = [
     { name = "rioxarray", version = "0.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "scrutech-core" },
     { name = "shapely" },
     { name = "streamlit" },
     { name = "typer" },
@@ -3850,6 +3879,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32" },
     { name = "rioxarray", specifier = ">=0.15" },
     { name = "scipy", specifier = ">=1.13" },
+    { name = "scrutech-core", editable = "../core" },
     { name = "shapely", specifier = ">=2.0" },
     { name = "streamlit", specifier = ">=1.36" },
     { name = "typer", specifier = ">=0.12" },
