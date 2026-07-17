@@ -20,6 +20,6 @@
 <text x="507.423" y="228" font-size="11" fill="#898781" text-anchor="middle">mai</text>
 <text x="626.5" y="228" font-size="11" fill="#898781" text-anchor="middle">juin</text>
 <text x="775.346" y="228" font-size="11" fill="#898781" text-anchor="middle">juil.</text>
-<path d="M 795.89 206.00 V 84.20 Q 795.89 80.20 799.89 80.20 H 810.34 Q 814.34 80.20 814.34 84.20 V 206.00 Z" fill="#3987e5"/>
-<text x="805.115" y="74.2" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">17</text>
+<path d="M 795.89 206.00 V 76.80 Q 795.89 72.80 799.89 72.80 H 810.34 Q 814.34 72.80 814.34 76.80 V 206.00 Z" fill="#3987e5"/>
+<text x="805.115" y="66.8" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">18</text>
 </svg>
