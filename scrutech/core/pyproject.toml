@@ -9,6 +9,8 @@ dependencies = [
     "shapely>=2.0",
     "pyarrow>=16.0",
     "requests>=2.32",
+    # Central store (core.db) — DuckDB before PostGIS: one file, no server, spatial built in.
+    "duckdb>=1.0",
 ]
 
 [dependency-groups]

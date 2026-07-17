@@ -3495,6 +3495,7 @@ name = "scrutech-core"
 version = "0.1.0"
 source = { editable = "../core" }
 dependencies = [
+    { name = "duckdb" },
     { name = "geopandas" },
     { name = "pyarrow" },
     { name = "requests" },
@@ -3503,6 +3504,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "duckdb", specifier = ">=1.0" },
     { name = "geopandas", specifier = ">=1.0" },
     { name = "pyarrow", specifier = ">=16.0" },
     { name = "requests", specifier = ">=2.32" },
