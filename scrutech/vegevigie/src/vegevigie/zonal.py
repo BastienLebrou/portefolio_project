@@ -21,6 +21,7 @@ from collections.abc import Callable
 
 import geopandas as gpd
 import numpy as np
+import rioxarray  # noqa: F401 — side effect: registers the .rio accessor used below
 import xarray as xr
 from rasterio.features import rasterize
 
