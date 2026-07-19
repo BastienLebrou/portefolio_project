@@ -36,6 +36,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
+from . import _qgis_compat as _compat
+
 # QGIS sets these to point at its own runtime; they must NOT leak into an external
 # Python interpreter or they break its rasterio/pyproj/GDAL.
 _ENV_STRIP = (
@@ -106,7 +108,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.START_YEAR,
                 self.tr("Start year"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=_compat.NUMBER_INTEGER,
                 defaultValue=2020,
                 minValue=2015,
                 maxValue=2100,
@@ -116,7 +118,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.END_YEAR,
                 self.tr("End year"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=_compat.NUMBER_INTEGER,
                 defaultValue=2020,
                 minValue=2015,
                 maxValue=2100,
@@ -126,7 +128,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 self.tr("Resolution (m)"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=_compat.NUMBER_INTEGER,
                 defaultValue=60,
                 minValue=10,
                 maxValue=200,
@@ -136,7 +138,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_CLOUD,
                 self.tr("Max scene cloud cover (%)"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=_compat.NUMBER_INTEGER,
                 defaultValue=60,
                 minValue=0,
                 maxValue=100,
@@ -153,7 +155,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (recommended)"),
-                behavior=QgsProcessingParameterFile.File,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
             )
         )

@@ -16,7 +16,6 @@ from __future__ import annotations
 from qgis.core import (
     QgsCoordinateTransform,
     QgsFeature,
-    QgsFeatureSink,
     QgsField,
     QgsFields,
     QgsGeometry,
@@ -30,9 +29,10 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber,
     QgsProject,
-    QgsWkbTypes,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
+
+from . import _qgis_compat as _compat
 
 # Buffer smoothness (segments per quarter-circle). 8 is QGIS's default trade-off.
 _BUFFER_SEGMENTS = 8
@@ -83,23 +83,22 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         return QCoreApplication.translate("ScruTech", string)
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
-        from qgis.core import QgsProcessing
 
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.FOREST, self.tr("Forest zones"), [QgsProcessing.TypeVectorPolygon]
+                self.FOREST, self.tr("Forest zones"), [_compat.SOURCE_VECTOR_POLYGON]
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.BATI, self.tr("Built-up zones"), [QgsProcessing.TypeVectorPolygon]
+                self.BATI, self.tr("Built-up zones"), [_compat.SOURCE_VECTOR_POLYGON]
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.CONTACT_M,
                 self.tr("Contact distance (m) — OLD débroussaillement = 50"),
-                type=QgsProcessingParameterNumber.Double,
+                type=_compat.NUMBER_DOUBLE,
                 defaultValue=50.0,
                 minValue=0.0,
             )
@@ -115,14 +114,14 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.LINE_OUTPUT,
                 self.tr("Interface line (frontier)"),
-                QgsProcessing.TypeVectorLine,
+                _compat.SOURCE_VECTOR_LINE,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.ZONE_OUTPUT,
                 self.tr("Interface zone (contact band)"),
-                QgsProcessing.TypeVectorPolygon,
+                _compat.SOURCE_VECTOR_POLYGON,
             )
         )
 
@@ -175,7 +174,7 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             self.LINE_OUTPUT,
             context,
             metric_crs,
-            QgsWkbTypes.MultiLineString,
+            _compat.WKB_MULTILINESTRING,
             QgsFields(),
             line,
         )
@@ -186,7 +185,7 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             self.ZONE_OUTPUT,
             context,
             metric_crs,
-            QgsWkbTypes.MultiPolygon,
+            _compat.WKB_MULTIPOLYGON,
             zone_fields,
             zone,
             attributes=[round(area_ha, 2)],
@@ -223,5 +222,5 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
             feat.setGeometry(geometry)
             if attributes is not None:
                 feat.setAttributes(attributes)
-            sink.addFeature(feat, QgsFeatureSink.FastInsert)
+            sink.addFeature(feat, _compat.SINK_FAST_INSERT)
         return dest_id

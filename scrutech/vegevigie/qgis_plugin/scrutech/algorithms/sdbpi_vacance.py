@@ -22,6 +22,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
+from . import _qgis_compat as _compat
+
 _SOURCES = ["api", "geo_file", "grandlyon"]
 
 
@@ -73,7 +75,7 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.BUFFER,
                 self.tr("Buffer (m) — 25-30 recommandé en tissu mixte"),
-                type=QgsProcessingParameterNumber.Double,
+                type=_compat.NUMBER_DOUBLE,
                 defaultValue=15.0,
                 minValue=0.0,
             )
@@ -87,7 +89,7 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the SDBPi stack (geopandas, requests)"),
-                behavior=QgsProcessingParameterFile.File,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
             )
         )
 

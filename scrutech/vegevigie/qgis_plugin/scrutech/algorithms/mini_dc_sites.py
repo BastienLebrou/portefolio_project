@@ -20,6 +20,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
+from . import _qgis_compat as _compat
+
 
 class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
     """Score cadastral parcels for mini-data-center siting (multi-criteria funnel)."""
@@ -64,7 +66,7 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the mini_dc stack (geopandas, duckdb)"),
-                behavior=QgsProcessingParameterFile.File,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
             )
         )
         self.addParameter(

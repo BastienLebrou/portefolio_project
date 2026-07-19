@@ -1,6 +1,8 @@
 [general]
 name=ScruTech
 qgisMinimumVersion=3.28
+; Without a maximum, QGIS assumes 3.99 and refuses to load the plugin on 4.x.
+qgisMaximumVersion=4.99
 description=Geodata hub in QGIS: VegeVigie (trend/drought), PAF fire interface, écobuage, SDBPi vacant buildings, mini data centers.
 about=ScruTech is a hub that exposes the ScruTech projects as QGIS Processing tools. VegeVigie: search Sentinel-2, build a datacube, mask clouds, compute NDVI monthly composites, run per-pixel Mann-Kendall + Sen's slope trend and NDVI-anomaly drought stress, aggregate to zones. PAF (forest fire): the Wildland-Urban Interface — frontier line and contact band between forest and built-up areas (débroussaillement / defence zone). Écobuage: weighted multi-criteria controlled-burn aptitude (0-100 map + 3-class zoning) from aligned criterion rasters. SDBPi: vacant professional buildings (BD TOPO × SIRENE candidates). Mini data centers: cadastral-parcel site scoring (5-filter funnel). The VegeVigie, SDBPi and mini-data-center tools need a Python environment with their stack (datacube / GeoPandas / DuckDB) and run in an external interpreter via subprocess; the PAF and écobuage tools use only native QGIS (GDAL/numpy/QgsGeometry) — no extra dependencies, no internet.
 version=0.4.0

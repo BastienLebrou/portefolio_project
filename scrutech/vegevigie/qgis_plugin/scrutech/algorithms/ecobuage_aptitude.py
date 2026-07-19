@@ -25,6 +25,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
+from . import _qgis_compat as _compat
+
 # Slope's exploitable band (percent) and ramp — the README defaults.
 _SLOPE_LO, _SLOPE_HI, _SLOPE_RAMP = 15.0, 40.0, 10.0
 
@@ -107,7 +109,7 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
                 QgsProcessingParameterNumber(
                     key,
                     self.tr(label),
-                    type=QgsProcessingParameterNumber.Double,
+                    type=_compat.NUMBER_DOUBLE,
                     defaultValue=default,
                     minValue=0.0,
                 )
