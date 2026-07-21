@@ -24,5 +24,6 @@
 <path d="M 253.86 206.00 V 173.00 Q 253.86 169.00 257.86 169.00 H 273.86 Q 277.86 169.00 277.86 173.00 V 206.00 Z" fill="#2a78d6"/>
 <text x="265.857" y="228" font-size="11" fill="#898781" text-anchor="middle">Ven</text>
 <text x="314.714" y="228" font-size="11" fill="#898781" text-anchor="middle">Sam</text>
+<path d="M 351.57 206.00 V 200.75 Q 351.57 196.75 355.57 196.75 H 371.57 Q 375.57 196.75 375.57 200.75 V 206.00 Z" fill="#2a78d6"/>
 <text x="363.571" y="228" font-size="11" fill="#898781" text-anchor="middle">Dim</text>
 </svg>
