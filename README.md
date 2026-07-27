@@ -134,13 +134,13 @@ réel (script [`scripts/generate_stats.py`](scripts/generate_stats.py), sans dé
 <!-- AUTO-STATS:START -->
 | 📦 Commits | 📅 Jours actifs | 🗂️ Projets |
 |:---:|:---:|:---:|
-| **31** | **7** | **1** |
+| **32** | **8** | **1** |
 
 | 🐍 Lignes de Python | ✅ Tests automatisés | 🥇 Langage principal |
 |:---:|:---:|:---:|
 | **10 767** | **95** | **Python (65,8 %)** |
 
-*Dernière mise à jour automatique : 25 juillet 2026 à 10:36 (heure de Paris) — commit `4861b5e`.*
+*Dernière mise à jour automatique : 27 juillet 2026 à 12:28 (heure de Paris) — commit `7417e8c`.*
 <!-- AUTO-STATS:END -->
 
 <picture>
