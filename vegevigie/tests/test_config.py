@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from vegevigie.config import DEFAULT_CONFIG_PATH, Settings, load_settings
+from vegevigie.config import (
+    CONFIG_CANDIDATES,
+    CONFIG_ENV_VAR,
+    Settings,
+    default_config_path,
+    load_settings,
+)
 
 
 def test_default_config_loads() -> None:
@@ -19,7 +25,60 @@ def test_default_config_loads() -> None:
 
 
 def test_default_config_path_exists() -> None:
-    assert DEFAULT_CONFIG_PATH.is_file()
+    assert default_config_path().is_file()
+
+
+def test_config_candidates_cover_the_three_layouts() -> None:
+    """dev repo, bundled QGIS plugin, and packaged wheel — in that order."""
+    import vegevigie.config
+
+    here = Path(vegevigie.config.__file__).resolve()
+    expected = (
+        here.parents[2] / "config" / "default.yaml",  # <repo>/config/default.yaml
+        here.parents[1] / "config" / "default.yaml",  # scrutech/config/default.yaml
+        here.parent / "default_config.yaml",  # inside the installed package
+    )
+    assert expected == CONFIG_CANDIDATES
+
+
+def test_packaged_plugin_layout_resolves(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Simulate the ScruTech bundle: scrutech/vegevigie/ + scrutech/config/."""
+    plugin = tmp_path / "scrutech"
+    (plugin / "vegevigie").mkdir(parents=True)
+    (plugin / "config").mkdir()
+    bundled = plugin / "config" / "default.yaml"
+    bundled.write_text((Path(__file__).parents[1] / "config" / "default.yaml").read_text())
+
+    fake_module = plugin / "vegevigie" / "config.py"
+    monkeypatch.setattr(
+        "vegevigie.config.CONFIG_CANDIDATES",
+        (
+            fake_module.parents[2] / "config" / "default.yaml",
+            fake_module.parents[1] / "config" / "default.yaml",
+            fake_module.parent / "default_config.yaml",
+        ),
+    )
+    assert default_config_path() == bundled
+    assert load_settings().aoi.departement == "07"
+
+
+def test_missing_config_names_every_place_it_looked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("vegevigie.config.CONFIG_CANDIDATES", (tmp_path / "nope.yaml",))
+    with pytest.raises(FileNotFoundError, match="nope.yaml"):
+        default_config_path()
+
+
+def test_env_var_overrides_candidates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    custom = tmp_path / "site.yaml"
+    custom.write_text((Path(__file__).parents[1] / "config" / "default.yaml").read_text())
+    monkeypatch.setenv(CONFIG_ENV_VAR, str(custom))
+    assert default_config_path() == custom
+
+    monkeypatch.setenv(CONFIG_ENV_VAR, str(tmp_path / "absent.yaml"))
+    with pytest.raises(FileNotFoundError, match=CONFIG_ENV_VAR):
+        default_config_path()
 
 
 def test_paths_derived_dirs() -> None:

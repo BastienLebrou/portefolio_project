@@ -15,14 +15,37 @@ QGIS-native commune loader for all départements (N8, findings 4–5), interpret
 persistence/auto-detection (N11→done). Engine spine covered by offline tests
 (`test_stages.py`, `test_qgis_runner.py`, `test_scrutech_protocol.py`).
 
-**Still open** — prebuilt `.model3` file (N2; per-stage chaining works, the
-shipped model is pending a live-QGIS session to author/validate it), HTML run
-report (N5), time-series probe (N6), Check/Bootstrap environment algorithms
-(N7), pre-flight cost estimate (N9), polygon AOI masking (N10), CDSE backend
-(N11), French i18n (N12), rewiring the CLI commands onto the stage functions
-(they still carry their own zarr-based contracts), finding 12's plugin-side
-tests beyond the protocol, and a live-QGIS validation pass of the new
-algorithms + QMLs (this environment has no QGIS runtime).
+**P0 fixes (post-review)** — two defects found by re-auditing the above, both
+fixed and covered by tests:
+
+1. *Config unreachable in the packaged plugin.* The S2 refactor dropped the
+   bundle-aware config lookup, so `load_settings()` resolved to
+   `<qgis_plugins_dir>/config/default.yaml` and in-process runs of an installed
+   plugin crashed. `config.py` now searches three layouts (dev repo, plugin
+   bundle, installed wheel) with a `VEGEVIGIE_CONFIG` override and an error that
+   names every path it tried; the wheel force-includes a copy, so a
+   non-editable `pip install` works too.
+2. *The manifest cache invalidated everything.* The fingerprint covered all
+   settings at once, so tightening `trend.p_value` wiped the ledger and forced a
+   full datacube re-download — the very defect (finding 6) the manifest existed
+   to fix. Fingerprints are now per stage: each hashes only the config sections
+   it reads plus its upstream stages', and the zones layer hash rides in the
+   zonal stage's fingerprint alone. Manifest version bumped to 2. A changed AOI
+   also now refreshes the cached scene list, which the year-only filename would
+   otherwise have masked.
+
+**Still open** — the P1 items from the review: rewiring the CLI onto the stage
+functions (it still writes its own zarr-based artifacts, so CLI and plugin runs
+don't share outputs), dropping the `.compute()` in `stage_composites` that
+materializes the whole monthly stack in RAM (the CLI path streams to zarr
+instead), and CI coverage of the plugin (compile check, packaged-layout test,
+zip build). Then the P2 features: prebuilt `.model3` (N2), HTML run report (N5),
+time-series probe (N6), Check/Bootstrap environment (N7), pre-flight cost
+estimate (N9), polygon AOI masking (N10), CDSE backend (N11), i18n (N12).
+
+**Not yet validated anywhere** — no run has ever touched real Sentinel-2 data
+(every figure in the repo comes from synthetic inputs; this environment has
+neither QGIS nor egress to Planetary Computer). A live run is the next gate.
 
 ---
 

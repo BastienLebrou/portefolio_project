@@ -16,8 +16,10 @@ import rioxarray  # noqa: F401 — registers the .rio accessor
 import xarray as xr
 from shapely.geometry import box
 
+from vegevigie.config import Settings
 from vegevigie.pipeline import build_settings
 from vegevigie.stages import (
+    STAGE_COMPOSITES,
     STAGE_DROUGHT,
     STAGE_RANK,
     STAGE_SEARCH,
@@ -29,6 +31,7 @@ from vegevigie.stages import (
     monthly_path,
     run_stage,
     settings_fingerprint,
+    stage_fingerprint,
 )
 
 CRS = "EPSG:32631"
@@ -94,20 +97,80 @@ def test_fingerprint_ignores_paths(tmp_path: Path) -> None:
     assert settings_fingerprint(a) != settings_fingerprint(_settings(tmp_path / "a", resolution=20))
 
 
-def test_manifest_survives_reload_and_resets_on_param_change(tmp_path: Path) -> None:
+def test_manifest_survives_reload(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     manifest = RunManifest.for_settings(settings)
     artifact = tmp_path / "raw" / "items.json"
     artifact.parent.mkdir(parents=True)
     artifact.write_text("{}")
-    manifest.record(STAGE_SEARCH, {"items": artifact}, {"scene_count": 2})
+    fp = stage_fingerprint(settings, STAGE_SEARCH)
+    manifest.record(STAGE_SEARCH, {"items": artifact}, {"scene_count": 2}, fp)
 
     reloaded = RunManifest.for_settings(settings)
-    assert reloaded.fresh(STAGE_SEARCH) == {"items": artifact}
+    assert reloaded.fresh(STAGE_SEARCH, fp) == {"items": artifact}
     assert reloaded.meta(STAGE_SEARCH)["scene_count"] == 2
+    assert reloaded.fresh(STAGE_SEARCH, "some-other-fingerprint") is None
 
-    changed = RunManifest.for_settings(_settings(tmp_path, resolution=20))
-    assert changed.fresh(STAGE_SEARCH) is None  # new fingerprint -> fresh ledger
+
+def _with(settings: Settings, section: str, key: str, value: object) -> Settings:
+    payload = settings.model_dump()
+    payload[section][key] = value
+    return Settings.model_validate(payload)
+
+
+def test_stage_fingerprints_isolate_unrelated_parameters(tmp_path: Path) -> None:
+    """A tighter p-value must not invalidate the (expensive) datacube download."""
+    base = _settings(tmp_path)
+    stricter = _with(base, "trend", "p_value", 0.01)
+
+    for stage in (STAGE_SEARCH, STAGE_COMPOSITES):
+        assert stage_fingerprint(base, stage) == stage_fingerprint(stricter, stage)
+    assert stage_fingerprint(base, STAGE_TREND) != stage_fingerprint(stricter, STAGE_TREND)
+
+
+def test_stage_fingerprints_propagate_downstream(tmp_path: Path) -> None:
+    """A coarser resolution changes the composites and everything built on them."""
+    base = _settings(tmp_path)
+    coarser = _with(base, "raster", "resolution", 100)
+
+    assert stage_fingerprint(base, STAGE_SEARCH) == stage_fingerprint(coarser, STAGE_SEARCH)
+    for stage in (STAGE_COMPOSITES, STAGE_TREND, STAGE_DROUGHT, STAGE_ZONAL):
+        assert stage_fingerprint(base, stage) != stage_fingerprint(coarser, stage)
+
+
+def test_zones_ride_in_the_zonal_fingerprint_only(tmp_path: Path) -> None:
+    """Swapping the zones layer re-runs zonal, and nothing upstream of it."""
+    settings = _settings(tmp_path)
+    assert stage_fingerprint(settings, STAGE_ZONAL, extra="zones-a") != stage_fingerprint(
+        settings, STAGE_ZONAL, extra="zones-b"
+    )
+    # The upstream stages compute their own fingerprint with no `extra`, so the
+    # zones hash cannot reach them however the zonal stage is called.
+    upstream = {s: stage_fingerprint(settings, s) for s in (STAGE_COMPOSITES, STAGE_TREND)}
+    stage_fingerprint(settings, STAGE_ZONAL, extra="zones-b")
+    assert {s: stage_fingerprint(settings, s) for s in upstream} == upstream
+
+
+def test_changing_p_value_keeps_the_datacube_cached(tmp_path: Path) -> None:
+    """End-to-end version of the isolation guarantee, through the manifest."""
+    settings = _settings(tmp_path)
+    monthly = monthly_path(settings)
+    monthly.parent.mkdir(parents=True, exist_ok=True)
+    monthly.write_text("pretend-zarr")
+
+    manifest = RunManifest.for_settings(settings)
+    manifest.record(
+        STAGE_COMPOSITES,
+        {"monthly": monthly},
+        {"months": 24},
+        stage_fingerprint(settings, STAGE_COMPOSITES),
+    )
+
+    stricter = _with(settings, "trend", "p_value", 0.01)
+    reloaded = RunManifest.for_settings(stricter)
+    assert reloaded.fresh(STAGE_COMPOSITES, stage_fingerprint(stricter, STAGE_COMPOSITES)) == {
+        "monthly": monthly
+    }
 
 
 def test_manifest_stores_relative_paths_and_checks_disk(tmp_path: Path) -> None:
@@ -116,7 +179,7 @@ def test_manifest_stores_relative_paths_and_checks_disk(tmp_path: Path) -> None:
     artifact = tmp_path / "processed" / "trend.tif"
     artifact.parent.mkdir(parents=True)
     artifact.write_text("x")
-    manifest.record(STAGE_TREND, {"sen_slope": artifact})
+    manifest.record(STAGE_TREND, {"sen_slope": artifact}, fingerprint="fp")
 
     import json
 

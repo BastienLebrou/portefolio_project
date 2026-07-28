@@ -8,12 +8,53 @@ read files or hard-code thresholds themselves (CLAUDE.md §7).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, Field
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "default.yaml"
+_HERE = Path(__file__).resolve()
+
+# Environment override — an escape hatch when none of the layouts below apply
+# (e.g. a site-specific config on a server, or debugging an install).
+CONFIG_ENV_VAR = "VEGEVIGIE_CONFIG"
+
+# The same engine runs from three different layouts, and the default config sits
+# in a different place in each. Rather than assume one, try them in order:
+#
+# 1. dev / editable install — ``<repo>/src/vegevigie/config.py`` next to
+#    ``<repo>/config/default.yaml``;
+# 2. bundled inside the ScruTech QGIS plugin — ``scrutech/vegevigie/config.py``
+#    with the config copied to ``scrutech/config/default.yaml`` by package.py;
+# 3. pip-installed wheel — no repo around it, so the build force-includes a copy
+#    inside the package itself (see pyproject.toml).
+CONFIG_CANDIDATES: tuple[Path, ...] = (
+    _HERE.parents[2] / "config" / "default.yaml",
+    _HERE.parents[1] / "config" / "default.yaml",
+    _HERE.parent / "default_config.yaml",
+)
+
+
+def default_config_path() -> Path:
+    """Return the first default config that exists, or raise with where we looked."""
+    env_value = os.environ.get(CONFIG_ENV_VAR)
+    if env_value:
+        candidate = Path(env_value)
+        if not candidate.is_file():
+            msg = f"{CONFIG_ENV_VAR} points at {candidate}, which is not a file."
+            raise FileNotFoundError(msg)
+        return candidate
+    for candidate in CONFIG_CANDIDATES:
+        if candidate.is_file():
+            return candidate
+    looked = "\n  ".join(str(c) for c in CONFIG_CANDIDATES)
+    msg = (
+        "Could not find VegeVigie's default configuration. Looked in:\n  "
+        f"{looked}\n\nPass an explicit config path, or set the "
+        f"{CONFIG_ENV_VAR} environment variable to a default.yaml."
+    )
+    raise FileNotFoundError(msg)
 
 
 class AoiConfig(BaseModel):
@@ -97,8 +138,13 @@ class Settings(BaseModel):
 
 
 def load_settings(path: Path | None = None) -> Settings:
-    """Load and validate settings from a YAML file (default: ``config/default.yaml``)."""
-    config_path = path or DEFAULT_CONFIG_PATH
+    """Load and validate settings from a YAML file.
+
+    With no ``path``, the default config is resolved through
+    :func:`default_config_path`, which handles the dev repo, the bundled QGIS
+    plugin and a pip-installed wheel alike.
+    """
+    config_path = path or default_config_path()
     with config_path.open() as fh:
         raw = yaml.safe_load(fh)
     return Settings.model_validate(raw)

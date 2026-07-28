@@ -43,7 +43,7 @@ logger = logging.getLogger("vegevigie")
 ProgressCallback = Callable[[int, str], None]
 
 MANIFEST_NAME = "scrutech_run.json"
-MANIFEST_VERSION = 1
+MANIFEST_VERSION = 2
 
 # Stage names — shared vocabulary across CLI, qgis_runner and the ScruTech plugin.
 STAGE_SEARCH = "search"
@@ -55,21 +55,59 @@ STAGE_RANK = "rank"
 PIPELINE_STAGES = (STAGE_SEARCH, STAGE_COMPOSITES, STAGE_TREND, STAGE_DROUGHT, STAGE_ZONAL)
 ALL_STAGES = (*PIPELINE_STAGES, STAGE_RANK)
 
+# Which config sections each stage actually reads. Caching is per stage, so
+# tightening the trend p-value must NOT invalidate the datacube download: only
+# the sections a stage depends on (plus its upstream stages) enter its
+# fingerprint. ``paths`` is deliberately absent everywhere — *where* outputs land
+# doesn't change *what* they are, so a run folder stays valid when moved.
+STAGE_SETTINGS_KEYS: dict[str, tuple[str, ...]] = {
+    STAGE_SEARCH: ("aoi", "time", "stac"),
+    STAGE_COMPOSITES: ("raster", "composite"),
+    STAGE_TREND: ("trend",),
+    STAGE_DROUGHT: (),
+    STAGE_ZONAL: (),
+}
+
+# Upstream stages whose fingerprint feeds into this one, so a change propagates
+# down the chain (new AOI -> new composites -> new trend -> new zonal).
+STAGE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
+    STAGE_SEARCH: (),
+    STAGE_COMPOSITES: (STAGE_SEARCH,),
+    STAGE_TREND: (STAGE_COMPOSITES,),
+    STAGE_DROUGHT: (STAGE_COMPOSITES,),
+    STAGE_ZONAL: (STAGE_TREND, STAGE_DROUGHT),
+}
+
 
 class StageInputError(RuntimeError):
     """A stage's input artifact is missing — an earlier stage must run first."""
 
 
-def settings_fingerprint(settings: Settings) -> str:
-    """Stable hash of the parameters that determine the pipeline outputs.
+def _hash(payload: object) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
 
-    ``paths`` is excluded: *where* outputs land doesn't change *what* they are, so
-    moving a run folder (or mounting it elsewhere) keeps the cache valid.
+
+def settings_fingerprint(settings: Settings) -> str:
+    """Stable hash of every parameter that determines the pipeline outputs.
+
+    Informational (recorded in the manifest header); cache decisions use the
+    per-stage :func:`stage_fingerprint` instead.
     """
     payload = settings.model_dump(mode="json")
     payload.pop("paths", None)
-    canonical = json.dumps(payload, sort_keys=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+    return _hash(payload)
+
+
+def stage_fingerprint(settings: Settings, stage: str, extra: str = "") -> str:
+    """Hash of the settings ``stage`` depends on, plus its upstream stages'.
+
+    ``extra`` folds in a non-config input — the zonal stage passes a hash of the
+    zones layer, so swapping zones invalidates it while leaving the rasters alone.
+    """
+    payload = settings.model_dump(mode="json")
+    own = {key: payload[key] for key in STAGE_SETTINGS_KEYS.get(stage, ())}
+    deps = [stage_fingerprint(settings, dep) for dep in STAGE_DEPENDENCIES.get(stage, ())]
+    return _hash({"stage": stage, "settings": own, "deps": deps, "extra": extra})
 
 
 @dataclass
@@ -83,7 +121,12 @@ class RunManifest:
 
     @classmethod
     def for_settings(cls, settings: Settings) -> RunManifest:
-        """Load the manifest of ``settings``' data dir, resetting it on parameter change."""
+        """Load the manifest of ``settings``' data dir (or start one).
+
+        Stage records are kept as-is: each carries its own fingerprint and is
+        judged individually by :meth:`fresh`, so changing one parameter only
+        invalidates the stages that actually depend on it.
+        """
         data_dir = settings.paths.data_dir
         data_dir.mkdir(parents=True, exist_ok=True)
         path = data_dir / MANIFEST_NAME
@@ -96,12 +139,10 @@ class RunManifest:
             except (OSError, ValueError):
                 logger.warning("Unreadable manifest at %s — starting fresh.", path)
                 raw = None
-            if (
-                raw is not None
-                and raw.get("version") == MANIFEST_VERSION
-                and raw.get("fingerprint") == fingerprint
-            ):
+            if raw is not None and raw.get("version") == MANIFEST_VERSION:
                 return cls(path, fingerprint, payload, dict(raw.get("stages", {})))
+            if raw is not None:
+                logger.info("Manifest at %s is from an older version — starting fresh.", path)
         return cls(path, fingerprint, payload)
 
     def save(self) -> None:
@@ -114,20 +155,31 @@ class RunManifest:
         self.path.write_text(json.dumps(body, indent=2))
 
     def record(
-        self, stage: str, artifacts: dict[str, Path], meta: dict[str, Any] | None = None
+        self,
+        stage: str,
+        artifacts: dict[str, Path],
+        meta: dict[str, Any] | None = None,
+        fingerprint: str | None = None,
     ) -> None:
         """Register a completed stage (and persist the manifest)."""
         self.stages[stage] = {
             "artifacts": {key: self._store_path(p) for key, p in artifacts.items()},
             "meta": meta or {},
+            "fingerprint": fingerprint,
             "completed_at": datetime.now(UTC).isoformat(timespec="seconds"),
         }
         self.save()
 
-    def fresh(self, stage: str) -> dict[str, Path] | None:
-        """Return the stage's artifacts if recorded *and* all still on disk, else None."""
+    def fresh(self, stage: str, fingerprint: str | None = None) -> dict[str, Path] | None:
+        """Return the stage's artifacts if they are still valid, else None.
+
+        Valid means: recorded, produced with the same ``fingerprint`` (when one is
+        given), and every artifact still present on disk.
+        """
         record = self.stages.get(stage)
         if record is None:
+            return None
+        if fingerprint is not None and record.get("fingerprint") != fingerprint:
             return None
         artifacts = {key: self._load_path(s) for key, s in record.get("artifacts", {}).items()}
         if artifacts and all(p.exists() for p in artifacts.values()):
@@ -228,11 +280,11 @@ def _processed(settings: Settings, name: str, suffix: str) -> Path:
     return settings.paths.processed / f"{name}_{start}_{end}.{suffix}"
 
 
-def _cached_outcome(ctx: RunContext, stage: str) -> StageOutcome | None:
-    """Shared cache check: manifest hit + artifacts on disk + not forced."""
+def _cached_outcome(ctx: RunContext, stage: str, fingerprint: str) -> StageOutcome | None:
+    """Shared cache check: same fingerprint + artifacts on disk + not forced."""
     if ctx.force:
         return None
-    artifacts = ctx.manifest.fresh(stage)
+    artifacts = ctx.manifest.fresh(stage, fingerprint)
     if artifacts is None:
         return None
     ctx.report(100, f"Stage '{stage}' is up to date — reusing cached outputs.")
@@ -263,7 +315,8 @@ def _open_band(path: Path) -> xr.DataArray:
 
 def stage_search(ctx: RunContext, backend: StacBackend | None = None) -> StageOutcome:
     """STAC search over the AOI; cache the (unsigned) scene list as JSON."""
-    cached = _cached_outcome(ctx, STAGE_SEARCH)
+    fingerprint = stage_fingerprint(ctx.settings, STAGE_SEARCH)
+    cached = _cached_outcome(ctx, STAGE_SEARCH, fingerprint)
     if cached is not None:
         return cached
 
@@ -283,17 +336,21 @@ def stage_search(ctx: RunContext, backend: StacBackend | None = None) -> StageOu
         collection=settings.stac.collection,
         max_cloud_cover=settings.stac.max_cloud_cover,
     )
+    # The cache filename carries only the year window, so a *different AOI* over
+    # the same years would otherwise silently reuse the previous scene list.
+    # Getting here means the fingerprint moved (or --force), so refresh it.
     path = items_path(settings)
-    items = search_and_cache(backend or PlanetaryComputerBackend(), params, path, force=ctx.force)
+    items = search_and_cache(backend or PlanetaryComputerBackend(), params, path, force=True)
     ctx.report(100, f"Found {len(items)} scenes.")
     meta = {"scene_count": len(items)}
-    ctx.manifest.record(STAGE_SEARCH, {"items": path}, meta)
+    ctx.manifest.record(STAGE_SEARCH, {"items": path}, meta, fingerprint)
     return StageOutcome(STAGE_SEARCH, {"items": path}, meta)
 
 
 def stage_composites(ctx: RunContext, backend: StacBackend | None = None) -> StageOutcome:
     """Datacube + SCL masking + NDVI + gap-aware monthly median composites (zarr)."""
-    cached = _cached_outcome(ctx, STAGE_COMPOSITES)
+    fingerprint = stage_fingerprint(ctx.settings, STAGE_COMPOSITES)
+    cached = _cached_outcome(ctx, STAGE_COMPOSITES, fingerprint)
     if cached is not None:
         return cached
 
@@ -336,13 +393,14 @@ def stage_composites(ctx: RunContext, backend: StacBackend | None = None) -> Sta
     n_months = int(monthly.sizes.get("time", 0))
     ctx.report(100, f"Monthly composites written ({n_months} months).")
     meta = {"months": n_months, "scene_count": len(items)}
-    ctx.manifest.record(STAGE_COMPOSITES, {"monthly": out}, meta)
+    ctx.manifest.record(STAGE_COMPOSITES, {"monthly": out}, meta, fingerprint)
     return StageOutcome(STAGE_COMPOSITES, {"monthly": out}, meta)
 
 
 def stage_trend(ctx: RunContext) -> StageOutcome:
     """Per-pixel Mann-Kendall + Sen's slope → sen_slope / trend_class / p-value tifs."""
-    cached = _cached_outcome(ctx, STAGE_TREND)
+    fingerprint = stage_fingerprint(ctx.settings, STAGE_TREND)
+    cached = _cached_outcome(ctx, STAGE_TREND, fingerprint)
     if cached is not None:
         return cached
 
@@ -385,13 +443,14 @@ def stage_trend(ctx: RunContext) -> StageOutcome:
         "months": n_months,
     }
     ctx.report(100, "Trend rasters written.")
-    ctx.manifest.record(STAGE_TREND, artifacts, meta)
+    ctx.manifest.record(STAGE_TREND, artifacts, meta, fingerprint)
     return StageOutcome(STAGE_TREND, artifacts, meta)
 
 
 def stage_drought(ctx: RunContext) -> StageOutcome:
     """NDVI anomaly + VCI vs monthly climatology → rasters + AOI-mean timeline."""
-    cached = _cached_outcome(ctx, STAGE_DROUGHT)
+    fingerprint = stage_fingerprint(ctx.settings, STAGE_DROUGHT)
+    cached = _cached_outcome(ctx, STAGE_DROUGHT, fingerprint)
     if cached is not None:
         return cached
 
@@ -432,7 +491,7 @@ def stage_drought(ctx: RunContext) -> StageOutcome:
     series = timeline.to_series()
     meta = {"driest_month": str(series.idxmin().date()) if len(series) else None}
     ctx.report(100, "Drought rasters + timeline written.")
-    ctx.manifest.record(STAGE_DROUGHT, artifacts, meta)
+    ctx.manifest.record(STAGE_DROUGHT, artifacts, meta, fingerprint)
     return StageOutcome(STAGE_DROUGHT, artifacts, meta)
 
 
@@ -448,13 +507,12 @@ def stage_zonal(ctx: RunContext, zones: gpd.GeoDataFrame) -> StageOutcome:
     """Aggregate the trend/drought rasters to zones → GPKG + GeoParquet + DuckDB."""
     settings = ctx.settings
     zones_fp = _zones_fingerprint(zones)
-    if not ctx.force:
-        artifacts = ctx.manifest.fresh(STAGE_ZONAL)
-        if artifacts is not None and ctx.manifest.meta(STAGE_ZONAL).get("zones") == zones_fp:
-            ctx.report(100, f"Stage '{STAGE_ZONAL}' is up to date — reusing cached outputs.")
-            return StageOutcome(
-                STAGE_ZONAL, artifacts, meta=ctx.manifest.meta(STAGE_ZONAL), skipped=True
-            )
+    # The zones layer is an input like any other, so it rides in the fingerprint:
+    # swapping zones re-runs only this stage, leaving the rasters untouched.
+    fingerprint = stage_fingerprint(settings, STAGE_ZONAL, extra=zones_fp)
+    cached = _cached_outcome(ctx, STAGE_ZONAL, fingerprint)
+    if cached is not None:
+        return cached
 
     trend_arts = ctx.manifest.fresh(STAGE_TREND)
     if trend_arts is None:
@@ -485,7 +543,7 @@ def stage_zonal(ctx: RunContext, zones: gpd.GeoDataFrame) -> StageOutcome:
     }
     meta = {"zones": zones_fp, "n_zones": len(zones)}
     ctx.report(100, "Zonal statistics written (GPKG + GeoParquet + DuckDB).")
-    ctx.manifest.record(STAGE_ZONAL, artifacts, meta)
+    ctx.manifest.record(STAGE_ZONAL, artifacts, meta, fingerprint)
     return StageOutcome(STAGE_ZONAL, artifacts, meta)
 
 
