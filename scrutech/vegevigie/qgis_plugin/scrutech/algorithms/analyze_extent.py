@@ -181,7 +181,8 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         resolution = self.parameterAsInt(parameters, self.RESOLUTION, context)
         max_cloud = self.parameterAsInt(parameters, self.MAX_CLOUD, context)
         out_folder = self._resolve_output_folder(parameters, context)
-        python_exe = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
+        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
+        python_exe = self._resolve_python(explicit, feedback)
         zones_path = self._zones_to_path(parameters, context, out_folder, feedback)
 
         if python_exe:
@@ -210,6 +211,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
 
         if result.scene_count == 0:
             feedback.reportError(self.tr("No Sentinel-2 scenes found for this AOI/window."))
+        self._write_styles(result, feedback)
         self._queue_layers(result, context)
         return {
             "TREND": _s(result.trend_tif),
@@ -343,6 +345,34 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         if not value or value == "TEMPORARY_OUTPUT":
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech"
         return Path(value)
+
+    def _resolve_python(self, explicit: str, feedback) -> str:
+        """Auto-find the VegeVigie interpreter (or create it) — no path to paste."""
+        from ._venv import resolve
+
+        plugin_root = Path(__file__).resolve().parents[1]
+        project_dir = plugin_root.parents[1]  # scrutech/vegevigie (dev layout) for provisioning
+        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
+        if python_exe:
+            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
+        else:
+            feedback.pushInfo(
+                "No VegeVigie interpreter found — falling back to in-process "
+                "(needs the datacube stack inside QGIS's Python)."
+            )
+        return python_exe
+
+    def _write_styles(self, result, feedback) -> None:
+        """Drop a sibling .qml next to each raster so QGIS applies the ScruTech style."""
+        from ._styles import drought_qml, trend_qml
+
+        for tif, qml in ((result.trend_tif, trend_qml()), (result.drought_tif, drought_qml())):
+            if tif is None:
+                continue
+            try:
+                Path(tif).with_suffix(".qml").write_text(qml, encoding="utf-8")
+            except OSError as exc:
+                feedback.pushInfo(f"Could not write style for {tif}: {exc}")
 
     def _load_base_settings(self):
         from vegevigie.config import load_settings
