@@ -5,8 +5,8 @@
 <text x="24" y="47" font-size="12" fill="#52514e">Part des octets sources suivis par Git</text>
 <clipPath id="strip"><rect x="24" y="92" width="360" height="12" rx="6"/></clipPath>
 <g clip-path="url(#strip)">
-<rect x="24.00" y="92" width="234.72" height="12" fill="#2a78d6"/>
-<rect x="260.72" y="92" width="103.01" height="12" fill="#1baf7a"/>
+<rect x="24.00" y="92" width="234.73" height="12" fill="#2a78d6"/>
+<rect x="260.73" y="92" width="103.01" height="12" fill="#1baf7a"/>
 <rect x="365.74" y="92" width="3.87" height="12" fill="#4a3aa7"/>
 <rect x="371.61" y="92" width="2.16" height="12" fill="#2a78d6"/>
 <rect x="375.77" y="92" width="1.50" height="12" fill="#eda100"/>
