@@ -13,8 +13,8 @@
 <text x="38" y="99" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">12</text>
 <line x1="46" y1="58.0" x2="388" y2="58.0" stroke="#e1e0d9" stroke-width="1"/>
 <text x="38" y="62" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">16</text>
-<path d="M 58.43 206.00 V 80.50 Q 58.43 76.50 62.43 76.50 H 78.43 Q 82.43 76.50 82.43 80.50 V 206.00 Z" fill="#2a78d6"/>
-<text x="70.4286" y="70.5" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">14</text>
+<path d="M 58.43 206.00 V 71.25 Q 58.43 67.25 62.43 67.25 H 78.43 Q 82.43 67.25 82.43 71.25 V 206.00 Z" fill="#2a78d6"/>
+<text x="70.4286" y="61.25" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">15</text>
 <text x="70.4286" y="228" font-size="11" fill="#898781" text-anchor="middle">Lun</text>
 <path d="M 107.29 206.00 V 117.50 Q 107.29 113.50 111.29 113.50 H 127.29 Q 131.29 113.50 131.29 117.50 V 206.00 Z" fill="#2a78d6"/>
 <text x="119.286" y="228" font-size="11" fill="#898781" text-anchor="middle">Mar</text>
