@@ -18,7 +18,7 @@
 <text x="70.4286" y="228" font-size="11" fill="#898781" text-anchor="middle">Lun</text>
 <path d="M 107.29 206.00 V 117.50 Q 107.29 113.50 111.29 113.50 H 127.29 Q 131.29 113.50 131.29 117.50 V 206.00 Z" fill="#2a78d6"/>
 <text x="119.286" y="228" font-size="11" fill="#898781" text-anchor="middle">Mar</text>
-<path d="M 156.14 206.00 V 182.25 Q 156.14 178.25 160.14 178.25 H 176.14 Q 180.14 178.25 180.14 182.25 V 206.00 Z" fill="#2a78d6"/>
+<path d="M 156.14 206.00 V 173.00 Q 156.14 169.00 160.14 169.00 H 176.14 Q 180.14 169.00 180.14 173.00 V 206.00 Z" fill="#2a78d6"/>
 <text x="168.143" y="228" font-size="11" fill="#898781" text-anchor="middle">Mer</text>
 <path d="M 205.00 206.00 V 200.75 Q 205.00 196.75 209.00 196.75 H 225.00 Q 229.00 196.75 229.00 200.75 V 206.00 Z" fill="#2a78d6"/>
 <text x="217" y="228" font-size="11" fill="#898781" text-anchor="middle">Jeu</text>
