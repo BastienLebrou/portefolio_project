@@ -113,6 +113,11 @@ def trend_dataset(
     def _kernel(block: np.ndarray) -> tuple[float, float, float, float]:
         return mk_sen_1d(block, alpha=alpha, min_valid=min_valid)
 
+    # apply_ufunc needs the core dim (time) in a single dask chunk; the datacube
+    # is chunked along time, so collapse it first (dask path only).
+    if monthly.chunks is not None:
+        monthly = monthly.chunk({time_dim: -1})
+
     slope, pval, zscore, tclass = xr.apply_ufunc(
         _kernel,
         monthly,

@@ -86,7 +86,7 @@ def test_trend_dataset_lazy_with_dask() -> None:
     da = xr.DataArray(
         np.linspace(0.3, 0.8, t)[:, None, None].repeat(2, 1).repeat(2, 2),
         dims=("time", "y", "x"),
-    ).chunk({"y": 1, "x": 1})
+    ).chunk({"time": 6, "y": 1, "x": 1})  # time in 4 chunks: apply_ufunc must rechunk it
     out = trend_dataset(da, min_valid=4)
     # Still lazy before compute.
     assert out["sen_slope"].chunks is not None
