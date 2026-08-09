@@ -57,6 +57,10 @@ def fill_temporal_gaps(
     """
     if max_gap <= 0:
         return monthly
+    # interpolate_na uses apply_ufunc with time as a core dim, which rejects a
+    # cube chunked along time; collapse time to one chunk first (dask path only).
+    if monthly.chunks is not None:
+        monthly = monthly.chunk({time_dim: -1})
     # interpolate_na measures a gap as the distance between the valid points that
     # bracket a NaN run, i.e. (n_missing_months + 1). To fill runs of up to
     # `max_gap` missing months we therefore allow a bracketing distance of

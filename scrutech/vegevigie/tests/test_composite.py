@@ -66,6 +66,17 @@ def test_fill_temporal_gaps_leaves_long_gap() -> None:
     assert np.isnan(filled.isel(time=2).item())
 
 
+def test_fill_temporal_gaps_on_time_chunked_dask() -> None:
+    # Regression: interpolate_na over a cube chunked along time raised
+    # "core dimension consists of multiple chunks" in a live QGIS run.
+    monthly = _cube(
+        ["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"],
+        [0.2, np.nan, 0.6, 0.8],
+    ).chunk({"time": 2})  # time in 2 chunks
+    filled = fill_temporal_gaps(monthly, max_gap=1).compute()
+    assert np.isclose(filled.isel(time=1).item(), 0.4)
+
+
 def test_fill_max_gap_zero_is_noop() -> None:
     monthly = _cube(["2020-01-01", "2020-02-01"], [0.2, np.nan])
     filled = fill_temporal_gaps(monthly, max_gap=0)
