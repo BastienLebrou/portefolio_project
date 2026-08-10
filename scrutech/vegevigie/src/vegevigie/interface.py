@@ -112,6 +112,49 @@ def forest_bati_interface(
     return InterfaceResult(line=line_gdf, zone=zone_gdf, metrics=metrics)
 
 
+def _write_result(result: InterfaceResult, out_dir: Path) -> tuple[Path, Path]:
+    """Write the two WUI layers as GeoParquet (metric CRS) + WGS84 GeoJSON."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    line_parquet = out_dir / "interface_line.parquet"
+    zone_parquet = out_dir / "interface_zone.parquet"
+    result.line.to_parquet(line_parquet)
+    result.zone.to_parquet(zone_parquet)
+    result.line.to_crs(WGS84).to_file(out_dir / "interface_line.geojson", driver="GeoJSON")
+    result.zone.to_crs(WGS84).to_file(out_dir / "interface_zone.geojson", driver="GeoJSON")
+    return line_parquet, zone_parquet
+
+
+def build_interface_from_aoi(
+    aoi: object,
+    out_dir: Path,
+    contact_m: float,
+    metric_crs: str = "EPSG:2154",
+    progress=None,
+) -> tuple[Path, Path, dict[str, float]]:
+    """AOI-only WUI: derive forest + built-up from BD TOPO for the emprise, then compute.
+
+    The user supplies **only a study area** — forest (BD TOPO wooded zones) and buildings
+    are fetched from the IGN Géoplateforme WFS via :mod:`core.sources`, so no input layer is
+    required. Writes the same GeoParquet + GeoJSON products as :func:`build_interface`.
+    """
+    from core.aoi import resolve_aoi
+    from core.sources import fetch_buildings, fetch_forest
+
+    report = progress or (lambda _pct, _msg: None)
+    a = resolve_aoi(aoi)
+    report(20, "Fetching BD TOPO forest for the AOI…")
+    forest = fetch_forest(a)
+    report(50, "Fetching BD TOPO buildings for the AOI…")
+    bati = fetch_buildings(a)
+    report(75, "Computing the forest↔built-up interface…")
+    result = forest_bati_interface(forest, bati, metric_crs, contact_m, a.to_gdf())
+
+    line_parquet, zone_parquet = _write_result(result, out_dir)
+    report(100, f"WUI: {result.metrics['interface_length_m'] / 1000:.2f} km of frontier.")
+    logger.info("Wrote AOI-derived interface layers to %s.", out_dir)
+    return line_parquet, zone_parquet, result.metrics
+
+
 def _empty_result(metric_crs: str) -> InterfaceResult:
     empty = gpd.GeoDataFrame({"kind": []}, geometry=[], crs=metric_crs)
     metrics = {
@@ -163,11 +206,7 @@ def build_interface(
     aoi = _load_aoi(aoi_path, bbox, metric_crs)
 
     result = forest_bati_interface(forest, bati, metric_crs, contact_m, aoi)
-
-    result.line.to_parquet(line_parquet)
-    result.zone.to_parquet(zone_parquet)
-    result.line.to_crs(WGS84).to_file(out_dir / "interface_line.geojson", driver="GeoJSON")
-    result.zone.to_crs(WGS84).to_file(out_dir / "interface_zone.geojson", driver="GeoJSON")
+    line_parquet, zone_parquet = _write_result(result, out_dir)
 
     logger.info("Wrote interface layers to %s (+ WGS84 GeoJSON exports).", out_dir)
     return line_parquet, zone_parquet, result.metrics

@@ -3,7 +3,7 @@
 import geopandas as gpd
 from shapely.geometry import box
 
-from vegevigie.interface import build_interface, forest_bati_interface
+from vegevigie.interface import build_interface, build_interface_from_aoi, forest_bati_interface
 
 L93 = "EPSG:2154"
 
@@ -73,4 +73,22 @@ def test_build_interface_writes_parquet_and_geojson(tmp_path) -> None:
     assert line_path.exists() and zone_path.exists()
     assert (tmp_path / "out" / "interface_line.geojson").exists()
     assert (tmp_path / "out" / "interface_zone.geojson").exists()
+    assert metrics["interface_length_m"] > 0
+
+
+def test_build_interface_from_aoi_fetches_and_writes(tmp_path, monkeypatch) -> None:
+    # AOI-only: forest + buildings come from core.sources (mocked), not from the user.
+    import core.sources as sources
+
+    forest_wgs = _forest().to_crs("EPSG:4326")
+    bati_wgs = _bati(120).to_crs("EPSG:4326")
+    monkeypatch.setattr(sources, "fetch_forest", lambda aoi, **k: forest_wgs.to_crs(L93))
+    monkeypatch.setattr(sources, "fetch_buildings", lambda aoi, **k: bati_wgs.to_crs(L93))
+
+    aoi = gpd.GeoDataFrame(geometry=[box(-10, -10, 260, 110)], crs=L93).to_crs("EPSG:4326")
+    line_path, zone_path, metrics = build_interface_from_aoi(
+        aoi, out_dir=tmp_path / "out", contact_m=50.0
+    )
+    assert line_path.exists() and zone_path.exists()
+    assert (tmp_path / "out" / "interface_line.geojson").exists()
     assert metrics["interface_length_m"] > 0

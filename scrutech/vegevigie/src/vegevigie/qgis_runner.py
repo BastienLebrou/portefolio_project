@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     spec = json.loads(Path(argv[0]).read_text())
+
+    task = spec.get("task", "vegevigie_analyze")
+    if task == "paf_interface_aoi":
+        return _run_paf_interface_aoi(spec)
+
     zones = None
     if spec.get("zones_path"):
         import geopandas as gpd
@@ -65,6 +70,29 @@ def main(argv: list[str] | None = None) -> int:
         ),
         flush=True,
     )
+    return 0
+
+
+def _run_paf_interface_aoi(spec: dict) -> int:
+    """AOI-only WUI: fetch forest+built-up from BD TOPO for the emprise, compute, write."""
+    from vegevigie.interface import build_interface_from_aoi
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        line_path, zone_path, metrics = build_interface_from_aoi(
+            tuple(spec["bbox"]),
+            out_dir=Path(spec["out_folder"]),
+            contact_m=float(spec.get("contact_m", 50.0)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    result = {"line_path": str(line_path), "zone_path": str(zone_path), **metrics}
+    print("RESULT " + json.dumps(result), flush=True)
     return 0
 
 

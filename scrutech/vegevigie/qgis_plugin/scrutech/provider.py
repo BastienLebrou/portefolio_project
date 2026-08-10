@@ -12,6 +12,7 @@ from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
 from .algorithms.mini_dc_sites import MiniDcSitesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
+from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
 from .algorithms.sdbpi_vacance import SdbpiVacanceAlgorithm
 
 
@@ -22,6 +23,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(LoadCommunesAlgorithm())
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
+        self.addAlgorithm(InterfaceFromAoiAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
         self.addAlgorithm(SdbpiVacanceAlgorithm())
         self.addAlgorithm(MiniDcSitesAlgorithm())
