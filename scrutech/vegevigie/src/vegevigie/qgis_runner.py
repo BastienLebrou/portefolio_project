@@ -32,6 +32,8 @@ def main(argv: list[str] | None = None) -> int:
     task = spec.get("task", "vegevigie_analyze")
     if task == "paf_interface_aoi":
         return _run_paf_interface_aoi(spec)
+    if task == "alphaearth_change":
+        return _run_alphaearth_change(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -103,6 +105,33 @@ def _run_paf_interface_aoi(spec: dict) -> int:
         return 1
 
     result = {"line_path": str(line_path), "zone_path": str(zone_path), **metrics}
+    print("RESULT " + json.dumps(result), flush=True)
+    return 0
+
+
+def _run_alphaearth_change(spec: dict) -> int:
+    """AOI-only AlphaEarth change: fetch the GEE cosine-change surface, flag, write."""
+    from alphaearth.pipeline import detect_change_for_aoi
+    from shapely.geometry import box, mapping
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        changed, geojson, summary = detect_change_for_aoi(
+            mapping(box(*spec["bbox"])),
+            int(spec["year1"]),
+            int(spec["year2"]),
+            out_dir=Path(spec["out_folder"]),
+            percentile=float(spec.get("percentile", 95.0)),
+            max_pixels=int(spec.get("max_pixels", 500_000)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    result = {"changed_path": str(changed), "geojson_path": str(geojson), **summary}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
 

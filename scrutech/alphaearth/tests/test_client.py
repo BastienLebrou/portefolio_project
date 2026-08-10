@@ -37,3 +37,17 @@ def test_features_to_gdf_parses_a_gee_collection() -> None:
     assert gdf.crs.to_epsg() == 4326
     assert gdf["pixel_id"].tolist() == [0, 1]
     assert gdf.loc[0, "A00"] == 0.0 and gdf.loc[1, "A00"] == 1.0
+
+
+def test_dist_features_to_gdf_parses_change_distance() -> None:
+    from alphaearth.client import _dist_features_to_gdf
+
+    def _pt(x: float, d: float) -> dict:
+        geom = {"type": "Point", "coordinates": [x, 44.0]}
+        return {"geometry": geom, "properties": {"change_distance": d}}
+
+    feats = [_pt(4.0, 0.05), _pt(4.1, 0.8)]
+    gdf = _dist_features_to_gdf(feats)
+    assert gdf["change_distance"].tolist() == [0.05, 0.8]
+    assert gdf.crs.to_epsg() == 4326
+    assert gdf["pixel_id"].tolist() == [0, 1]

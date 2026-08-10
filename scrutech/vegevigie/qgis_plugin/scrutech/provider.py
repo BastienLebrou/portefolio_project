@@ -7,6 +7,7 @@ from pathlib import Path
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
+from .algorithms.alphaearth_change import AlphaEarthChangeAlgorithm
 from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
 from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
@@ -24,6 +25,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(LoadCommunesAlgorithm())
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
         self.addAlgorithm(InterfaceFromAoiAlgorithm())
+        self.addAlgorithm(AlphaEarthChangeAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
         self.addAlgorithm(SdbpiVacanceAlgorithm())
         self.addAlgorithm(MiniDcSitesAlgorithm())

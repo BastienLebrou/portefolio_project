@@ -27,6 +27,18 @@ def cosine_distance(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return 1.0 - np.sum(an * bn, axis=1)
 
 
+def flag_by_percentile(distances: np.ndarray, percentile: float = 95.0) -> tuple[np.ndarray, float]:
+    """Flag the top ``distances`` above the given percentile. Returns (changed_mask, threshold).
+
+    Used by the AOI change pipeline where the distance is computed server-side (already
+    pixel-aligned), so no row merge is needed — just the threshold.
+    """
+    if distances.size == 0:
+        return np.zeros(0, dtype=bool), 0.0
+    threshold = float(np.percentile(distances, percentile))
+    return distances > threshold, threshold
+
+
 def detect_change(
     t1: pd.DataFrame,
     t2: pd.DataFrame,

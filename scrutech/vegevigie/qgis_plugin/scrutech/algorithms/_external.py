@@ -57,12 +57,20 @@ def run_engine(python_exe: str, script: Path, args: list[str], feedback) -> int:
     return proc.returncode
 
 
-def run_spec(python_exe: str, module: str, spec: dict, out_folder: Path, feedback) -> dict:
+def run_spec(
+    python_exe: str,
+    module: str,
+    spec: dict,
+    out_folder: Path,
+    feedback,
+    extra_env: dict | None = None,
+) -> dict:
     """Write ``spec`` to JSON, run ``python -m module spec.json``, parse PROGRESS/RESULT.
 
     Shared by the AOI-only algorithms (PAF, AlphaEarth…). Streams ``PROGRESS <pct> <msg>``
-    to the feedback and returns the ``RESULT <json>`` payload. Raises RuntimeError with a
-    readable message on engine error or non-zero exit.
+    to the feedback and returns the ``RESULT <json>`` payload. ``extra_env`` injects secrets
+    (e.g. GEE credentials) into the child env only — never written to the spec on disk.
+    Raises RuntimeError with a readable message on engine error or non-zero exit.
     """
     out_folder.mkdir(parents=True, exist_ok=True)
     spec_path = out_folder / "scrutech_spec.json"
@@ -71,6 +79,8 @@ def run_spec(python_exe: str, module: str, spec: dict, out_folder: Path, feedbac
     cmd = [python_exe, "-m", module, str(spec_path)]
     feedback.pushInfo("Running engine in external interpreter:\n  " + " ".join(cmd))
     env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
+    if extra_env:
+        env.update(extra_env)
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     proc = subprocess.Popen(
         cmd,

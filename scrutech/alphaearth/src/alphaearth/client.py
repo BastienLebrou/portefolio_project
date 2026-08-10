@@ -49,21 +49,83 @@ def estimate_gee_cost(aoi_km2: float) -> dict:
     }
 
 
-def authenticate_gee(auth_id: str = "gee_service") -> None:
-    """Initialize GEE from a service-account JSON stored in QgsAuthManager (never on disk).
+def authenticate_gee(auth_id: str = "gee_service", credentials_json: str | None = None) -> None:
+    """Initialize GEE from a service-account JSON (never on disk).
 
-    Store the JSON under the config key ``json_credentials`` of the auth entry ``auth_id``.
+    Credential source, in order: the ``credentials_json`` argument → the
+    ``SCRUTECH_GEE_CREDENTIALS`` environment variable (how the QGIS plugin passes it to
+    the external interpreter, which has no QgsAuthManager) → QgsAuthManager entry
+    ``auth_id`` (config key ``json_credentials``, for in-QGIS use).
     """
     import json
+    import os
 
     import ee
-    from qgis.core import QgsApplication
 
-    config = QgsApplication.authManager().authMethodConfig(auth_id)
-    creds = json.loads(config.configMap()["json_credentials"])
+    raw = credentials_json or os.environ.get("SCRUTECH_GEE_CREDENTIALS")
+    if raw is None:
+        from qgis.core import QgsApplication
+
+        config = QgsApplication.authManager().authMethodConfig(auth_id)
+        raw = config.configMap()["json_credentials"]
+    creds = json.loads(raw)
     ee.Initialize(
         credentials=ee.ServiceAccountCredentials(creds["client_email"], key_data=json.dumps(creds))
     )
+
+
+def _annual_image(geom, year: int):
+    """The single AlphaEarth annual embedding image (64 bands) over ``geom`` for ``year``."""
+    import ee
+
+    return (
+        ee.ImageCollection(DATASET)
+        .filterDate(f"{year}-01-01", f"{year}-12-31")
+        .filterBounds(geom)
+        .first()
+    )
+
+
+def _cosine_distance_image(img1, img2):
+    """Server-side per-pixel cosine distance (1 − cosine) between two 64-band images.
+
+    Doing this on GEE avoids the pixel-alignment problem: two independent ``sample`` calls
+    would return different point sets across years, so a client-side row merge would be
+    meaningless. One image, one sample, one aligned ``change_distance`` per pixel.
+    """
+    import ee
+
+    dot = img1.multiply(img2).reduce(ee.Reducer.sum())
+    n1 = img1.multiply(img1).reduce(ee.Reducer.sum()).sqrt()
+    n2 = img2.multiply(img2).reduce(ee.Reducer.sum()).sqrt()
+    cosine = dot.divide(n1.multiply(n2))
+    return ee.Image(1).subtract(cosine).rename("change_distance")
+
+
+def fetch_change_samples(
+    aoi_geojson: dict, year1: int, year2: int, max_pixels: int = 500_000
+) -> gpd.GeoDataFrame:
+    """Sample the year1→year2 cosine-change surface over the AOI (WGS84 points).
+
+    Returns a GeoDataFrame with a single ``change_distance`` column (+ geometry). Requires
+    :func:`authenticate_gee` first.
+    """
+    import ee
+
+    geom = ee.Geometry(aoi_geojson)
+    dist = _cosine_distance_image(_annual_image(geom, year1), _annual_image(geom, year2))
+    sample = dist.sample(region=geom, scale=10, numPixels=max_pixels, geometries=True)
+    return _dist_features_to_gdf(sample.getInfo()["features"])
+
+
+def _dist_features_to_gdf(features: list[dict]) -> gpd.GeoDataFrame:
+    """Parse a sampled ``change_distance`` FeatureCollection to a GDF (pure, testable)."""
+    rows = [
+        {"pixel_id": i, "change_distance": f.get("properties", {}).get("change_distance")}
+        for i, f in enumerate(features)
+    ]
+    geoms = [shape(f["geometry"]) for f in features]
+    return gpd.GeoDataFrame(pd.DataFrame(rows), geometry=geoms, crs="EPSG:4326")
 
 
 def _features_to_gdf(features: list[dict]) -> gpd.GeoDataFrame:

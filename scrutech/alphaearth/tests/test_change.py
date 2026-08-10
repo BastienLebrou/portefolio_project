@@ -36,3 +36,19 @@ def test_detect_change_flags_the_moved_pixels() -> None:
     # The strongly perturbed pixels are among the most-changed.
     top5 = set(out.sort_values("change_distance", ascending=False)["pixel_id"].head(5))
     assert len({0, 1, 2, 3, 4} & top5) >= 3
+
+
+def test_flag_by_percentile_marks_top_and_reports_threshold() -> None:
+    from alphaearth.change import flag_by_percentile
+
+    d = np.array([0.0, 0.1, 0.2, 0.3, 0.9])
+    changed, thr = flag_by_percentile(d, percentile=80.0)
+    assert changed.tolist() == [False, False, False, False, True]  # only 0.9 above p80
+    assert 0.3 <= thr <= 0.9
+
+
+def test_flag_by_percentile_empty_is_safe() -> None:
+    from alphaearth.change import flag_by_percentile
+
+    changed, thr = flag_by_percentile(np.array([]), 95.0)
+    assert changed.size == 0 and thr == 0.0
