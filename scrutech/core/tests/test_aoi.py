@@ -44,3 +44,24 @@ def test_to_l93_is_metric() -> None:
 def test_resolve_bad_input() -> None:
     with pytest.raises(ValueError):
         resolve_aoi(42)
+
+
+def test_communes_in_aoi_filters_to_intersecting(monkeypatch) -> None:
+    """Communes are derived from the AOI: right département looked up, non-touching dropped."""
+    import core.aoi as aoi_mod
+
+    # geo.api point lookups all resolve to département 07.
+    dept07 = [{"codeDepartement": "07"}]
+    monkeypatch.setattr(aoi_mod, "_get_json", lambda url, params, timeout: dept07)
+
+    inside = box(4.0, 44.0, 4.5, 44.5)  # overlaps the AOI below
+    outside = box(6.0, 46.0, 6.5, 46.5)  # far away
+    communes = gpd.GeoDataFrame(
+        {"code": ["07001", "07999"], "nom": ["In", "Out"]},
+        geometry=[inside, outside],
+        crs="EPSG:4326",
+    )
+    monkeypatch.setattr(aoi_mod, "fetch_communes", lambda dept, timeout=60: communes)
+
+    got = aoi_mod.communes_in_aoi((4.1, 44.1, 4.3, 44.3))
+    assert got["code"].tolist() == ["07001"]

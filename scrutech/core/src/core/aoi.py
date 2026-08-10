@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
 import requests
 from shapely.geometry import box
 from shapely.geometry.base import BaseGeometry
@@ -88,6 +89,45 @@ def fetch_commune(insee: str, timeout: int = 60) -> gpd.GeoDataFrame:
     gj = _get_json(f"{GEOAPI}/communes/{insee}", _GEOJSON_FIELDS, timeout)
     feats = gj["features"] if gj.get("type") == "FeatureCollection" else [gj]
     return gpd.GeoDataFrame.from_features(feats, crs=WGS84)[["code", "nom", "geometry"]]
+
+
+def communes_in_aoi(aoi: object, timeout: int = 60) -> gpd.GeoDataFrame:
+    """Commune polygons intersecting the AOI (WGS84) — derived from the emprise alone.
+
+    Finds the département(s) the AOI touches (geo.api point lookups on centroid + bbox
+    corners), fetches their communes, and keeps those intersecting the AOI geometry. Lets
+    VegeVigie rank communes with **no Zones layer to provide**. Returns an empty frame if
+    geo.api is unreachable (zonal ranking is a bonus, not a hard dependency).
+    """
+    a = resolve_aoi(aoi)
+    frames = []
+    for dept in _depts_for_geom(a.geom, timeout):
+        try:
+            frames.append(fetch_communes(dept, timeout))
+        except Exception as exc:  # noqa: BLE001 — skip a failing département, keep the rest
+            logger.warning("communes for dept %s failed: %s", dept, exc)
+    if not frames:
+        return gpd.GeoDataFrame({"code": [], "nom": []}, geometry=[], crs=WGS84)
+    allc = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=WGS84)
+    return allc[allc.intersects(a.geom)].reset_index(drop=True)
+
+
+def _depts_for_geom(geom: BaseGeometry, timeout: int) -> list[str]:
+    """Département codes the geometry touches, via geo.api point lookups (centroid+corners)."""
+    minx, miny, maxx, maxy = geom.bounds
+    c = geom.centroid
+    pts = [(c.x, c.y), (minx, miny), (minx, maxy), (maxx, miny), (maxx, maxy)]
+    depts: set[str] = set()
+    params = {"fields": "codeDepartement"}
+    for lon, lat in pts:
+        try:
+            j = _get_json(f"{GEOAPI}/communes", {"lon": lon, "lat": lat, **params}, timeout)
+        except Exception:  # noqa: BLE001 — a point in the sea returns nothing; ignore
+            continue
+        for com in j if isinstance(j, list) else []:
+            if com.get("codeDepartement"):
+                depts.add(com["codeDepartement"])
+    return sorted(depts)
 
 
 def _resolve_str(s: str) -> Aoi:

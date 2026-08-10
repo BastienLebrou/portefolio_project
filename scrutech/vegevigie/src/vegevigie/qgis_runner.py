@@ -38,6 +38,17 @@ def main(argv: list[str] | None = None) -> int:
         import geopandas as gpd
 
         zones = gpd.read_file(spec["zones_path"])
+    elif spec.get("auto_communes", True):
+        # AOI-only: derive the communes to rank straight from the emprise (no layer needed).
+        from core.aoi import communes_in_aoi
+
+        try:
+            zones = communes_in_aoi(tuple(spec["bbox"]))
+            print(f"PROGRESS 10 Auto-derived {len(zones)} communes from the AOI.", flush=True)
+        except Exception as exc:  # noqa: BLE001 — ranking is a bonus, don't fail the run
+            print(f"PROGRESS 10 Commune auto-derivation skipped ({exc}).", flush=True)
+        if zones is not None and zones.empty:
+            zones = None
 
     settings = build_settings(
         tuple(spec["bbox"]),
