@@ -9,6 +9,8 @@ requires-python = ">=3.11"
 dependencies = [
     # Shared ScruTech socle (AOI resolution, vector IO) — local editable, see [tool.uv.sources].
     "scrutech-core",
+    # Écobuage scoring engine — consumed by the AOI-only écobuage orchestrator.
+    "scrutech-ecobuage",
     # Core CLI + config (M0). The heavy datacube stack (odc-stac, xarray, dask, ...)
     # is still added milestone by milestone, when the code that uses it lands (§6).
     "typer>=0.12",
@@ -47,6 +49,7 @@ vegevigie = "vegevigie.cli:app"
 
 [tool.uv.sources]
 scrutech-core = { path = "../core", editable = true }
+scrutech-ecobuage = { path = "../ecobuage", editable = true }
 
 [dependency-groups]
 dev = [

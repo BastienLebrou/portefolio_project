@@ -1,0 +1,14 @@
+[project]
+name = "scrutech-ecobuage"
+version = "0.1.0"
+description = "Écobuage (controlled-burn) multi-criteria suitability scoring engine."
+requires-python = ">=3.11"
+dependencies = ["numpy", "rasterio"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Single flat module (ecobuage.py stays flat so the QGIS plugin can bundle it as-is).
+[tool.hatch.build.targets.wheel]
+only-include = ["ecobuage.py"]

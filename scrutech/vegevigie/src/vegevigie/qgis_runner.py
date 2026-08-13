@@ -34,6 +34,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_paf_interface_aoi(spec)
     if task == "alphaearth_change":
         return _run_alphaearth_change(spec)
+    if task == "ecobuage_aoi":
+        return _run_ecobuage_aoi(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -132,6 +134,32 @@ def _run_alphaearth_change(spec: dict) -> int:
         return 1
 
     result = {"changed_path": str(changed), "geojson_path": str(geojson), **summary}
+    print("RESULT " + json.dumps(result), flush=True)
+    return 0
+
+
+def _run_ecobuage_aoi(spec: dict) -> int:
+    """AOI-only écobuage: slope (DEM) + access (roads) + exclusions (buildings) → aptitude."""
+    from vegevigie.ecobuage_aoi import build_aptitude_from_aoi
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        apt_path, cls_path, info = build_aptitude_from_aoi(
+            tuple(spec["bbox"]),
+            spec["mnt_path"],
+            out_dir=Path(spec["out_folder"]),
+            resolution=float(spec.get("resolution", 25.0)),
+            veg_trend_tif=spec.get("veg_trend_tif"),
+            veg_drought_tif=spec.get("veg_drought_tif"),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    result = {"aptitude_path": str(apt_path), "classes_path": str(cls_path), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
 
