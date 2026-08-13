@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 
 import geopandas as gpd
+import pandas as pd
 import requests
 import shapely
 
@@ -29,6 +30,18 @@ WFS_PAGE_SIZE = 5000
 BUILDINGS_TYPENAME = "BDTOPO_V3:batiment"
 VEGETATION_TYPENAME = "BDTOPO_V3:zone_de_vegetation"
 ROADS_TYPENAME = "BDTOPO_V3:troncon_de_route"
+
+# Biodiversity reservoirs / protected areas — INPN (patrinat) layers on the Géoplateforme
+# WFS, same server as BD TOPO. Verified live 2026-08 (typenames return geometry in L93).
+RESERVOIR_TYPENAMES = {
+    "natura2000_sic": "patrinat_sic:sic",  # Natura 2000 — Directive Habitats
+    "natura2000_zps": "patrinat_zps:zps",  # Natura 2000 — Directive Oiseaux
+    "znieff1": "patrinat_znieff1:znieff1",  # ZNIEFF type 1 (secteurs de fort intérêt)
+    "znieff2": "patrinat_znieff2:znieff2",  # ZNIEFF type 2 (grands ensembles)
+    "ramsar": "patrinat_ramsar:ramsar",  # zones humides d'importance internationale
+}
+# TVB corridors are regional (SRCE/SRADDET), not on this national WFS — added later.
+DEFAULT_RESERVOIR_KINDS = ("natura2000_sic", "natura2000_zps", "znieff1", "znieff2")
 
 # BD TOPO zone_de_vegetation "nature" values that count as forest for the WUI/fuel maths.
 # Matched case-insensitively as substrings (covers "Forêt fermée de feuillus", "Bois", …).
@@ -54,6 +67,32 @@ def fetch_forest(aoi: object, *, timeout: int = 120) -> gpd.GeoDataFrame:
 def fetch_roads(aoi: object, *, timeout: int = 120) -> gpd.GeoDataFrame:
     """BD TOPO road segments within the AOI (EPSG:2154) — for accessibility/distance."""
     return fetch_bdtopo(aoi, ROADS_TYPENAME, ["cleabs", "nature", "importance"], timeout=timeout)
+
+
+def fetch_biodiversity_reservoirs(
+    aoi: object,
+    kinds: tuple[str, ...] | None = None,
+    *,
+    timeout: int = 120,
+) -> gpd.GeoDataFrame:
+    """Protected areas / biodiversity reservoirs intersecting the AOI (EPSG:2154).
+
+    Combines the requested INPN layers (default: Natura 2000 SIC + ZPS, ZNIEFF 1 + 2) into
+    one GeoDataFrame with a ``kind`` label and the site name — the "enjeu" input of biotrame.
+    """
+    kinds = kinds or DEFAULT_RESERVOIR_KINDS
+    frames = []
+    for kind in kinds:
+        gdf = fetch_bdtopo(aoi, RESERVOIR_TYPENAMES[kind], ["nom_site"], timeout=timeout)
+        if gdf.empty:
+            continue
+        gdf["kind"] = kind
+        if "nom_site" not in gdf.columns:
+            gdf["nom_site"] = None
+        frames.append(gdf[["kind", "nom_site", "geometry"]])
+    if not frames:
+        return gpd.GeoDataFrame({"kind": [], "nom_site": []}, geometry=[], crs=L93)
+    return gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=L93)
 
 
 def fetch_bdtopo(

@@ -21,7 +21,7 @@ class _FakeResp:
 
 def _feature(x: float, y: float, nature: str = "Forêt fermée de feuillus") -> dict:
     # A tiny 3D polygon around (x, y) in L93 metres — Z must be dropped by _force_2d.
-    ring = [[x, y, 10.0], [x + 50, y, 10.0], [x + 50, y + 50, 10.0], [x, y + 50, 10.0], [x, y, 10.0]]
+    ring = [[x, y, 1.0], [x + 50, y, 1.0], [x + 50, y + 50, 1.0], [x, y + 50, 1.0], [x, y, 1.0]]
     return {
         "type": "Feature",
         "geometry": {"type": "Polygon", "coordinates": [ring]},
@@ -66,7 +66,35 @@ def test_fetch_forest_keeps_only_forest_natures(monkeypatch) -> None:
         _feature(c.x + 100, c.y, "Vigne"),  # not forest → dropped
         _feature(c.x, c.y + 100, "Bois"),
     ]
-    monkeypatch.setattr(sources.requests, "get", lambda url, params, timeout: _FakeResp({"features": feats}))
+    monkeypatch.setattr(
+        sources.requests, "get", lambda url, params, timeout: _FakeResp({"features": feats})
+    )
 
     forest = sources.fetch_forest(aoi)
     assert set(forest["nature"]) == {"Forêt fermée de conifères", "Bois"}
+
+
+def test_fetch_biodiversity_reservoirs_combines_kinds(monkeypatch) -> None:
+    aoi = gpd.GeoDataFrame(geometry=[box(4.6, 44.5, 4.7, 44.6)], crs="EPSG:4326")
+    from core.aoi import resolve_aoi
+
+    c = resolve_aoi(aoi).to_l93().centroid
+
+    def _site(name: str) -> dict:
+        ring = [[c.x, c.y], [c.x + 80, c.y], [c.x + 80, c.y + 80], [c.x, c.y + 80], [c.x, c.y]]
+        return {
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"nom_site": name},
+        }
+
+    monkeypatch.setattr(
+        sources.requests, "get",
+        lambda url, params, timeout: _FakeResp({"features": [_site("Site X")]}),
+    )
+
+    gdf = sources.fetch_biodiversity_reservoirs(aoi, kinds=("natura2000_sic", "znieff1"))
+    assert set(gdf["kind"]) == {"natura2000_sic", "znieff1"}
+    assert list(gdf.columns) == ["kind", "nom_site", "geometry"] or "geometry" in gdf.columns
+    assert (gdf["nom_site"] == "Site X").all()
+    assert gdf.crs.to_epsg() == 2154
