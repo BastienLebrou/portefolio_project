@@ -11,6 +11,8 @@ dependencies = [
     "scrutech-core",
     # Écobuage scoring engine — consumed by the AOI-only écobuage orchestrator.
     "scrutech-ecobuage",
+    # Biotrame H3 mesh + scoring — consumed by the AOI-only biotrame orchestrator.
+    "scrutech-biotrame",
     # Core CLI + config (M0). The heavy datacube stack (odc-stac, xarray, dask, ...)
     # is still added milestone by milestone, when the code that uses it lands (§6).
     "typer>=0.12",
@@ -50,6 +52,7 @@ vegevigie = "vegevigie.cli:app"
 [tool.uv.sources]
 scrutech-core = { path = "../core", editable = true }
 scrutech-ecobuage = { path = "../ecobuage", editable = true }
+scrutech-biotrame = { path = "../biotrame", editable = true }
 
 [dependency-groups]
 dev = [

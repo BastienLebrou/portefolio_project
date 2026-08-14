@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_alphaearth_change(spec)
     if task == "ecobuage_aoi":
         return _run_ecobuage_aoi(spec)
+    if task == "biotrame_aoi":
+        return _run_biotrame_aoi(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -160,6 +162,31 @@ def _run_ecobuage_aoi(spec: dict) -> int:
         return 1
 
     result = {"aptitude_path": str(apt_path), "classes_path": str(cls_path), **info}
+    print("RESULT " + json.dumps(result), flush=True)
+    return 0
+
+
+def _run_biotrame_aoi(spec: dict) -> int:
+    """AOI-only biotrame: H3 mesh + reservoirs (+ optional trend degradation) → priority score."""
+    from vegevigie.biotrame_aoi import build_priority_mesh_from_aoi
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        parquet, geojson, info = build_priority_mesh_from_aoi(
+            tuple(spec["bbox"]),
+            out_dir=Path(spec["out_folder"]),
+            resolution=int(spec.get("resolution", 8)),
+            veg_trend_tif=spec.get("veg_trend_tif"),
+            corridor_max_m=float(spec.get("corridor_max_m", 2000.0)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    result = {"parquet_path": str(parquet), "geojson_path": str(geojson), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
 

@@ -9,6 +9,7 @@ from qgis.PyQt.QtGui import QIcon
 
 from .algorithms.alphaearth_change import AlphaEarthChangeAlgorithm
 from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
+from .algorithms.biotrame_priority import BiotramePriorityAlgorithm
 from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.ecobuage_aptitude_aoi import EcobuageAptitudeFromAoiAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
@@ -29,6 +30,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(AlphaEarthChangeAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
         self.addAlgorithm(EcobuageAptitudeFromAoiAlgorithm())
+        self.addAlgorithm(BiotramePriorityAlgorithm())
         self.addAlgorithm(SdbpiVacanceAlgorithm())
         self.addAlgorithm(MiniDcSitesAlgorithm())
 
