@@ -158,8 +158,24 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             f"à étudier: {payload.get('n_a_etudier', 0)} | "
             f"à exclure: {payload.get('n_a_exclure', 0)} | criteria: {payload.get('criteria')}"
         )
+        self._write_styles(payload, feedback)
         self._queue_layers(payload, context)
         return {"APTITUDE": payload.get("aptitude_path"), "CLASSES": payload.get("classes_path")}
+
+    def _write_styles(self, payload: dict, feedback) -> None:
+        from ._styles import ecobuage_aptitude_qml, ecobuage_classes_qml
+
+        pairs = [
+            (payload.get("aptitude_path"), ecobuage_aptitude_qml()),
+            (payload.get("classes_path"), ecobuage_classes_qml()),
+        ]
+        for path, qml in pairs:
+            if not path:
+                continue
+            try:
+                Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
+            except OSError as exc:
+                feedback.pushInfo(f"Could not write style for {path}: {exc}")
 
     # --- helpers -------------------------------------------------------------
     def _resolve_mnt(self, parameters, context) -> str:

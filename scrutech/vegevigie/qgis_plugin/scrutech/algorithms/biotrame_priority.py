@@ -168,8 +168,21 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             f"réservoirs: {payload.get('n_reservoirs', 0)} | "
             f"connectivité: {payload.get('connectivity_source')} | axes: {payload.get('axes')}"
         )
+        self._write_styles(payload, feedback)
         self._queue_layers(payload, context)
         return {"MESH": payload.get("geojson_path"), "PARQUET": payload.get("parquet_path")}
+
+    def _write_styles(self, payload: dict, feedback) -> None:
+        from ._styles import biotrame_qml
+
+        qml = biotrame_qml()
+        for path in (payload.get("geojson_path"), payload.get("parquet_path")):
+            if not path:
+                continue
+            try:
+                Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
+            except OSError as exc:
+                feedback.pushInfo(f"Could not write style for {path}: {exc}")
 
     # --- helpers -------------------------------------------------------------
     def _raster_source(self, parameters, name, context) -> str | None:

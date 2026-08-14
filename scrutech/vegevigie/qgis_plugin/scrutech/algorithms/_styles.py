@@ -57,3 +57,92 @@ def trend_qml() -> str:
 def drought_qml() -> str:
     """NDVI anomaly (z-score): red/brown = drought, green = wet (centred on 0)."""
     return _qml(1, -2.0, 2.0, _DROUGHT_STOPS)
+
+
+# Aptitude 0-100 ramp (écobuage): grey (unsuitable) → green (suitable to burn).
+_APTITUDE_STOPS = [
+    (0.0, "#cccccc", "nulle"),
+    (33.0, "#fdae61", "faible"),
+    (66.0, "#a6d96a", "modérée"),
+    (100.0, "#1a9850", "forte"),
+]
+
+
+def ecobuage_aptitude_qml() -> str:
+    """Écobuage aptitude (0-100): grey = unsuitable, green = suitable."""
+    return _qml(1, 0.0, 100.0, _APTITUDE_STOPS)
+
+
+def _paletted_qml(entries: list[tuple[int, str, str]]) -> str:
+    """A paletted (categorical) raster QML for small integer class rasters."""
+    items = "\n".join(
+        f'        <paletteEntry value="{v}" color="{c}" label="{lbl}" alpha="255"/>'
+        for v, c, lbl in entries
+    )
+    return (
+        "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"
+        '<qgis version="3.34" styleCategories="AllStyleCategories">\n'
+        "  <pipe>\n"
+        '    <rasterrenderer type="paletted" band="1" opacity="1">\n'
+        "      <colorPalette>\n"
+        f"{items}\n"
+        "      </colorPalette>\n"
+        "    </rasterrenderer>\n"
+        "  </pipe>\n"
+        "</qgis>\n"
+    )
+
+
+def ecobuage_classes_qml() -> str:
+    """Écobuage 3-class raster: 0 exclure (grey) / 1 à étudier (orange) / 2 prioritaire (green)."""
+    return _paletted_qml(
+        [(0, "#cccccc", "à exclure"), (1, "#fdae61", "à étudier"), (2, "#1a9850", "prioritaire")]
+    )
+
+
+# Biotrame classes (vector): alert semiology — the more urgent, the redder.
+_BIOTRAME_CATEGORIES = [
+    (2, "215,48,39,255", "prioritaire"),
+    (1, "253,174,97,255", "à étudier"),
+    (0, "204,204,204,255", "secondaire"),
+]
+
+
+def _fill_symbol(name: str, rgba: str) -> str:
+    return (
+        f'      <symbol name="{name}" type="fill" alpha="0.7">\n'
+        '        <layer class="SimpleFill">\n'
+        '          <Option type="Map">\n'
+        f'            <Option name="color" type="QString" value="{rgba}"/>\n'
+        '            <Option name="outline_color" type="QString" value="90,90,90,255"/>\n'
+        '            <Option name="outline_width" type="QString" value="0.1"/>\n'
+        '            <Option name="style" type="QString" value="solid"/>\n'
+        "          </Option>\n"
+        "        </layer>\n"
+        "      </symbol>"
+    )
+
+
+def biotrame_qml() -> str:
+    """Vector categorized style on the ``classe`` field (0/1/2), alert palette."""
+    cats = "\n".join(
+        f'      <category value="{v}" symbol="{i}" label="{lbl}" render="true"/>'
+        for i, (v, _rgba, lbl) in enumerate(_BIOTRAME_CATEGORIES)
+    )
+    syms = "\n".join(
+        _fill_symbol(str(i), rgba) for i, (_v, rgba, _lbl) in enumerate(_BIOTRAME_CATEGORIES)
+    )
+    return (
+        "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"
+        '<qgis version="3.34" styleCategories="Symbology">\n'
+        '  <renderer-v2 type="categorizedSymbol" attr="classe" forceraster="0"'
+        ' symbollevels="0" enableorderby="0">\n'
+        "    <categories>\n"
+        f"{cats}\n"
+        "    </categories>\n"
+        "    <symbols>\n"
+        f"{syms}\n"
+        "    </symbols>\n"
+        "  </renderer-v2>\n"
+        "</qgis>\n"
+    )
