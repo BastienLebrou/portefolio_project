@@ -95,6 +95,23 @@ def fetch_biodiversity_reservoirs(
     return gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=L93)
 
 
+def fetch_tvb_corridors(
+    aoi: object,
+    typename: str,
+    *,
+    wfs_url: str,
+    keep: list[str] | None = None,
+    timeout: int = 120,
+) -> gpd.GeoDataFrame:
+    """Trame Verte et Bleue corridors for the AOI, from a **regional** WFS (SRCE/SRADDET).
+
+    There is no national TVB WFS — each DREAL publishes its SRCE on its own server, with its
+    own ``typename``. Pass the region's ``wfs_url`` + ``typename`` (e.g. from the biotrame
+    algorithm parameters). Returns the corridor geometries (EPSG:2154), clipped to the AOI.
+    """
+    return fetch_bdtopo(aoi, typename, keep or [], timeout=timeout, wfs_url=wfs_url)
+
+
 def fetch_bdtopo(
     aoi: object,
     typename: str,
@@ -102,19 +119,21 @@ def fetch_bdtopo(
     *,
     timeout: int = 120,
     clip: bool = True,
+    wfs_url: str = WFS_URL,
 ) -> gpd.GeoDataFrame:
-    """Fetch one BD TOPO layer within the AOI's bbox (paginated WFS), clipped to the AOI.
+    """Fetch one WFS layer within the AOI's bbox (paginated), clipped to the AOI.
 
-    Returns a GeoDataFrame in EPSG:2154 with the ``keep`` columns that exist (plus
-    geometry). Distances/areas are meaningful because everything is in Lambert-93.
+    Defaults to the Géoplateforme WFS (BD TOPO / INPN); ``wfs_url`` targets any other WFS 2.0
+    endpoint (e.g. a regional DREAL server for the TVB). Returns a GeoDataFrame in EPSG:2154
+    with the ``keep`` columns that exist (plus geometry).
     """
     a: Aoi = resolve_aoi(aoi)
     aoi_l93 = a.to_l93()
     minx, miny, maxx, maxy = aoi_l93.bounds
 
-    features = _paginated_wfs(typename, (minx, miny, maxx, maxy), timeout)
+    features = _paginated_wfs(typename, (minx, miny, maxx, maxy), timeout, wfs_url)
     if not features:
-        logger.warning("BD TOPO %s: 0 feature for AOI %s", typename, a.aoi_id)
+        logger.warning("WFS %s: 0 feature for AOI %s", typename, a.aoi_id)
         return gpd.GeoDataFrame({c: [] for c in keep}, geometry=[], crs=L93)
 
     gdf = gpd.GeoDataFrame.from_features(features, crs=L93)
@@ -126,7 +145,9 @@ def fetch_bdtopo(
     return gdf
 
 
-def _paginated_wfs(typename: str, bbox_l93: tuple, timeout: int) -> list[dict]:
+def _paginated_wfs(
+    typename: str, bbox_l93: tuple, timeout: int, wfs_url: str = WFS_URL
+) -> list[dict]:
     """Page through a WFS GetFeature (EPSG:2154 bbox) and return raw GeoJSON features."""
     minx, miny, maxx, maxy = bbox_l93
     features: list[dict] = []
@@ -144,7 +165,7 @@ def _paginated_wfs(typename: str, bbox_l93: tuple, timeout: int) -> list[dict]:
             "STARTINDEX": str(start),
             "OUTPUTFORMAT": "application/json",
         }
-        resp = requests.get(WFS_URL, params=params, timeout=timeout)
+        resp = requests.get(wfs_url, params=params, timeout=timeout)
         resp.raise_for_status()
         page = resp.json().get("features", []) or []
         features.extend(page)

@@ -41,3 +41,19 @@ def test_score_mesh_crosses_reservoir_and_degradation() -> None:
     degr = pd.Series(1.0, index=grid["hex_id"])
     scored3 = score_mesh(grid, reservoirs, degradation=degr)
     assert "degradation" in scored3.columns
+
+
+def test_corridors_drive_connectivity_when_present() -> None:
+    from shapely.geometry import LineString
+
+    aoi = gpd.GeoDataFrame(geometry=[box(4.60, 44.50, 4.70, 44.60)], crs="EPSG:4326")
+    grid = hex_grid(aoi, resolution=8)
+    reservoirs = gpd.GeoDataFrame(geometry=[box(4.60, 44.50, 4.62, 44.60)], crs="EPSG:4326")
+    # A corridor line crossing the eastern side, far from the reservoir.
+    corridors = gpd.GeoDataFrame(
+        geometry=[LineString([(4.68, 44.50), (4.68, 44.60)])], crs="EPSG:4326"
+    )
+    proxy = score_mesh(grid, reservoirs)
+    real = score_mesh(grid, reservoirs, corridors=corridors)
+    # The connectivity field must differ when real corridors drive it.
+    assert not proxy["connectivite"].equals(real["connectivite"])

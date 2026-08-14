@@ -11,6 +11,7 @@ interpreter (auto-detected).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from qgis.core import (
@@ -24,6 +25,7 @@ from qgis.core import (
     QgsProcessingParameterFolderDestination,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterLayer,
+    QgsProcessingParameterString,
     QgsProcessingUtils,
 )
 from qgis.PyQt.QtCore import QCoreApplication
@@ -37,6 +39,8 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
     EXTENT = "EXTENT"
     RESOLUTION = "RESOLUTION"
     VEG_TREND = "VEG_TREND"
+    TVB_WFS = "TVB_WFS"
+    TVB_TYPENAME = "TVB_TYPENAME"
     PYTHON_EXE = "PYTHON_EXE"
     OUTPUT_FOLDER = "OUTPUT_FOLDER"
 
@@ -90,6 +94,20 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterString(
+                self.TVB_WFS,
+                self.tr("TVB WFS URL — regional SRCE (optional; empty = SCRUTECH_TVB_WFS env)"),
+                optional=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterString(
+                self.TVB_TYPENAME,
+                self.tr("TVB corridor typename (optional; empty = SCRUTECH_TVB_TYPENAME env)"),
+                optional=True,
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
@@ -124,12 +142,20 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
 
         from ._external import run_spec
 
+        tvb_wfs = self.parameterAsString(
+            parameters, self.TVB_WFS, context
+        ).strip() or os.environ.get("SCRUTECH_TVB_WFS", "")
+        tvb_typename = self.parameterAsString(
+            parameters, self.TVB_TYPENAME, context
+        ).strip() or os.environ.get("SCRUTECH_TVB_TYPENAME", "")
         spec = {
             "task": "biotrame_aoi",
             "bbox": list(bbox),
             "resolution": resolution,
             "out_folder": str(out_folder),
             "veg_trend_tif": self._raster_source(parameters, self.VEG_TREND, context),
+            "tvb_wfs_url": tvb_wfs or None,
+            "tvb_typename": tvb_typename or None,
         }
         try:
             payload = run_spec(python_exe, "vegevigie.qgis_runner", spec, out_folder, feedback)
@@ -139,7 +165,8 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(
             f"Biotrame — {payload.get('n_prioritaire', 0)} prioritaires / "
             f"{payload.get('n_hexagons', 0)} hexagones | "
-            f"réservoirs: {payload.get('n_reservoirs', 0)} | axes: {payload.get('axes')}"
+            f"réservoirs: {payload.get('n_reservoirs', 0)} | "
+            f"connectivité: {payload.get('connectivity_source')} | axes: {payload.get('axes')}"
         )
         self._queue_layers(payload, context)
         return {"MESH": payload.get("geojson_path"), "PARQUET": payload.get("parquet_path")}

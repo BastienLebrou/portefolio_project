@@ -180,6 +180,8 @@ def _run_biotrame_aoi(spec: dict) -> int:
             resolution=int(spec.get("resolution", 8)),
             veg_trend_tif=spec.get("veg_trend_tif"),
             corridor_max_m=float(spec.get("corridor_max_m", 2000.0)),
+            tvb_wfs_url=spec.get("tvb_wfs_url"),
+            tvb_typename=spec.get("tvb_typename"),
             progress=progress,
         )
     except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash

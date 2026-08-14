@@ -36,12 +36,14 @@ def build_priority_mesh_from_aoi(
     reservoir_kinds: tuple[str, ...] | None = None,
     corridor_max_m: float = 2000.0,
     browning_scale: float = 0.01,
+    tvb_wfs_url: str | None = None,
+    tvb_typename: str | None = None,
     progress=None,
 ) -> tuple[Path, Path, dict]:
     """Build the scored priority mesh for the AOI. Returns (parquet, geojson, info)."""
     from biotrame.mesh import hex_grid
     from biotrame.score import score_mesh
-    from core.sources import fetch_biodiversity_reservoirs
+    from core.sources import fetch_biodiversity_reservoirs, fetch_tvb_corridors
 
     report = progress or (lambda _p, _m: None)
     report(15, "Building the H3 hexagon mesh…")
@@ -50,13 +52,27 @@ def build_priority_mesh_from_aoi(
     report(40, "Fetching biodiversity reservoirs (Natura 2000 / ZNIEFF)…")
     reservoirs = fetch_biodiversity_reservoirs(aoi, kinds=reservoir_kinds)
 
+    corridors = None
+    if tvb_wfs_url and tvb_typename:
+        report(55, "Fetching real TVB corridors (regional SRCE WFS)…")
+        try:
+            corridors = fetch_tvb_corridors(aoi, tvb_typename, wfs_url=tvb_wfs_url)
+        except Exception as exc:  # noqa: BLE001 — fall back to the proximity proxy, don't fail
+            logger.warning("TVB fetch failed (%s); using reservoir-proximity proxy.", exc)
+
     degradation = None
     if veg_trend_tif:
         report(65, "Zonal degradation from the VegeVigie trend raster…")
         degradation = _zonal_browning(grid, veg_trend_tif, browning_scale)
 
     report(80, "Crossing axes → priority score…")
-    scored = score_mesh(grid, reservoirs, degradation=degradation, corridor_max_m=corridor_max_m)
+    scored = score_mesh(
+        grid,
+        reservoirs,
+        degradation=degradation,
+        corridor_max_m=corridor_max_m,
+        corridors=corridors,
+    )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     parquet = out_dir / "biotrame_priority.parquet"
@@ -64,11 +80,13 @@ def build_priority_mesh_from_aoi(
     scored.to_crs(L93).to_parquet(parquet)
     scored.to_crs(WGS84).to_file(geojson, driver="GeoJSON")
 
+    has_tvb = corridors is not None and not corridors.empty
     info = {
         "n_hexagons": int(len(scored)),
         "n_prioritaire": int((scored["classe"] == 2).sum()),
         "n_a_etudier": int((scored["classe"] == 1).sum()),
         "n_reservoirs": int(len(reservoirs)),
+        "connectivity_source": "tvb_corridors" if has_tvb else "reservoir_proximity_proxy",
         "axes": ["enjeu", "connectivite"] + (["degradation"] if degradation is not None else []),
         "resolution": resolution,
     }

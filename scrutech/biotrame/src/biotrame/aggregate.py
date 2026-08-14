@@ -29,14 +29,28 @@ def reservoir_overlap(hexagons: gpd.GeoDataFrame, reservoirs: gpd.GeoDataFrame) 
     return pd.Series(frac.to_numpy(), index=hexagons["hex_id"], name="enjeu")
 
 
+def proximity(
+    hexagons: gpd.GeoDataFrame, features: gpd.GeoDataFrame, max_m: float, name: str
+) -> pd.Series:
+    """Proximity (0-1) of each hexagon centroid to the nearest feature (0 m = 1, ≥ max = 0)."""
+    hx = hexagons.to_crs(L93)
+    if features is None or features.empty:
+        return pd.Series(0.0, index=hexagons["hex_id"], name=name)
+    target = features.to_crs(L93).union_all()
+    dist = hx.geometry.centroid.distance(target)
+    prox = (1.0 - dist / max_m).clip(0.0, 1.0)
+    return pd.Series(prox.to_numpy(), index=hexagons["hex_id"], name=name)
+
+
 def reservoir_proximity(
     hexagons: gpd.GeoDataFrame, reservoirs: gpd.GeoDataFrame, corridor_max_m: float = 2000.0
 ) -> pd.Series:
-    """Proximity (0-1) of each hexagon to the nearest reservoir (0 m = 1, ≥ max = 0)."""
-    hx = hexagons.to_crs(L93)
-    if reservoirs is None or reservoirs.empty:
-        return pd.Series(0.0, index=hexagons["hex_id"], name="connectivite")
-    res_u = reservoirs.to_crs(L93).union_all()
-    dist = hx.geometry.centroid.distance(res_u)
-    prox = (1.0 - dist / corridor_max_m).clip(0.0, 1.0)
-    return pd.Series(prox.to_numpy(), index=hexagons["hex_id"], name="connectivite")
+    """Connectivité proxy: proximity to the nearest reservoir (used when no TVB is available)."""
+    return proximity(hexagons, reservoirs, corridor_max_m, "connectivite")
+
+
+def corridor_proximity(
+    hexagons: gpd.GeoDataFrame, corridors: gpd.GeoDataFrame, corridor_max_m: float = 2000.0
+) -> pd.Series:
+    """Connectivité (real): proximity to the nearest TVB corridor (SRCE/SRADDET)."""
+    return proximity(hexagons, corridors, corridor_max_m, "connectivite")

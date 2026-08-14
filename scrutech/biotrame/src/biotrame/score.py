@@ -13,7 +13,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from biotrame.aggregate import reservoir_overlap, reservoir_proximity
+from biotrame.aggregate import corridor_proximity, reservoir_overlap, reservoir_proximity
 
 # Class thresholds on the 0-100 score.
 PRIORITAIRE, A_ETUDIER = 66.0, 33.0
@@ -43,14 +43,20 @@ def score_mesh(
     reservoirs: gpd.GeoDataFrame,
     degradation: pd.Series | None = None,
     corridor_max_m: float = 2000.0,
+    corridors: gpd.GeoDataFrame | None = None,
 ) -> gpd.GeoDataFrame:
     """Assemble the scored mesh: enjeu + connectivité (+ optional dégradation) → score + classe.
 
     ``degradation`` (if given) is a 0-1 Series indexed by ``hex_id`` computed raster-side by
-    the orchestrator. Returns the hexagons with the per-axis columns, ``score`` and ``classe``.
+    the orchestrator. ``corridors`` (real TVB) drive the connectivité axis when provided;
+    otherwise it falls back to proximity-to-reservoir. Returns the hexagons with the per-axis
+    columns, ``score`` and ``classe``.
     """
     enjeu = reservoir_overlap(hexagons, reservoirs)
-    connect = reservoir_proximity(hexagons, reservoirs, corridor_max_m)
+    if corridors is not None and not corridors.empty:
+        connect = corridor_proximity(hexagons, corridors, corridor_max_m)
+    else:
+        connect = reservoir_proximity(hexagons, reservoirs, corridor_max_m)
 
     out = hexagons.copy()
     out["enjeu"] = enjeu.to_numpy()
