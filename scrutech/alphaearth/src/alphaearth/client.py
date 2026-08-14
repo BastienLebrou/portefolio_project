@@ -70,7 +70,8 @@ def authenticate_gee(auth_id: str = "gee_service", credentials_json: str | None 
         raw = config.configMap()["json_credentials"]
     creds = json.loads(raw)
     ee.Initialize(
-        credentials=ee.ServiceAccountCredentials(creds["client_email"], key_data=json.dumps(creds))
+        credentials=ee.ServiceAccountCredentials(creds["client_email"], key_data=json.dumps(creds)),
+        project=creds.get("project_id"),
     )
 
 

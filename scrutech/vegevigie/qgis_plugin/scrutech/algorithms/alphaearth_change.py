@@ -42,6 +42,7 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
     YEAR2 = "YEAR2"
     PERCENTILE = "PERCENTILE"
     MAX_PIXELS = "MAX_PIXELS"
+    KEY_FILE = "KEY_FILE"
     AUTH_ID = "AUTH_ID"
     PYTHON_EXE = "PYTHON_EXE"
     OUTPUT_FOLDER = "OUTPUT_FOLDER"
@@ -108,9 +109,16 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterFile(
+                self.KEY_FILE,
+                self.tr("GEE service-account key (.json) — empty = SCRUTECH_GEE_CREDENTIALS env"),
+                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True, extension="json",
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterString(
-                self.AUTH_ID, self.tr("GEE auth config ID (QGIS Authentication)"),
-                defaultValue="gee_service",
+                self.AUTH_ID, self.tr("GEE auth config ID (fallback — QGIS Authentication)"),
+                defaultValue="gee_service", optional=True,
             )
         )
         self.addParameter(
@@ -142,9 +150,10 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         percentile = self.parameterAsDouble(parameters, self.PERCENTILE, context)
         max_pixels = self.parameterAsInt(parameters, self.MAX_PIXELS, context)
         auth_id = self.parameterAsString(parameters, self.AUTH_ID, context).strip()
+        key_file = self.parameterAsString(parameters, self.KEY_FILE, context).strip()
         out_folder = self._resolve_output_folder(parameters, context)
 
-        credentials = self._read_credentials(auth_id)
+        credentials = self._read_credentials(key_file, auth_id)
         explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
         python_exe = self._resolve_python(explicit, feedback)
         if not python_exe:
@@ -180,18 +189,35 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         return {"CHANGED": payload.get("changed_path"), "ALL": payload.get("geojson_path")}
 
     # --- helpers -------------------------------------------------------------
-    def _read_credentials(self, auth_id: str) -> str:
-        config = QgsApplication.authManager().authMethodConfig(auth_id)
-        creds = config.configMap().get("json_credentials") if config else None
-        if not creds:
+    def _read_credentials(self, key_file: str, auth_id: str) -> str:
+        """Service-account JSON (compacted to one line), tried: key file → env → QgsAuthManager."""
+        import json
+        import os
+
+        raw = None
+        if key_file:
+            path = Path(key_file)
+            if not path.exists():
+                raise QgsProcessingException(self.tr("GEE key file not found: {}").format(key_file))
+            raw = path.read_text(encoding="utf-8")
+        elif os.environ.get("SCRUTECH_GEE_CREDENTIALS"):
+            raw = os.environ["SCRUTECH_GEE_CREDENTIALS"]
+        else:
+            config = QgsApplication.authManager().authMethodConfig(auth_id) if auth_id else None
+            raw = config.configMap().get("json_credentials") if config else None
+        if not raw:
             raise QgsProcessingException(
                 self.tr(
-                    "No GEE credential found under auth ID '{}'. In QGIS ▸ Settings ▸ "
-                    "Authentication, create an entry and store the service-account JSON under "
-                    "the config key 'json_credentials'."
-                ).format(auth_id)
+                    "No GEE credential. Set the key file (.json) parameter, or the "
+                    "SCRUTECH_GEE_CREDENTIALS env var, or store the service-account JSON under "
+                    "the 'json_credentials' key of QGIS auth entry '{}'."
+                ).format(auth_id or "gee_service")
             )
-        return creds
+        try:  # compact to a single line so it crosses the subprocess env safely
+            return json.dumps(json.loads(raw))
+        except json.JSONDecodeError as exc:
+            msg = self.tr("GEE credential is not valid JSON: {}").format(exc)
+            raise QgsProcessingException(msg) from exc
 
     def _resolve_output_folder(self, parameters, context) -> Path:
         value = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
