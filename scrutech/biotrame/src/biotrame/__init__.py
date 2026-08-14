@@ -6,5 +6,6 @@ accélérer les mesures écologiques / de compensation, à partir d'une emprise 
 """
 
 from biotrame.mesh import hex_grid
+from biotrame.score import classify, priority_score, score_mesh
 
-__all__ = ["hex_grid"]
+__all__ = ["classify", "hex_grid", "priority_score", "score_mesh"]
