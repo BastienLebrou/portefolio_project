@@ -14,17 +14,16 @@
 <line x1="46" y1="58.0" x2="820" y2="58.0" stroke="#e1e0d9" stroke-width="1"/>
 <text x="38" y="62" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">40</text>
 <text x="60.8846" y="228" font-size="11" fill="#898781" text-anchor="middle">févr.</text>
-<text x="120.423" y="228" font-size="11" fill="#898781" text-anchor="middle">mars</text>
-<text x="269.269" y="228" font-size="11" fill="#898781" text-anchor="middle">avr.</text>
-<text x="388.346" y="228" font-size="11" fill="#898781" text-anchor="middle">mai</text>
-<text x="507.423" y="228" font-size="11" fill="#898781" text-anchor="middle">juin</text>
-<text x="656.269" y="228" font-size="11" fill="#898781" text-anchor="middle">juil.</text>
-<path d="M 676.81 206.00 V 102.70 Q 676.81 98.70 680.81 98.70 H 691.27 Q 695.27 98.70 695.27 102.70 V 206.00 Z" fill="#2a78d6"/>
-<text x="686.038" y="92.7" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">29</text>
-<path d="M 706.58 206.00 V 198.90 Q 706.58 194.90 710.58 194.90 H 721.04 Q 725.04 194.90 725.04 198.90 V 206.00 Z" fill="#2a78d6"/>
+<text x="90.6538" y="228" font-size="11" fill="#898781" text-anchor="middle">mars</text>
+<text x="239.5" y="228" font-size="11" fill="#898781" text-anchor="middle">avr.</text>
+<text x="358.577" y="228" font-size="11" fill="#898781" text-anchor="middle">mai</text>
+<text x="477.654" y="228" font-size="11" fill="#898781" text-anchor="middle">juin</text>
+<text x="626.5" y="228" font-size="11" fill="#898781" text-anchor="middle">juil.</text>
+<path d="M 647.04 206.00 V 102.70 Q 647.04 98.70 651.04 98.70 H 661.50 Q 665.50 98.70 665.50 102.70 V 206.00 Z" fill="#2a78d6"/>
+<text x="656.269" y="92.7" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">29</text>
+<path d="M 676.81 206.00 V 198.90 Q 676.81 194.90 680.81 194.90 H 691.27 Q 695.27 194.90 695.27 198.90 V 206.00 Z" fill="#2a78d6"/>
+<path d="M 706.58 206.00 V 195.20 Q 706.58 191.20 710.58 191.20 H 721.04 Q 725.04 191.20 725.04 195.20 V 206.00 Z" fill="#2a78d6"/>
 <path d="M 736.35 206.00 V 195.20 Q 736.35 191.20 740.35 191.20 H 750.81 Q 754.81 191.20 754.81 195.20 V 206.00 Z" fill="#2a78d6"/>
-<path d="M 766.12 206.00 V 195.20 Q 766.12 191.20 770.12 191.20 H 780.57 Q 784.57 191.20 784.57 195.20 V 206.00 Z" fill="#2a78d6"/>
-<text x="775.346" y="228" font-size="11" fill="#898781" text-anchor="middle">août</text>
-<path d="M 795.89 206.00 V 202.60 Q 795.89 198.60 799.89 198.60 H 810.34 Q 814.34 198.60 814.34 202.60 V 206.00 Z" fill="#2a78d6"/>
-<text x="805.115" y="192.6" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">2</text>
+<text x="745.577" y="228" font-size="11" fill="#898781" text-anchor="middle">août</text>
+<path d="M 766.12 206.00 V 198.90 Q 766.12 194.90 770.12 194.90 H 780.57 Q 784.57 194.90 784.57 198.90 V 206.00 Z" fill="#2a78d6"/>
 </svg>
