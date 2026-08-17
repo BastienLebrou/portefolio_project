@@ -41,6 +41,7 @@ def _from_qgis(scope: str, new_name: str, fallback_owner: Any, old_name: str) ->
 NUMBER_INTEGER = _scoped_or(QgsProcessingParameterNumber, "Type", "Integer")
 NUMBER_DOUBLE = _scoped_or(QgsProcessingParameterNumber, "Type", "Double")
 FILE_BEHAVIOR_FILE = _scoped_or(QgsProcessingParameterFile, "Behavior", "File")
+FILE_BEHAVIOR_FOLDER = _scoped_or(QgsProcessingParameterFile, "Behavior", "Folder")
 SINK_FAST_INSERT = _scoped_or(QgsFeatureSink, "Flag", "FastInsert")
 
 # Layer/geometry type enums (renamed, not just re-scoped, in QGIS 4).
