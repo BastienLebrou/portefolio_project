@@ -38,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_ecobuage_aoi(spec)
     if task == "biotrame_aoi":
         return _run_biotrame_aoi(spec)
+    if task == "load_cached":
+        return _run_load_cached(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -108,6 +110,7 @@ def _run_paf_interface_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
+    _cache(spec, "paf")
     result = {"line_path": str(line_path), "zone_path": str(zone_path), **metrics}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -135,6 +138,7 @@ def _run_alphaearth_change(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
+    _cache(spec, "alphaearth")
     result = {"changed_path": str(changed), "geojson_path": str(geojson), **summary}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -161,6 +165,7 @@ def _run_ecobuage_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
+    _cache(spec, "ecobuage")
     result = {"aptitude_path": str(apt_path), "classes_path": str(cls_path), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -188,9 +193,41 @@ def _run_biotrame_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
+    _cache(spec, "biotrame")
     result = {"parquet_path": str(parquet), "geojson_path": str(geojson), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
+
+
+def _run_load_cached(spec: dict) -> int:
+    """List the cached products for an AOI (no compute) so the plugin can load them."""
+    from core.aoi import resolve_aoi
+    from core.storage import data_root, list_cached
+
+    try:
+        aoi_id = resolve_aoi(tuple(spec["bbox"])).aoi_id
+        paths = [str(p) for p in list_cached(aoi_id)]
+    except Exception as exc:  # noqa: BLE001
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+    payload = {"aoi_id": aoi_id, "paths": paths, "root": str(data_root())}
+    print("RESULT " + json.dumps(payload), flush=True)
+    return 0
+
+
+def _cache(spec: dict, pilier: str) -> None:
+    """Copy an AOI task's outputs into the ScruTech store, keyed by aoi_id (for instant reload)."""
+    try:
+        from core.aoi import resolve_aoi
+        from core.storage import _LOADABLE, cache_outputs
+
+        folder = Path(spec["out_folder"])
+        files = [p for p in folder.glob("*") if p.suffix.lower() in _LOADABLE]
+        aoi_id = resolve_aoi(tuple(spec["bbox"])).aoi_id
+        dests = cache_outputs(aoi_id, pilier, files)
+        print(f"PROGRESS 99 Cached {len(dests)} product(s) under aoi={aoi_id}.", flush=True)
+    except Exception as exc:  # noqa: BLE001 — caching is a bonus, never fail the run
+        print(f"PROGRESS 99 Cache skipped ({exc}).", flush=True)
 
 
 def _s(path: Path | None) -> str | None:

@@ -12,11 +12,12 @@ from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
 from .algorithms.biotrame_priority import BiotramePriorityAlgorithm
 from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.ecobuage_aptitude_aoi import EcobuageAptitudeFromAoiAlgorithm
+from .algorithms.load_cached import LoadCachedAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
 from .algorithms.mini_dc_sites import MiniDcSitesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
-from .algorithms.report_launch import ReportLaunchAlgorithm
 from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
+from .algorithms.report_launch import ReportLaunchAlgorithm
 from .algorithms.sdbpi_vacance import SdbpiVacanceAlgorithm
 
 
@@ -33,6 +34,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(EcobuageAptitudeFromAoiAlgorithm())
         self.addAlgorithm(BiotramePriorityAlgorithm())
         self.addAlgorithm(ReportLaunchAlgorithm())
+        self.addAlgorithm(LoadCachedAlgorithm())
         self.addAlgorithm(SdbpiVacanceAlgorithm())
         self.addAlgorithm(MiniDcSitesAlgorithm())
 
