@@ -29,13 +29,13 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
         return "load_communes"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Load commune boundaries (zones)")
+        return self.tr("Communes de l'emprise")
 
     def group(self) -> str:
-        return self.tr("Data")
+        return self.tr("1 · Préparer l'emprise")
 
     def groupId(self) -> str:  # noqa: N802
-        return "data"
+        return "preparer"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

@@ -39,13 +39,13 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         return "report_launch"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Rapport visuel ScruTech (Streamlit)")
+        return self.tr("① Rapport visuel (Streamlit)")
 
     def group(self) -> str:
-        return self.tr("Rapport")
+        return self.tr("4 · Restituer")
 
     def groupId(self) -> str:  # noqa: N802
-        return "report"
+        return "restituer"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

@@ -69,13 +69,13 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         return "analyze_extent"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Analyze extent (vegetation trend & drought)")
+        return self.tr("① Végétation — tendance & sécheresse (VegeVigie)")
 
     def group(self) -> str:
-        return self.tr("Analysis")
+        return self.tr("2 · Indicateurs par emprise")
 
     def groupId(self) -> str:  # noqa: N802
-        return "analysis"
+        return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

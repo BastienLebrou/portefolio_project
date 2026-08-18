@@ -34,13 +34,13 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
         return "load_cached"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Charger une analyse ScruTech en cache (emprise)")
+        return self.tr("② Recharger une analyse (cache)")
 
     def group(self) -> str:
-        return self.tr("Rapport")
+        return self.tr("4 · Restituer")
 
     def groupId(self) -> str:  # noqa: N802
-        return "report"
+        return "restituer"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

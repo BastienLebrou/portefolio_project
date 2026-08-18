@@ -41,13 +41,13 @@ class InterfaceFromAoiAlgorithm(QgsProcessingAlgorithm):
         return "paf_interface_aoi"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Interface habitat-forêt depuis une emprise (WUI, AOI seule)")
+        return self.tr("③ Interface habitat-forêt — feu (PAF)")
 
     def group(self) -> str:
-        return self.tr("PAF — forest fire")
+        return self.tr("2 · Indicateurs par emprise")
 
     def groupId(self) -> str:  # noqa: N802
-        return "paf"
+        return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

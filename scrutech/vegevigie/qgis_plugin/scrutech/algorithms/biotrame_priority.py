@@ -48,13 +48,13 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         return "biotrame_priority"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Priorisation écologique (biotrame, emprise seule)")
+        return self.tr("Priorisation écologique (biotrame)")
 
     def group(self) -> str:
-        return self.tr("Biotrame — priorisation écologique")
+        return self.tr("3 · Croiser & prioriser")
 
     def groupId(self) -> str:  # noqa: N802
-        return "biotrame"
+        return "prioriser"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

@@ -25,18 +25,25 @@ class ScruTechProvider(QgsProcessingProvider):
     """Groups the ScruTech algorithms under one Processing Toolbox entry."""
 
     def loadAlgorithms(self) -> None:  # noqa: N802 — QGIS API name
-        self.addAlgorithm(AnalyzeExtentAlgorithm())
+        # Ordered as the workflow reads in the toolbox (groups are numbered 1→6).
+        # 1 · Préparer l'emprise
         self.addAlgorithm(LoadCommunesAlgorithm())
-        self.addAlgorithm(InterfaceHabitatForetAlgorithm())
-        self.addAlgorithm(InterfaceFromAoiAlgorithm())
+        # 2 · Indicateurs par emprise (les piliers AOI-only, dans l'ordre ①→④)
+        self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(AlphaEarthChangeAlgorithm())
-        self.addAlgorithm(EcobuageAptitudeAlgorithm())
+        self.addAlgorithm(InterfaceFromAoiAlgorithm())
         self.addAlgorithm(EcobuageAptitudeFromAoiAlgorithm())
+        # 3 · Croiser & prioriser
         self.addAlgorithm(BiotramePriorityAlgorithm())
+        # 4 · Restituer
         self.addAlgorithm(ReportLaunchAlgorithm())
         self.addAlgorithm(LoadCachedAlgorithm())
+        # 5 · Bâti & territoire
         self.addAlgorithm(SdbpiVacanceAlgorithm())
         self.addAlgorithm(MiniDcSitesAlgorithm())
+        # 6 · Outils avancés (couches en entrée)
+        self.addAlgorithm(InterfaceHabitatForetAlgorithm())
+        self.addAlgorithm(EcobuageAptitudeAlgorithm())
 
     def id(self) -> str:
         return "scrutech"

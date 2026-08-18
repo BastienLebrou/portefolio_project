@@ -46,13 +46,13 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         return "ecobuage_aptitude_aoi"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Aptitude à l'écobuage depuis une emprise (AOI + MNT)")
+        return self.tr("④ Aptitude à l'écobuage")
 
     def group(self) -> str:
-        return self.tr("Écobuage — pastoral / fire")
+        return self.tr("2 · Indicateurs par emprise")
 
     def groupId(self) -> str:  # noqa: N802
-        return "ecobuage"
+        return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

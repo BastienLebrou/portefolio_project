@@ -52,13 +52,13 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         return "interface_habitat_foret"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Interface habitat-forêt (WUI)")
+        return self.tr("Interface habitat-forêt (couches en entrée)")
 
     def group(self) -> str:
-        return self.tr("PAF — forest fire")
+        return self.tr("6 · Outils avancés (couches en entrée)")
 
     def groupId(self) -> str:  # noqa: N802
-        return "paf"
+        return "avance"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

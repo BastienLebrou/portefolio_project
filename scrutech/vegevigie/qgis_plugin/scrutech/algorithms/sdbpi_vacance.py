@@ -42,10 +42,10 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
         return self.tr("Bâtiments professionnels inoccupés (SDBPi)")
 
     def group(self) -> str:
-        return self.tr("SDBPi")
+        return self.tr("5 · Bâti & territoire")
 
     def groupId(self) -> str:  # noqa: N802
-        return "sdbpi"
+        return "bati_territoire"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

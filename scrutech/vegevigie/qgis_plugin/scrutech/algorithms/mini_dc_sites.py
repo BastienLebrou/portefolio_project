@@ -36,10 +36,10 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
         return self.tr("Sélection de sites mini data centers (démo)")
 
     def group(self) -> str:
-        return self.tr("Mini data centers")
+        return self.tr("5 · Bâti & territoire")
 
     def groupId(self) -> str:  # noqa: N802
-        return "mini_dc"
+        return "bati_territoire"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

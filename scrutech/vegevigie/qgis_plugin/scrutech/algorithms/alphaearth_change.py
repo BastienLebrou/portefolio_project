@@ -51,13 +51,13 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         return "alphaearth_change"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Détection de changement AlphaEarth (emprise, 2 années)")
+        return self.tr("② Changement satellite (AlphaEarth)")
 
     def group(self) -> str:
-        return self.tr("AlphaEarth")
+        return self.tr("2 · Indicateurs par emprise")
 
     def groupId(self) -> str:  # noqa: N802
-        return "alphaearth"
+        return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(

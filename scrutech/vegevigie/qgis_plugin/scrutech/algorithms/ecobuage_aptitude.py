@@ -52,13 +52,13 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
         return "ecobuage_aptitude"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Aptitude à l'écobuage (multi-critères)")
+        return self.tr("Aptitude à l'écobuage (couches en entrée)")
 
     def group(self) -> str:
-        return self.tr("Écobuage — pastoral / fire")
+        return self.tr("6 · Outils avancés (couches en entrée)")
 
     def groupId(self) -> str:  # noqa: N802
-        return "ecobuage"
+        return "avance"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
