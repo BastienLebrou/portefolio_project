@@ -261,6 +261,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self._explain(exc)) from exc
         return SimpleNamespace(
             trend_tif=result.trend_tif,
+            break_tif=result.break_tif,
             drought_tif=result.drought_tif,
             zonal_parquet=result.zonal_parquet,
             scene_count=result.scene_count,
@@ -334,6 +335,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             )
         return SimpleNamespace(
             trend_tif=_p(payload.get("trend_tif")),
+            break_tif=_p(payload.get("break_tif")),
             drought_tif=_p(payload.get("drought_tif")),
             zonal_parquet=_p(payload.get("zonal_parquet")),
             scene_count=int(payload.get("scene_count", 0)),
@@ -395,6 +397,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
     def _queue_layers(self, result, context: QgsProcessingContext) -> None:
         pairs = [
             (result.trend_tif, "ScruTech trend (Sen's slope)"),
+            (getattr(result, "break_tif", None), "ScruTech année de rupture (Pettitt)"),
             (result.drought_tif, "ScruTech drought (NDVI anomaly)"),
             (result.zonal_parquet, "ScruTech commune stats"),
         ]

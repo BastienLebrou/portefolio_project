@@ -81,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         + json.dumps(
             {
                 "trend_tif": _s(result.trend_tif),
+                "break_tif": _s(result.break_tif),
                 "drought_tif": _s(result.drought_tif),
                 "zonal_parquet": _s(result.zonal_parquet),
                 "timeline_parquet": _s(result.timeline_parquet),

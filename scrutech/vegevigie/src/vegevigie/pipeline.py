@@ -71,6 +71,7 @@ class PipelineResult:
 
     settings: Settings
     trend_tif: Path | None = None
+    break_tif: Path | None = None
     drought_tif: Path | None = None
     zonal_parquet: Path | None = None
     duckdb_path: Path | None = None
@@ -156,9 +157,18 @@ def run_pipeline(
     ndvi = masked_ndvi(cube["red"], cube["nir"], cube["scl"]).rename("ndvi")
     monthly = build_monthly_ndvi(ndvi, fill_max_gap=settings.composite.fill_max_gap).compute()
 
+    # Deseasonalize before the trend on multi-year series (removes the seasonal swing that
+    # otherwise drowns a real trend — the practical STL step). One year → keep the raw series.
+    from vegevigie.seasonal import deseasonalize, has_multiple_years
+
+    monthly_for_trend = monthly
+    if has_multiple_years(monthly):
+        report(60, "Déseasonnalisation (retrait du cycle saisonnier)…")
+        monthly_for_trend = deseasonalize(monthly).compute()
+
     report(65, "Per-pixel Mann-Kendall + Sen's slope…")
     trend = trend_dataset(
-        monthly, alpha=settings.trend.p_value, min_valid=settings.trend.min_valid_months
+        monthly_for_trend, alpha=settings.trend.p_value, min_valid=settings.trend.min_valid_months
     ).compute()
     result.trend_tif = _write_band(
         trend["sen_slope"],
@@ -172,6 +182,22 @@ def run_pipeline(
         settings.paths.processed / f"trend_class_{start}_{end}.tif",
         "trend_class",
     )
+
+    # Change-point: WHEN did each pixel flip (clear-cut, fire, drought onset). Multi-year only.
+    if has_multiple_years(monthly):
+        report(72, "Détection de rupture (Pettitt)…")
+        from vegevigie.breaks import break_dataset, break_year
+
+        breaks = break_dataset(
+            monthly_for_trend, min_valid=settings.trend.min_valid_months
+        ).compute()
+        year_grid = break_year(breaks, monthly, alpha=settings.trend.p_value)
+        result.break_tif = _write_band(
+            year_grid,
+            crs,
+            settings.paths.processed / f"break_year_{start}_{end}.tif",
+            "break_year",
+        )
 
     report(80, "Drought anomaly + VCI…")
     drought = drought_dataset(monthly).compute()
@@ -197,6 +223,7 @@ def run_pipeline(
         p
         for p in (
             result.trend_tif,
+            result.break_tif,
             result.drought_tif,
             result.zonal_parquet,
             result.timeline_parquet,
