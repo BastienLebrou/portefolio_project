@@ -21,7 +21,11 @@ def _load():
 def test_all_qml_are_wellformed_xml() -> None:
     m = _load()
     for name in (
-        "trend_qml", "drought_qml", "ecobuage_aptitude_qml", "ecobuage_classes_qml", "biotrame_qml"
+        "trend_qml",
+        "drought_qml",
+        "ecobuage_aptitude_qml",
+        "ecobuage_classes_qml",
+        "biotrame_qml",
     ):
         xml = getattr(m, name)()
         body = xml.split(">\n", 1)[1]  # drop the DOCTYPE line for the parser
@@ -32,4 +36,4 @@ def test_biotrame_qml_categorizes_on_classe() -> None:
     m = _load()
     xml = m.biotrame_qml()
     assert 'attr="classe"' in xml
-    assert xml.count('<category ') == 3  # 3 classes
+    assert xml.count("<category ") == 3  # 3 classes

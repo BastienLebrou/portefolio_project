@@ -25,8 +25,13 @@ def _write_dem(path, crs=None) -> None:
     dem = np.tile(xs, (h, 1)).astype("float32")
     transform = from_origin(minx, miny + h * res, res, res)
     prof = {
-        "driver": "GTiff", "width": w, "height": h, "count": 1, "dtype": "float32",
-        "transform": transform, "nodata": -99999.0,
+        "driver": "GTiff",
+        "width": w,
+        "height": h,
+        "count": 1,
+        "dtype": "float32",
+        "transform": transform,
+        "nodata": -99999.0,
     }
     if crs is not None:
         prof["crs"] = crs
@@ -66,18 +71,31 @@ def test_build_aptitude_from_aoi_writes_rasters(tmp_path, monkeypatch) -> None:
 def test_veg_rasters_add_criteria(tmp_path, monkeypatch) -> None:
     import core.sources as sources
 
-    monkeypatch.setattr(sources, "fetch_roads", lambda aoi, **k: gpd.GeoDataFrame(
-        geometry=[LineString([(900_000, 6_400_250), (900_500, 6_400_250)])], crs=L93))
-    monkeypatch.setattr(sources, "fetch_buildings", lambda aoi, **k: gpd.GeoDataFrame(
-        geometry=[], crs=L93))
+    monkeypatch.setattr(
+        sources,
+        "fetch_roads",
+        lambda aoi, **k: gpd.GeoDataFrame(
+            geometry=[LineString([(900_000, 6_400_250), (900_500, 6_400_250)])], crs=L93
+        ),
+    )
+    monkeypatch.setattr(
+        sources, "fetch_buildings", lambda aoi, **k: gpd.GeoDataFrame(geometry=[], crs=L93)
+    )
 
     dem = tmp_path / "mnt.tif"
     _write_dem(dem, crs=L93)
     # A tiny VegeVigie-like trend raster covering the AOI.
     trend = tmp_path / "trend.tif"
     with rasterio.open(
-        trend, "w", driver="GTiff", width=10, height=10, count=1, dtype="float32",
-        crs=L93, transform=from_origin(900_000, 6_400_500, 50, 50),
+        trend,
+        "w",
+        driver="GTiff",
+        width=10,
+        height=10,
+        count=1,
+        dtype="float32",
+        crs=L93,
+        transform=from_origin(900_000, 6_400_500, 50, 50),
     ) as dst:
         dst.write(np.full((10, 10), 0.008, dtype="float32"), 1)
 

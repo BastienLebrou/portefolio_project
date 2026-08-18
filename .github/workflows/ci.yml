@@ -3,15 +3,15 @@ name: CI
 on:
   push:
     paths:
-      - "scrutech/vegevigie/**"
+      - "scrutech/**"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
-      - "scrutech/vegevigie/**"
+      - "scrutech/**"
       - ".github/workflows/ci.yml"
 
 jobs:
-  vegevigie:
+  scrutech:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,16 +28,27 @@ jobs:
       - name: Set up Python
         run: uv python install 3.11
 
+      # Installs vegevigie + its path deps: core, ecobuage, biotrame, alphaearth.
       - name: Install dependencies
         run: uv sync --locked
 
+      # Lint the hub and every sibling pillar package with the same ruff config.
       - name: Lint (ruff)
         run: |
-          uv run ruff check .
+          uv run ruff check . ../core ../ecobuage ../biotrame ../alphaearth
           uv run ruff format --check .
 
       - name: Type-check (mypy)
         run: uv run mypy
 
-      - name: Tests (pytest)
+      # One session for the packaged piliers (testpaths spans core/biotrame/alphaearth).
+      - name: Tests — packages (vegevigie + core + biotrame + alphaearth)
         run: uv run pytest
+
+      # SDBPi and mini_dc are flat-module projects that each ship a top-level `config`
+      # module — they MUST run in separate pytest sessions or the names collide.
+      - name: Tests — SDBPi
+        run: uv run pytest ../sdbpi/tests
+
+      - name: Tests — mini_dc
+        run: uv run pytest ../mini_dc/outil/tests

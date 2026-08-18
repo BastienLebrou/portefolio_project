@@ -86,7 +86,11 @@ def build_aptitude_from_aoi(
     apt_path = out_dir / "ecobuage_aptitude.tif"
     cls_path = out_dir / "ecobuage_classes.tif"
     profile = {
-        "driver": "GTiff", "crs": L93, "transform": transform, "width": width, "height": height,
+        "driver": "GTiff",
+        "crs": L93,
+        "transform": transform,
+        "width": width,
+        "height": height,
     }
     _write_tif(apt_path, score.astype("float32"), profile)
     _write_tif(cls_path, classes.astype("uint8"), profile)

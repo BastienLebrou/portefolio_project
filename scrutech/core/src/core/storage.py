@@ -81,11 +81,7 @@ def list_cached(aoi_id: str) -> list[Path]:
     map isn't loaded twice.
     """
     root = data_root()
-    hits = [
-        p
-        for p in root.glob(f"*/aoi={aoi_id}/output/*")
-        if p.suffix.lower() in _LOADABLE
-    ]
+    hits = [p for p in root.glob(f"*/aoi={aoi_id}/output/*") if p.suffix.lower() in _LOADABLE]
     geojson_stems = {(p.parent, p.stem) for p in hits if p.suffix.lower() == ".geojson"}
 
     def _is_parquet_twin(p: Path) -> bool:

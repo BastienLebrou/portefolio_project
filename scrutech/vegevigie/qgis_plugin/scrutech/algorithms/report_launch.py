@@ -69,21 +69,27 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
             QgsProcessingParameterFile(
-                self.RESULTS, self.tr("Results folder (output of a previous algorithm)"),
+                self.RESULTS,
+                self.tr("Results folder (output of a previous algorithm)"),
                 behavior=_compat.FILE_BEHAVIOR_FOLDER,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.PORT, self.tr("Local port"), type=_compat.NUMBER_INTEGER,
-                defaultValue=8501, minValue=1024, maxValue=65535,
+                self.PORT,
+                self.tr("Local port"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=8501,
+                minValue=1024,
+                maxValue=65535,
             )
         )
         self.addParameter(
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
 
@@ -102,8 +108,10 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         python_exe = self._resolve_python(explicit, feedback)
         if not python_exe:
             raise QgsProcessingException(
-                self.tr("No VegeVigie interpreter found (needs streamlit). Point 'Python "
-                        "executable' at the project venv.")
+                self.tr(
+                    "No VegeVigie interpreter found (needs streamlit). Point 'Python "
+                    "executable' at the project venv."
+                )
             )
         app = Path(python_exe).parents[2] / "src" / "vegevigie" / "report" / "app.py"
         if not app.exists():
@@ -122,9 +130,17 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         from ._external import _ENV_STRIP
 
         cmd = [
-            python_exe, "-m", "streamlit", "run", str(app),
-            "--server.port", str(port), "--server.headless", "true",
-            "--browser.gatherUsageStats", "false",
+            python_exe,
+            "-m",
+            "streamlit",
+            "run",
+            str(app),
+            "--server.port",
+            str(port),
+            "--server.headless",
+            "true",
+            "--browser.gatherUsageStats",
+            "false",
         ]
         env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
         env["SCRUTECH_RESULTS"] = results

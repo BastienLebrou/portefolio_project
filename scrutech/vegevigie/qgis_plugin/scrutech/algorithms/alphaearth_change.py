@@ -85,26 +85,41 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.YEAR1, self.tr("Year 1"), type=_compat.NUMBER_INTEGER,
-                defaultValue=2018, minValue=2017, maxValue=2100,
+                self.YEAR1,
+                self.tr("Year 1"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=2018,
+                minValue=2017,
+                maxValue=2100,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.YEAR2, self.tr("Year 2"), type=_compat.NUMBER_INTEGER,
-                defaultValue=2023, minValue=2017, maxValue=2100,
+                self.YEAR2,
+                self.tr("Year 2"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=2023,
+                minValue=2017,
+                maxValue=2100,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.PERCENTILE, self.tr("Change percentile threshold"),
-                type=_compat.NUMBER_DOUBLE, defaultValue=95.0, minValue=50.0, maxValue=99.9,
+                self.PERCENTILE,
+                self.tr("Change percentile threshold"),
+                type=_compat.NUMBER_DOUBLE,
+                defaultValue=95.0,
+                minValue=50.0,
+                maxValue=99.9,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.MAX_PIXELS, self.tr("Max pixels to sample (GEE quota guard-rail)"),
-                type=_compat.NUMBER_INTEGER, defaultValue=100_000, minValue=1000,
+                self.MAX_PIXELS,
+                self.tr("Max pixels to sample (GEE quota guard-rail)"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=100_000,
+                minValue=1000,
                 maxValue=1_000_000,
             )
         )
@@ -112,20 +127,25 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.KEY_FILE,
                 self.tr("GEE service-account key (.json) — empty = SCRUTECH_GEE_CREDENTIALS env"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True, extension="json",
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
+                extension="json",
             )
         )
         self.addParameter(
             QgsProcessingParameterString(
-                self.AUTH_ID, self.tr("GEE auth config ID (fallback — QGIS Authentication)"),
-                defaultValue="gee_service", optional=True,
+                self.AUTH_ID,
+                self.tr("GEE auth config ID (fallback — QGIS Authentication)"),
+                defaultValue="gee_service",
+                optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
         self.addParameter(
@@ -158,8 +178,10 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         python_exe = self._resolve_python(explicit, feedback)
         if not python_exe:
             raise QgsProcessingException(
-                self.tr("No VegeVigie interpreter found (needs earthengine-api). Point 'Python "
-                        "executable' at the project venv.")
+                self.tr(
+                    "No VegeVigie interpreter found (needs earthengine-api). Point 'Python "
+                    "executable' at the project venv."
+                )
             )
 
         from ._external import run_spec
@@ -175,7 +197,11 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         }
         try:
             payload = run_spec(
-                python_exe, "vegevigie.qgis_runner", spec, out_folder, feedback,
+                python_exe,
+                "vegevigie.qgis_runner",
+                spec,
+                out_folder,
+                feedback,
                 extra_env={"SCRUTECH_GEE_CREDENTIALS": credentials},
             )
         except RuntimeError as exc:

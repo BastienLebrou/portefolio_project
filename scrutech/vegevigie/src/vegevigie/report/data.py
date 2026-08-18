@@ -33,11 +33,7 @@ class ReportInputs:
 
     def any(self) -> bool:
         """True if at least one pillar output was found."""
-        return any(
-            v is not None
-            for k, v in vars(self).items()
-            if k != "folder"
-        )
+        return any(v is not None for k, v in vars(self).items() if k != "folder")
 
     def present(self) -> list[str]:
         """Names of the pillars whose outputs are present (for a summary line)."""

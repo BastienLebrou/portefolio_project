@@ -63,7 +63,8 @@ def _map(data: ReportInputs) -> None:
     import leafmap.foliumap as leafmap
 
     layers = [
-        p for p in (data.biotrame, data.interface_zone, data.interface_line, data.alphaearth_change)
+        p
+        for p in (data.biotrame, data.interface_zone, data.interface_line, data.alphaearth_change)
         if p is not None
     ]
     if not layers:
@@ -78,14 +79,17 @@ def _map(data: ReportInputs) -> None:
             name="Biotrame — priorité",
             style_function=lambda f: {
                 "fillColor": _CLASSE_COLOR.get(int(f["properties"].get("classe", 0)), "#cccccc"),
-                "color": "#555555", "weight": 0.4, "fillOpacity": 0.6,
+                "color": "#555555",
+                "weight": 0.4,
+                "fillOpacity": 0.6,
             },
             tooltip=folium.GeoJsonTooltip(fields=[c for c in ("score", "classe") if c in gdf]),
         ).add_to(m)
     if data.interface_zone:
         old_style = {"fillColor": "#e34a33", "color": "#b30000", "fillOpacity": 0.5}
         folium.GeoJson(
-            gpd.read_file(data.interface_zone).to_crs("EPSG:4326"), name="PAF — bande OLD",
+            gpd.read_file(data.interface_zone).to_crs("EPSG:4326"),
+            name="PAF — bande OLD",
             style_function=lambda f: old_style,
         ).add_to(m)
     if data.alphaearth_change:
@@ -132,6 +136,8 @@ if present_rasters:
     st.subheader("Couches raster")
     cols = st.columns(2)
     for i, (path, title, cmap) in enumerate(present_rasters):
+        if path is None:
+            continue
         with cols[i % 2]:
             _raster_thumb(path, title, cmap)
 

@@ -81,25 +81,33 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterFile(
-                self.MNT, self.tr("DEM / MNT (.tif) — empty = SCRUTECH_MNT env var"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                self.MNT,
+                self.tr("DEM / MNT (.tif) — empty = SCRUTECH_MNT env var"),
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.RESOLUTION, self.tr("Analysis resolution (m)"),
-                type=_compat.NUMBER_INTEGER, defaultValue=25, minValue=5, maxValue=200,
+                self.RESOLUTION,
+                self.tr("Analysis resolution (m)"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=25,
+                minValue=5,
+                maxValue=200,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterLayer(
-                self.VEG_TREND, self.tr("VegeVigie trend raster (optional — embroussaillement)"),
+                self.VEG_TREND,
+                self.tr("VegeVigie trend raster (optional — embroussaillement)"),
                 optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterLayer(
-                self.VEG_DROUGHT, self.tr("VegeVigie drought raster (optional — combustible)"),
+                self.VEG_DROUGHT,
+                self.tr("VegeVigie drought raster (optional — combustible)"),
                 optional=True,
             )
         )
@@ -107,7 +115,8 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
         self.addParameter(
@@ -133,8 +142,10 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         python_exe = self._resolve_python(explicit, feedback)
         if not python_exe:
             raise QgsProcessingException(
-                self.tr("No VegeVigie interpreter found. Point 'Python executable' at the "
-                        "project venv (needs rasterio + geopandas).")
+                self.tr(
+                    "No VegeVigie interpreter found. Point 'Python executable' at the "
+                    "project venv (needs rasterio + geopandas)."
+                )
             )
 
         from ._external import run_spec
@@ -184,8 +195,10 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             mnt = os.environ.get("SCRUTECH_MNT", "").strip()
         if not mnt or not Path(mnt).exists():
             raise QgsProcessingException(
-                self.tr("No DEM found. Set the DEM (.tif) parameter or the SCRUTECH_MNT "
-                        "environment variable to an existing file.")
+                self.tr(
+                    "No DEM found. Set the DEM (.tif) parameter or the SCRUTECH_MNT "
+                    "environment variable to an existing file."
+                )
             )
         return mnt
 

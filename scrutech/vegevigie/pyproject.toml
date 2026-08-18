@@ -13,6 +13,8 @@ dependencies = [
     "scrutech-ecobuage",
     # Biotrame H3 mesh + scoring — consumed by the AOI-only biotrame orchestrator.
     "scrutech-biotrame",
+    # AlphaEarth engine — consumed by the AlphaEarth change runner task.
+    "scrutech-alphaearth",
     # Core CLI + config (M0). The heavy datacube stack (odc-stac, xarray, dask, ...)
     # is still added milestone by milestone, when the code that uses it lands (§6).
     "typer>=0.12",
@@ -53,6 +55,7 @@ vegevigie = "vegevigie.cli:app"
 scrutech-core = { path = "../core", editable = true }
 scrutech-ecobuage = { path = "../ecobuage", editable = true }
 scrutech-biotrame = { path = "../biotrame", editable = true }
+scrutech-alphaearth = { path = "../alphaearth", editable = true }
 
 [dependency-groups]
 dev = [
@@ -95,5 +98,7 @@ ignore_missing_imports = true
 check_untyped_defs = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-q"
+# Also runs the sibling package tests (all installed as vegevigie deps), so one CI
+# job covers core + ecobuage + biotrame + alphaearth + vegevigie.
+testpaths = ["tests", "../core/tests", "../biotrame/tests", "../alphaearth/tests"]
+addopts = "-q --import-mode=importlib"

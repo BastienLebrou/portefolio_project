@@ -83,13 +83,18 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.RESOLUTION, self.tr("H3 resolution (7 ≈ 5 km², 8 ≈ 0.7 km², 9 ≈ 0.1 km²)"),
-                type=_compat.NUMBER_INTEGER, defaultValue=8, minValue=5, maxValue=10,
+                self.RESOLUTION,
+                self.tr("H3 resolution (7 ≈ 5 km², 8 ≈ 0.7 km², 9 ≈ 0.1 km²)"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=8,
+                minValue=5,
+                maxValue=10,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterLayer(
-                self.VEG_TREND, self.tr("VegeVigie trend raster (optional — dégradation axis)"),
+                self.VEG_TREND,
+                self.tr("VegeVigie trend raster (optional — dégradation axis)"),
                 optional=True,
             )
         )
@@ -111,7 +116,8 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
         self.addParameter(
@@ -136,8 +142,10 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         python_exe = self._resolve_python(explicit, feedback)
         if not python_exe:
             raise QgsProcessingException(
-                self.tr("No VegeVigie interpreter found. Point 'Python executable' at the "
-                        "project venv (needs geopandas + h3).")
+                self.tr(
+                    "No VegeVigie interpreter found. Point 'Python executable' at the "
+                    "project venv (needs geopandas + h3)."
+                )
             )
 
         from ._external import run_spec

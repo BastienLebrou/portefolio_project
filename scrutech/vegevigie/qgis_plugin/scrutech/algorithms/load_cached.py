@@ -69,7 +69,8 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE, optional=True,
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
             )
         )
 

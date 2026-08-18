@@ -89,7 +89,8 @@ def test_fetch_biodiversity_reservoirs_combines_kinds(monkeypatch) -> None:
         }
 
     monkeypatch.setattr(
-        sources.requests, "get",
+        sources.requests,
+        "get",
         lambda url, params, timeout: _FakeResp({"features": [_site("Site X")]}),
     )
 

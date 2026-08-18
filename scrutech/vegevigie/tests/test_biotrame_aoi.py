@@ -19,7 +19,8 @@ def test_priority_mesh_writes_outputs_and_axes(tmp_path, monkeypatch) -> None:
     # A reservoir covering the western half of the AOI (mock the WFS fetch).
     reservoirs = gpd.GeoDataFrame(
         {"kind": ["natura2000_sic"], "nom_site": ["X"]},
-        geometry=[box(4.60, 44.50, 4.65, 44.60)], crs="EPSG:4326",
+        geometry=[box(4.60, 44.50, 4.65, 44.60)],
+        crs="EPSG:4326",
     ).to_crs("EPSG:2154")
     monkeypatch.setattr(sources, "fetch_biodiversity_reservoirs", lambda aoi, **k: reservoirs)
 
@@ -37,10 +38,12 @@ def test_trend_raster_adds_degradation_axis(tmp_path, monkeypatch) -> None:
     import core.sources as sources
 
     monkeypatch.setattr(
-        sources, "fetch_biodiversity_reservoirs",
+        sources,
+        "fetch_biodiversity_reservoirs",
         lambda aoi, **k: gpd.GeoDataFrame(
             {"kind": ["znieff1"], "nom_site": ["Y"]},
-            geometry=[box(4.60, 44.50, 4.65, 44.60)], crs="EPSG:4326"
+            geometry=[box(4.60, 44.50, 4.65, 44.60)],
+            crs="EPSG:4326",
         ).to_crs("EPSG:2154"),
     )
 
@@ -52,8 +55,16 @@ def test_trend_raster_adds_degradation_axis(tmp_path, monkeypatch) -> None:
     h = int((maxy - miny) / res) + 1
     trend = tmp_path / "trend.tif"
     with rasterio.open(
-        trend, "w", driver="GTiff", width=w, height=h, count=1, dtype="float32",
-        crs="EPSG:2154", transform=from_origin(minx, maxy, res, res), nodata=-9999.0,
+        trend,
+        "w",
+        driver="GTiff",
+        width=w,
+        height=h,
+        count=1,
+        dtype="float32",
+        crs="EPSG:2154",
+        transform=from_origin(minx, maxy, res, res),
+        nodata=-9999.0,
     ) as dst:
         dst.write(np.full((h, w), -0.02, dtype="float32"), 1)  # browning everywhere
 
