@@ -40,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_biotrame_aoi(spec)
     if task == "load_cached":
         return _run_load_cached(spec)
+    if task == "geoai_segment":
+        return _run_geoai_segment(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -197,6 +199,34 @@ def _run_biotrame_aoi(spec: dict) -> int:
     _cache(spec, "biotrame")
     result = {"parquet_path": str(parquet), "geojson_path": str(geojson), **info}
     print("RESULT " + json.dumps(result), flush=True)
+    return 0
+
+
+def _run_geoai_segment(spec: dict) -> int:
+    """GeoAI: zero-shot segmentation of a raster with a locally-downloaded SAM checkpoint."""
+    from vegevigie.geoai_segment import segment_raster
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        result = segment_raster(
+            spec["raster_path"],
+            out_dir=Path(spec["out_folder"]),
+            points_per_side=int(spec.get("points_per_side", 32)),
+            min_mask_region_area=int(spec.get("min_mask_region_area", 100)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    payload = {
+        "mask_path": str(result.mask_tif),
+        "vector_path": str(result.vector_gpkg),
+        "n_objects": result.n_objects,
+    }
+    print("RESULT " + json.dumps(payload), flush=True)
     return 0
 
 

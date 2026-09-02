@@ -122,6 +122,29 @@ Outputs (GeoTIFF + GeoParquet) are written to the folder and loaded as layers:
    Align the criterion rasters first (e.g. *GDAL ▸ Warp* or *Align rasters*). GDAL +
    numpy only — no internet, no datacube stack.
 
+## Use — GeoAI segmentation (experimental)
+
+1. Install the optional stack once, in the same venv used for the other tools:
+   ```
+   cd scrutech/vegevigie
+   uv sync --extra geoai       # adds segment-geospatial + torch (heavy, not installed by default)
+   ```
+2. **Processing Toolbox ▸ ScruTech ▸ GeoAI ▸ Segment anything (SAM, experimental)**.
+3. Pick any **raster** already in your project (Sentinel-2 composite, aerial ortho, a
+   VegeVigie output…) and **Run**.
+4. First run downloads the SAM ViT-B checkpoint (~375 MB, Apache-2.0, official Meta
+   source) into `~/.scrutech/models` and pins its checksum for reuse — every run after
+   that is fully offline, no API key, no cloud quota (unlike AlphaEarth, which needs
+   Earth Engine). See `vegevigie.geoai_segment` for the download/checksum design (Meta
+   publishes no official hash for these files, so it pins on first use rather than fake
+   one) and `qgis_plugin/TODO.md` for the full download-security checklist.
+
+Output is a polygon layer of segmented objects (`geoai_segments.gpkg`) + the raw mask
+raster. No AOI-scale guarantees yet — start with a small raster; this is a first,
+general-purpose slice of the GeoAI backlog (see chat notes / `TODO.md` for where else it
+could plug in: PAF burn-scar mapping, auto écobuage criterion rasters, offline
+AlphaEarth-style embeddings…).
+
 ## Notes & limits
 
 - Large extents / long windows download more imagery and take longer; start small.

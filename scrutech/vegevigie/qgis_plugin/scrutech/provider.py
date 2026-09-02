@@ -12,6 +12,7 @@ from .algorithms.analyze_extent import AnalyzeExtentAlgorithm
 from .algorithms.biotrame_priority import BiotramePriorityAlgorithm
 from .algorithms.ecobuage_aptitude import EcobuageAptitudeAlgorithm
 from .algorithms.ecobuage_aptitude_aoi import EcobuageAptitudeFromAoiAlgorithm
+from .algorithms.geoai_segment import GeoaiSegmentAlgorithm
 from .algorithms.load_cached import LoadCachedAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
 from .algorithms.mini_dc_sites import MiniDcSitesAlgorithm
@@ -44,6 +45,8 @@ class ScruTechProvider(QgsProcessingProvider):
         # 6 · Outils avancés (couches en entrée)
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
+        # 7 · GeoAI (modèles ouverts, expérimental)
+        self.addAlgorithm(GeoaiSegmentAlgorithm())
 
     def id(self) -> str:
         return "scrutech"

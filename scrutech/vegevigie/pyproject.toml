@@ -48,6 +48,15 @@ dependencies = [
     "leafmap>=0.35",
 ]
 
+[project.optional-dependencies]
+# GeoAI (experimental, QGIS 'Segment anything' algorithm). NOT installed by default —
+# torch is heavy (~GB-scale) and would slow down every CI run / base install for a
+# feature most pillars don't need. Install explicitly: uv sync --extra geoai
+geoai = [
+    "segment-geospatial>=0.12",
+    "torch>=2.0",
+]
+
 [project.scripts]
 vegevigie = "vegevigie.cli:app"
 
