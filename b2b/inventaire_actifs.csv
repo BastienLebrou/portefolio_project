@@ -1,0 +1,16 @@
+brique;maturite;loc_python;tests;dependances;fichier_source;reserve
+core (socle AOI/IO/DuckDB/layout);beta;934;23;geopandas,shapely,pyarrow,requests,duckdb,geo.api.gouv.fr,WFS data.geopf.fr,INPN;scrutech/core/README.md + core/src/core/*.py;S3 annonce mais non implemente
+VegeVigie (NDVI/tendance/secheresse/zonal);beta;8307;88;odc-stac,xarray,dask,rioxarray,rasterio,zarr,scipy,pymannkendall,duckdb,streamlit,leafmap,STAC Planetary Computer;scrutech/vegevigie/README.md;aucun run sur imagerie reelle dans le depot
+PAF / WUI (interface habitat-foret);beta;inclus dans vegevigie;dans test_interface.py;geopandas,shapely,core.io,core.sources (BD TOPO WFS);src/vegevigie/interface.py + tests/test_interface.py;segmentation priorisee non faite
+SDBPi (batiments pro inoccupes);prod (resultat reel documente);1054;4;geopandas,requests,WFS BD TOPO,API recherche-entreprises,SIRENE Grand Lyon;scrutech/sdbpi/README.md;candidats et non certitudes; buffer fixe
+mini_dc (selection de sites);beta synthetique / POC reel;2018;1 + harnais SQL;duckdb spatial,H3,geopandas,cadastre,BD TOPO,ARCEP,HTA,EBC,PPRI;scrutech/mini_dc/outil/*.py;ABF et PPRI absents du run reel; resultats reels non documentes
+Ecobuage (aptitude brulage dirige);POC;94;0 dans le paquet;numpy,rasterio,rasters VegeVigie,MNT,CLC,BDIFF/EFFIS,Natura 2000;scrutech/ecobuage/README.md;jamais alimente par des rasters reels
+Biotrame (maille H3 + score ecologique);POC/beta;286;7;geopandas,numpy,H3,INPN,WFS TVB regional;scrutech/biotrame/src/biotrame/*.py;axe connectivite en proxy; endpoint AURA non teste
+AlphaEarth (embeddings GEE 64-D);POC;665;13 (tous mockes);earthengine-api,scikit-learn,compte de service GEE;scrutech/alphaearth/README.md;aucune requete GEE reelle attestee
+Climate Risk Analyzer (EUDR);POC;562;0;PyQGIS uniquement;scrutech/climate_risk_analyzer/README.md;scores mock; aucune source reelle branchee
+Plugin QGIS ScruTech (hub Processing);beta;inclus dans vegevigie;test_styles.py;QGIS >= 3.28, interpreteur Python externe;qgis_plugin/scrutech/metadata.txt;jamais valide en session QGIS live
+Scaffold plugin QGIS 4.0;spec non executable;479;6;aucune;scrutech/plugin/**;methodes en NotImplementedError
+Stockage central DuckDB;beta;inclus dans core;test_db.py;duckdb + spatial, variable SCRUTECH_DATA;scrutech/storage/schema.sql;S3 non implemente
+Restitution Streamlit (dashboard + rapport);beta;inclus dans vegevigie;test_dashboard_data.py,test_report_data.py;streamlit,leafmap,matplotlib;src/vegevigie/report/app.py;alimente par un jeu de demo
+CI (lint+mypy+3 sessions pytest);prod;-;-;GitHub Actions,uv,ruff,mypy,pytest;.github/workflows/ci.yml;-
+Automatisation portfolio (stats Git);prod;-;-;stdlib + GitHub Actions;scripts/generate_stats.py;-

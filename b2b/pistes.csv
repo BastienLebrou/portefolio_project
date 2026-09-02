@@ -1,0 +1,9 @@
+rang;piste;cible;signal_de_demande_date;modele;effort_restant_1a5;preuve_demande_1a5;score;delai_mise_sur_marche
+1;Gisement de vacance d'activite;Foncieres, investisseurs, bureaux d'etudes;Art. 220 loi 2021-1104 du 22/08/2021 (taux de vacance ZAE);Ponctuel + rafraichissement semestriel;2;4;2.00;3-4 semaines
+2;Diagnostic OLD / WUI de portefeuille;Assureurs, grands proprietaires;Loi 2023-580 (10/07/2023) + decret 2024-284 + info OLD au 01/01/2025;Licence annuelle par portefeuille;2;4;2.00;4-6 semaines (12 avec axe vegetation)
+3;Ecran EUDR geolocalise;Agro-industrie, negoce, papetiers;Reglement UE 2023/1115 applicable au 30/12/2026;Ponctuel + abonnement annuel;3;5;1.67;6-8 semaines
+4;Screening RGA vegetation x bati;Assureurs;Surprime CatNat 12->20 pourcent au 01/01/2025; 3,5 Md EUR de sinistres en 2022;Ponctuel + abonnement;3;4;1.33;4-6 semaines
+5;Pre-qualification sites data centers;Investisseurs DC, amenageurs, energeticiens;RTE mai 2026 : 18 GW pour ~80 projets; 63 sites cles en main;Mission forfaitaire par region;3;4;1.33;6-8 semaines
+6;Suivi agronomique agrivoltaique;Developpeurs ENR;Decret 2024-318 (08/04/2024) + arrete du 05/07/2024;Abonnement annuel par centrale;4;5;1.25;8-10 semaines
+7;Ciblage et suivi compensation SNCRR;MOA, operateurs de compensation, BE;Decrets 2024-1052/1053 + arrete du 21/11/2024;Ponctuel + suivi pluriannuel;5;4;0.80;10-12 semaines
+8;Priorisation vegetation reseaux;Gestionnaires de reseaux et prestataires elagage;AO Enedis Gestion de la vegetation Lot 1 - NON VERIFIE;Ponctuel + abonnement;4;3;0.75;6-8 semaines

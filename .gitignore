@@ -10,6 +10,9 @@
 !/ROADMAP.md
 !/QGIS_PLUGIN.md
 !/PROMPT_audit_reorg.md
+# Audit B2B (dossier de travail + livrable daté)
+!/b2b/
+!/audit_b2b_*.md
 
 # Artefacts / environnements — jamais versionnés
 __pycache__/
