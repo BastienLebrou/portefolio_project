@@ -9,6 +9,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+# ONNX est un format de modèle d'IA "portable" (indépendant du framework qui l'a
+# entraîné - PyTorch, TensorFlow...) qu'on peut exécuter localement sans dépendre d'un
+# service externe ; "quantifié" veut dire que ses poids numériques sont stockés en
+# précision réduite (moins d'octets par nombre) pour un modèle plus petit et plus
+# rapide à exécuter sur une machine ordinaire, au prix d'une précision légèrement moindre.
 class InferenceMode(str, Enum):
     LOCAL_ONNX = "local_onnx"
     REMOTE_API = "remote_api"  # interface seulement, non implémenté dans ce plugin

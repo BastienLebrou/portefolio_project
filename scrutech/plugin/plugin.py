@@ -48,6 +48,12 @@ class GeoDataEngineerPlugin:
         self.actions.clear()
 
     def _add_action(self, icon_path: str, text: str, callback) -> None:
+        # Factorise les 4 lignes répétitives de création d'un bouton (icône + libellé +
+        # connexion du clic + ajout barre d'outils/menu) : initGui() n'a plus qu'à
+        # décrire CHAQUE bouton (icône, texte, méthode à appeler), pas comment le créer.
+        # `self.actions` garde une référence à chaque QAction créée : sans ça, Python
+        # pourrait "l'oublier" (garbage collection) puisque rien d'autre ne la retient,
+        # et le bouton disparaîtrait silencieusement de l'interface.
         action = QAction(QIcon(icon_path), text, self.iface.mainWindow())
         action.triggered.connect(callback)
         self.iface.addToolBarIcon(action)

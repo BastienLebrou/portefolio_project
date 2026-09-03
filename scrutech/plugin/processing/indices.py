@@ -28,6 +28,10 @@ class IndicesProcessor:
     def __init__(self, local_area_threshold_km2: float = DEFAULT_LOCAL_AREA_THRESHOLD_KM2):
         self.local_area_threshold_km2 = local_area_threshold_km2
 
+    # Le principe : sous le seuil, calculer localement est rapide et gratuit (juste
+    # de l'arithmétique sur les pixels déjà visibles) ; au-delà, télécharger puis
+    # calculer sur toute la zone en local deviendrait trop lourd — mieux vaut déléguer
+    # le calcul à un service distant (qui a déjà la donnée) et ne récupérer QUE le résultat.
     def choose_execution_mode(self, area_km2: float) -> str:
         raise NotImplementedError
 

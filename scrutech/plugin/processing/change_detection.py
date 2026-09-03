@@ -15,6 +15,11 @@ class Algorithm(str, Enum):
 
 
 class ChangeDetectionProcessor:
+    # Contrairement aux autres processors du plugin (qui basculent local/distant selon
+    # la taille de la zone), celui-ci délègue TOUJOURS à Earth Engine : ces algorithmes
+    # analysent des séries temporelles denses (des centaines d'images par pixel), un
+    # volume de calcul qui dépasse largement ce qu'une machine locale peut faire de
+    # façon raisonnable — d'où `requires_gee()` qui renvoie toujours True, sans condition.
     def requires_gee(self) -> bool:
         return True
 

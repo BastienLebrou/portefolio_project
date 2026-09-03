@@ -16,5 +16,10 @@ class JobMonitor(QDockWidget):
     def register_job(self, job: ApiJob) -> None:
         raise NotImplementedError
 
-    def append_log_entry(self, endpoint: str, params: dict, status_code: int, latency_ms: float) -> None:
+    # Signature riche mais pas de logique encore (scaffold) : elle documente déjà
+    # QUOI journaliser pour chaque appel API (contrainte n°5 du module docstring) —
+    # l'implémentation viendra écrire ces informations dans le fichier de log dédié.
+    def append_log_entry(
+        self, endpoint: str, params: dict, status_code: int, latency_ms: float
+    ) -> None:
         raise NotImplementedError

@@ -21,5 +21,9 @@ class CacheManager:
     def get(self, key: str) -> str | None:
         raise NotImplementedError
 
+    # LRU = "Least Recently Used" : quand le cache dépasse sa taille max, on supprime
+    # d'abord les fichiers les moins récemment CONSULTÉS (pas les plus anciens créés) —
+    # l'idée qu'une donnée réutilisée souvent doit rester, une autre oubliée depuis
+    # longtemps peut partir. Stratégie de cache standard, ex: navigateurs web, CDN.
     def purge_lru_until_under_limit(self) -> None:
         raise NotImplementedError
