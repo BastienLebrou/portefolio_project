@@ -42,6 +42,7 @@ def _write_dem(path, crs=None) -> None:
 def test_build_aptitude_from_aoi_writes_rasters(tmp_path, monkeypatch) -> None:
     import core.sources as sources
 
+    # monkeypatch.setattr évite le vrai appel réseau BD TOPO (voir test_aoi.py pour le détail).
     # A road crossing the AOI, and one building near a corner.
     road = gpd.GeoDataFrame(
         geometry=[LineString([(900_000, 6_400_250), (900_500, 6_400_250)])], crs=L93

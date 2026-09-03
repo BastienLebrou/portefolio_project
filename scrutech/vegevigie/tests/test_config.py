@@ -43,6 +43,10 @@ def _base_config() -> dict:
 def test_reversed_time_window_rejected() -> None:
     raw = _base_config()
     raw["time"] = {"start": 2025, "end": 2018}
+    # pytest.raises(...) vérifie que le bloc `with` lève BIEN l'exception attendue (le
+    # test échoue si aucune exception, ou une exception d'un autre type, n'est levée) ;
+    # `match=` vérifie en plus que le message d'erreur contient ce texte — s'assure
+    # qu'on rejette pour la bonne raison, pas par un bug qui produirait une autre erreur.
     with pytest.raises(ValidationError, match="must be >="):
         Settings.model_validate(raw)
 
@@ -54,6 +58,9 @@ def test_cloud_cover_out_of_range_rejected() -> None:
         Settings.model_validate(raw)
 
 
+# `tmp_path` est une "fixture" pytest : un dossier temporaire unique, créé
+# automatiquement pour ce test et nettoyé après — pytest le fournit tout seul dès qu'un
+# paramètre de test s'appelle `tmp_path` (aucun import ni configuration à faire).
 def test_load_settings_custom_path(tmp_path: Path) -> None:
     custom = tmp_path / "custom.yaml"
     raw = _base_config()

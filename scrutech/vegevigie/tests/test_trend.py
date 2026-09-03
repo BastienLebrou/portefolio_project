@@ -19,6 +19,9 @@ SAMPLE_SERIES = {
 }
 
 
+# @pytest.mark.parametrize exécute la MÊME fonction de test une fois par valeur listée
+# (ici, une fois par clé de SAMPLE_SERIES) : 5 séries testées = 5 tests distincts dans
+# le rapport, sans dupliquer le code du test cinq fois.
 @pytest.mark.parametrize("name", list(SAMPLE_SERIES))
 def test_matches_pymannkendall_clean_series(name: str) -> None:
     y = SAMPLE_SERIES[name]

@@ -78,6 +78,9 @@ def test_build_interface_writes_parquet_and_geojson(tmp_path) -> None:
 
 def test_build_interface_from_aoi_fetches_and_writes(tmp_path, monkeypatch) -> None:
     # AOI-only: forest + buildings come from core.sources (mocked), not from the user.
+    # monkeypatch.setattr remplace temporairement une fonction par une factice, le
+    # temps du test (voir test_aoi.py::test_build_aoi_skips_when_cached pour le détail) —
+    # ici pour éviter un vrai appel réseau vers le WFS BD TOPO pendant les tests.
     import core.sources as sources
 
     forest_wgs = _forest().to_crs("EPSG:4326")
