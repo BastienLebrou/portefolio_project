@@ -13,6 +13,12 @@ import sys
 from pathlib import Path
 
 # Make ``core`` importable when run straight from the repo (no install needed).
+# sys.path est la liste des dossiers où Python cherche les modules à `import` ; l'y
+# ajouter en tête (insert(0, ...)) rend `core` trouvable même si ce paquet n'est pas
+# "installé" (pip install -e) dans l'environnement courant — pratique pour lancer ce
+# script directement depuis le dépôt sans étape d'installation préalable.
+# `# noqa: E402` désactive l'avertissement du linter "import pas en haut de fichier" :
+# ici c'est voulu, l'import doit venir APRÈS avoir modifié sys.path pour fonctionner.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core" / "src"))
 from core.db import connect  # noqa: E402
 from core.storage import data_root, db_path  # noqa: E402

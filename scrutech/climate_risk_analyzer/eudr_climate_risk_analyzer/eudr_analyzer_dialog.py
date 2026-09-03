@@ -28,6 +28,11 @@ from qgis.PyQt.QtWidgets import (
 class EudrAnalyzerDockWidget(QDockWidget):
     """Simple dockable panel for selecting inputs and displaying results."""
 
+    # pyqtSignal() déclare un "signal" Qt : un événement que cet objet peut émettre
+    # (ici, "l'utilisateur veut lancer l'analyse"). D'autres objets s'y "connectent"
+    # (voir eudr_analyzer_plugin.py : `dock_widget.run_analysis_requested.connect(...)`)
+    # pour être notifiés — le widget d'UI n'a donc pas besoin de connaître QUI réagit à
+    # son clic, il se contente d'"émettre" l'événement (voir _connect_signals ci-dessous).
     run_analysis_requested = pyqtSignal()
 
     RAW_MATERIALS = (

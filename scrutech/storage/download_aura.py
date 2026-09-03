@@ -114,6 +114,11 @@ def fetch_overpass(osm_filter: str, region: gpd.GeoDataFrame, **_: object) -> gp
     return gpd.GeoDataFrame(rows, crs=WGS84)
 
 
+# Table de dispatch : associe le texte "kind" de chaque source (dans SOURCES ci-
+# dessous) à la fonction Python qui sait la télécharger. `run_source` fait juste
+# `_FETCHERS[src["kind"]]` pour trouver la bonne fonction — plus extensible qu'une
+# longue chaîne de `if kind == "geojson": ... elif kind == "opendatasoft": ...`
+# quand on ajoute un nouveau type de source.
 _FETCHERS = {
     "geojson": fetch_geojson_url,
     "opendatasoft": fetch_opendatasoft,
@@ -175,6 +180,11 @@ def run_source(src: dict, region: gpd.GeoDataFrame) -> tuple[str, str]:
     if out.exists():
         return name, "cached"
     fetcher = _FETCHERS[src["kind"]]
+    # Chaque dict de SOURCES a des clés différentes selon son "kind" (url, ou base+
+    # dataset, ou osm_filter...) : on retire juste "name"/"kind" (qui ne sont pas des
+    # paramètres de la fonction fetcher) et on passe TOUT LE RESTE tel quel via `**kwargs`
+    # — chaque fetcher ne récupère que les arguments qu'il connaît (`**_: object` dans
+    # leur signature absorbe les éventuels extras sans erreur).
     kwargs = {k: v for k, v in src.items() if k not in ("name", "kind")}
     gdf = fetcher(region=region, **kwargs)
     if gdf.empty:

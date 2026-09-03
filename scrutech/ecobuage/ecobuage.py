@@ -16,6 +16,9 @@ import numpy as np
 
 def rescale(a: np.ndarray, lo: float, hi: float, invert: bool = False) -> np.ndarray:
     """Normalise un critère en 0..1 (clippé). ``invert=True`` -> plus bas = mieux."""
+    # (a - lo) / (hi - lo) place `lo` à 0 et `hi` à 1, avec une transition linéaire
+    # entre les deux ; np.clip(..., 0, 1) écrase tout ce qui dépasse cet intervalle
+    # (une valeur en dessous de lo reste à 0, au-dessus de hi reste à 1).
     s = np.clip((a - lo) / (hi - lo), 0.0, 1.0)
     return 1.0 - s if invert else s
 
@@ -26,6 +29,11 @@ def band(a: np.ndarray, lo: float, hi: float, ramp: float) -> np.ndarray:
     Pour la pente : la plage exploitable est une bande (trop plat = inutile, trop raide =
     infaisable), pas une fonction monotone.
     """
+    # Deux rampes construites avec `rescale` : `below` monte de 0 à 1 en approchant
+    # `lo` par le bas, `above` DESCEND de 1 à 0 en dépassant `hi` (invert=True). Prendre
+    # le MINIMUM des deux donne 1 seulement là où les deux valent 1 (au milieu de la
+    # bande [lo, hi]), et redescend vers 0 de part et d'autre — la forme "plateau avec
+    # rampes" recherchée pour un critère qui a un optimum au milieu, pas aux extrêmes.
     below = rescale(a, lo - ramp, lo)
     above = rescale(a, hi, hi + ramp, invert=True)
     return np.minimum(below, above)
@@ -67,6 +75,9 @@ def write_geotiff(array: np.ndarray, profile: dict, path: str) -> str:
     return path
 
 
+# Ce bloc ne s'exécute que si on lance `python ecobuage.py` directement (pas à
+# l'import) : un mini auto-test intégré, sans dépendre de pytest, pour vérifier
+# rapidement que le module se comporte comme attendu sur un cas connu à la main.
 if __name__ == "__main__":
     # ponytail: self-check sur 3 cellules synthétiques (favorable / faible / exclue).
     combustible = np.array([[0.9, 0.2, 0.8]])  # biomasse sèche / NDVI-NBR, 0..1

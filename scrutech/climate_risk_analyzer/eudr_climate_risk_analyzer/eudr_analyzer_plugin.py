@@ -211,6 +211,12 @@ def read_supplier_csv(csv_path):
     return suppliers
 
 
+# @contextmanager transforme une fonction génératrice en objet utilisable avec `with`
+# (comme `with open(...)`) : tout ce qui est AVANT `yield` s'exécute à l'entrée du
+# `with`, ce qui est APRÈS (ou dans un `finally`) s'exécute à la sortie — même en cas
+# d'erreur. Ici ça permet d'essayer plusieurs encodages de texte et de garantir que le
+# fichier est toujours refermé proprement, tout en gardant `with open_csv_with_fallback(...)
+# as f:` aussi simple à utiliser qu'un `open()` classique.
 @contextmanager
 def open_csv_with_fallback(csv_path):
     """Open CSV files exported from common tools, including Excel on Windows."""
@@ -314,6 +320,10 @@ def resolve_raw_material(row, selected_raw_material):
 
 def build_supplier_point_layer(scored_rows, raw_material):
     """Create an in-memory WGS84 point layer from scored supplier rows."""
+    # Une couche "memory" (le 3e argument "memory") vit uniquement en RAM, jamais
+    # écrite sur disque : parfaite pour un résultat temporaire construit à la volée
+    # depuis du code, sans avoir à créer et gérer un fichier GeoPackage/Shapefile. La
+    # chaîne "Point?crs=EPSG:4326" décrit son type de géométrie et son CRS.
     layer_name = "EUDR Climate Risk - {}".format(raw_material)
     layer = QgsVectorLayer("Point?crs=EPSG:4326", layer_name, "memory")
     provider = layer.dataProvider()
@@ -357,6 +367,10 @@ def build_supplier_point_layer(scored_rows, raw_material):
 
 def apply_eudr_graduated_symbology(layer):
     """Apply green/yellow/red graduated symbology to EUDR risk score."""
+    # Un rendu "gradué" (QgsGraduatedSymbolRenderer) colore chaque objet selon la
+    # tranche de valeurs (ici sur eudr_risk_score) dans laquelle il tombe — la manière
+    # standard en cartographie de représenter une variable continue en quelques
+    # classes de couleur discrètes et lisibles (ici : vert/jaune/rouge = risque).
     ranges = [
         build_symbol_range(layer, 0, 19, QColor("#2e7d32"), "Low EUDR risk (< 20)"),
         build_symbol_range(layer, 20, 50, QColor("#f9a825"), "Medium EUDR risk (20-50)"),
