@@ -374,6 +374,187 @@ flowchart LR
     D --> E([README toujours à jour])
 ```
 
+## 🗺️ Carte détaillée des scripts
+
+Cette section liste **chaque script Python du dépôt**, pilier par pilier, avec son nom de
+fichier d'origine entre parenthèses et son rôle expliqué en langage simple. Objectif : que
+n'importe qui (même sans lire le code) comprenne à quoi sert chaque fichier avant d'aller y
+regarder. Le code lui-même est commenté en français pour un niveau Python intermédiaire :
+chaque fonction non triviale explique son « pourquoi », pas juste son « quoi ».
+
+<details>
+<summary><b>🧱 Socle commun — <code>scrutech/core/</code></b> (utilisé par tous les piliers)</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `src/core/aoi.py` | **Le cœur du principe « AOI-first »** : transforme n'importe quelle façon de désigner une zone d'étude (code INSEE, département, rectangle de coordonnées, fichier, ou déjà un objet zone) en un objet `Aoi` unique et stable. Va aussi chercher les contours de communes sur l'API officielle du gouvernement. |
+| `src/core/constants.py` | Les deux systèmes de coordonnées utilisés partout (WGS84 = GPS/degrés, Lambert-93 = mètres pour la France) et le type `BBox` (rectangle englobant). |
+| `src/core/db.py` | Ouvre et interroge la base de données centrale **DuckDB** (un seul fichier, pas de serveur) qui stocke les résultats de tous les piliers ; écrit les résultats de façon « idempotente » (relancer un calcul ne crée jamais de doublons). |
+| `src/core/io.py` | Le lecteur/écrivain de fichiers vecteur unique (remplace 3 fonctions presque identiques qui existaient avant dans différents piliers) : lit du GeoParquet ou tout autre format SIG classique. |
+| `src/core/sources.py` | Va chercher automatiquement, à partir d'une simple zone d'étude, les données officielles nécessaires : bâtiments, forêts, routes (BD TOPO de l'IGN) et zones protégées (Natura 2000, ZNIEFF). |
+| `src/core/storage.py` | Définit **où** chaque résultat est rangé sur le disque (un chemin standard par pilier/zone/produit) et fournit des fonctions pour retrouver ou recopier les résultats déjà calculés. |
+
+</details>
+
+<details>
+<summary><b>🌿 VegeVigie — <code>scrutech/vegevigie/</code></b> (pilier principal, le plus mature)</summary>
+
+*Moteur (`src/vegevigie/`) :*
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `cli.py` | La **ligne de commande** de VegeVigie (`vegevigie run ...`) : l'endroit où on lance toute la chaîne de calcul depuis un terminal. |
+| `config.py` | Lit et valide la configuration (fichier YAML) : quelle zone, quelles dates, quels seuils. |
+| `aoi.py` | Fonctions spécifiques à VegeVigie pour préparer la zone d'étude avant analyse. |
+| `catalog.py` | Cherche les images satellite Sentinel-2 disponibles pour la zone et la période, via le catalogue **STAC**. |
+| `datacube.py` | Construit le « cube de données » (empilement d'images dans le temps) à partir des scènes trouvées, avec `xarray`/`dask` pour ne charger en mémoire que ce qui est nécessaire. |
+| `indices.py` | Calcule le **NDVI** (indice de végétation) pixel par pixel et masque les nuages. |
+| `composite.py` | Fusionne plusieurs images d'un même mois en une seule image « composite » (médiane), pour combler les trous dus aux nuages. |
+| `seasonal.py` | Retire l'effet des saisons (été/hiver) de la série NDVI avant de chercher une tendance, pour ne pas confondre saisonnalité normale et vraie évolution. |
+| `trend.py` | **Le résultat phare** : détecte, pixel par pixel, si la végétation verdit ou brunit sur plusieurs années (test de Mann-Kendall + pente de Sen). |
+| `breaks.py` | Détecte à quel moment précis une série a « cassé » (rupture brutale), une version simplifiée de l'algorithme BFAST. |
+| `drought.py` | Détecte le stress hydrique : anomalies NDVI et indice de sécheresse VCI. |
+| `zonal.py` | Résume les résultats raster (tendance, sécheresse) par commune (agrégation zonale). |
+| `store.py` | Sauvegarde les résultats en GeoParquet et les interroge/classe via DuckDB. |
+| `pipeline.py` | **L'orchestrateur** : enchaîne toutes les étapes ci-dessus dans le bon ordre (recherche → cube → NDVI → tendance → sécheresse → zonal), avec mise en cache pour ne jamais refaire un calcul déjà fait. |
+| `qgis_runner.py` | Point d'entrée qui permet au plugin QGIS de lancer ce pipeline dans un **processus Python séparé** (QGIS a son propre Python, incompatible avec les grosses bibliothèques scientifiques). |
+| `interface.py` | Calcule la ligne de contact entre forêt et bâti (interface habitat-forêt), utilisée par le pilier PAF. |
+| `biotrame_aoi.py` | Version « zone d'étude seule » du pilier Biotrame (maillage hexagonal écologique), intégrée au moteur VegeVigie. |
+| `ecobuage_aoi.py` | Version « zone d'étude seule » du pilier Écobuage (aptitude au brûlage dirigé). |
+| `dashboard/app.py`, `dashboard/data.py` | Le **tableau de bord public** (Streamlit + carte interactive leafmap) qui affiche les résultats sans avoir besoin de QGIS. |
+| `report/app.py`, `report/data.py` | Une page de **rapport visuel** qui résume automatiquement un dossier de résultats déjà calculé. |
+
+*Démos pédagogiques (`scripts/demo_*.py`)* — génèrent les images du README à partir de données **synthétiques** (inventées), sans appel réseau, pour que n'importe qui puisse reproduire les figures :
+`demo_ndvi_masking.py` (masquage nuages), `demo_monthly_ndvi.py` (composites mensuels), `demo_trend_map.py` (carte de tendance), `demo_drought.py` (sécheresse), `demo_zonal_ranking.py` (classement communes), `demo_dashboard_data.py` (données du tableau de bord).
+
+*Plugin QGIS (`qgis_plugin/`)* — la version « bouton dans QGIS » de tous les piliers :
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `scrutech/scrutech_plugin.py` | Le point d'entrée que QGIS charge au démarrage du plugin. |
+| `scrutech/provider.py` | Enregistre la liste des algorithmes ScruTech dans la boîte à outils « Processing » de QGIS. |
+| `scrutech/dependencies.py` | Vérifie que les bibliothèques scientifiques nécessaires sont bien installées avant de lancer un calcul. |
+| `algorithms/analyze_extent.py` | Bouton « 1 clic » : tendance de végétation + sécheresse sur une emprise. |
+| `algorithms/paf_interface.py`, `algorithms/paf_interface_aoi.py` | Bouton pour calculer l'interface forêt/bâti (PAF). |
+| `algorithms/ecobuage_aptitude.py`, `algorithms/ecobuage_aptitude_aoi.py` | Bouton pour le score d'aptitude au brûlage dirigé (Écobuage). |
+| `algorithms/biotrame_priority.py` | Bouton pour le maillage hexagonal de priorité écologique (Biotrame). |
+| `algorithms/mini_dc_sites.py` | Bouton pour la sélection de sites de mini data centers. |
+| `algorithms/sdbpi_vacance.py` | Bouton pour la détection de bâtiments professionnels vacants. |
+| `algorithms/alphaearth_change.py` | Bouton pour la détection de changement par embeddings satellite AlphaEarth. |
+| `algorithms/load_cached.py` | Charge un résultat déjà calculé, sans tout relancer. |
+| `algorithms/load_communes.py` | Charge les contours de communes comme couche de zones. |
+| `algorithms/report_launch.py` | Lance le rapport visuel Streamlit depuis QGIS. |
+| `algorithms/_external.py` | Fait tourner le moteur lourd (hors QGIS) dans un interpréteur Python externe. |
+| `algorithms/_venv.py` | Trouve ou crée cet interpréteur Python externe automatiquement. |
+| `algorithms/_qgis_compat.py` | Petite couche de compatibilité pour que le code marche sur QGIS 3 **et** QGIS 4. |
+| `algorithms/_icons.py`, `algorithms/_styles.py` | Icônes et styles de couleur (charte graphique ScruTech) appliqués aux boutons et aux résultats. |
+| `deploy_plugin.py` | Construit le plugin et le dépose directement dans le dossier de plugins de QGIS (pour tester en local). |
+| `package.py` | Empaquette le plugin en `.zip` installable (pour le distribuer). |
+
+</details>
+
+<details>
+<summary><b>🛰️ AlphaEarth — <code>scrutech/alphaearth/</code></b></summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `client.py` | Interroge Google Earth Engine pour récupérer les embeddings satellite (authentification sécurisée via QGIS, jamais de clé écrite en dur). |
+| `store.py` | Sauvegarde localement (cache GeoParquet) ce qui a déjà été téléchargé, pour ne pas re-télécharger deux fois la même zone/année. |
+| `classifier.py` | Classifie l'occupation du sol à partir des embeddings avec un algorithme de Machine Learning (Random Forest). |
+| `change.py` | Détecte un changement entre deux années en mesurant la « distance » mathématique entre leurs embeddings. |
+| `pipeline.py` | Orchestrateur : zone d'étude + deux années en entrée → carte de changement en sortie. |
+| `_columns.py` | Simple liste des noms des 64 colonnes numériques qui composent un embedding. |
+
+</details>
+
+<details>
+<summary><b>🐝 Biotrame — <code>scrutech/biotrame/</code></b> (priorisation écologique par maillage hexagonal)</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `mesh.py` | Découpe la zone d'étude en une grille d'hexagones réguliers (norme H3 utilisée par Uber puis largement adoptée en géodonnées). |
+| `aggregate.py` | Calcule, pour chaque hexagone, des indicateurs (proximité de zones protégées, etc.). |
+| `score.py` | Combine ces indicateurs en un score de priorité écologique par hexagone. |
+
+</details>
+
+<details>
+<summary><b>🏚️ SDBPi — <code>scrutech/sdbpi/</code></b> (bâtiments professionnels inoccupés)</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `config.py` | Paramètres centraux du POC (rayon de recherche, seuils...). |
+| `net.py` | Couche réseau : requêtes HTTP robustes avec nouvelles tentatives automatiques en cas d'échec. |
+| `sources.py` | Télécharge (avec mise en cache locale) les bâtiments BD TOPO et les entreprises SIRENE. |
+| `processing.py` | Le calcul lui-même : croise bâtiments et entreprises actives pour repérer les candidats à la vacance. |
+| `run_vacance.py` | Point d'entrée qui enchaîne acquisition → traitement → export pour une commune donnée. |
+
+</details>
+
+<details>
+<summary><b>🏢 Mini data centers — <code>scrutech/mini_dc/outil/</code></b> (sélection de sites)</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `config.py` | Paramètres centraux de l'outil (seuils de surface, distances...). |
+| `db.py` | Connexion à la base DuckDB et chargement de son extension géospatiale. |
+| `telecharge_arcep.py` | Télécharge les données de couverture fibre (ARCEP, open data). |
+| `telecharge_ebc.py` | Télécharge les zones classées « Espaces Boisés Classés » d'une commune (contrainte réglementaire). |
+| `generate_synthetic.py` | Fabrique un jeu de données **inventé** mais réaliste pour tester le pipeline sans dépendre de vraies données. |
+| `adapter_donnees_reelles.py` | Convertit des données publiques réelles vers le format attendu par le pipeline. |
+| `pipeline.py` | **Le cœur de l'outil** : applique successivement les 5 filtres (foncier, nuisances, fibre, énergie, réglementaire) puis calcule un score. |
+| `analyse_reelle.py` | Lance l'analyse complète sur un vrai cas d'étude (Alba-la-Romaine). |
+| `run.py` | Point d'entrée unique qui orchestre tout l'outil. |
+| `tests_pipeline.py` | Script de validation qui vérifie que les résultats du pipeline sont cohérents (pas un test `pytest` classique, un script de contrôle qualité). |
+
+</details>
+
+<details>
+<summary><b>🔥 PAF, 🌾 Écobuage, 🌍 Climate Risk, 💾 Storage — piliers plus légers</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `scrutech/paff/reference/interface.py` | Calcule la ligne de contact entre forêt et zones bâties (interface habitat-forêt), et la bande de 50 m à débroussailler autour. |
+| `scrutech/ecobuage/ecobuage.py` | Combine plusieurs critères pondérés (biomasse, pente, accès...) en un score d'aptitude au brûlage dirigé, puis classe les zones en 3 catégories. |
+| `scrutech/climate_risk_analyzer/eudr_climate_risk_analyzer/eudr_analyzer_plugin.py` | Logique principale du plugin QGIS : importe des coordonnées fournisseurs et calcule un score de risque (déforestation EUDR, stress climatique). |
+| `scrutech/climate_risk_analyzer/eudr_climate_risk_analyzer/eudr_analyzer_dialog.py` | La fenêtre/formulaire affichée à l'utilisateur dans QGIS. |
+| `scrutech/storage/init_db.py` | Crée (ou met à jour) la base DuckDB centrale et affiche ce qu'elle contient. |
+| `scrutech/storage/download_aura.py` | Télécharge le cache de données pré-calculées pour la région Auvergne-Rhône-Alpes. |
+| `scrutech/apprentissage/ndvi_a_la_main.py` | Script **pédagogique** : recalcule un NDVI « à la main », étape par étape, pour comprendre le calcul sans boîte noire. |
+
+</details>
+
+<details>
+<summary><b>🧩 Plugin QGIS (scaffold v2) — <code>scrutech/plugin/</code></b> (spécification future, pas encore branchée en production)</summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `core/auth_manager.py` | Stocke les clés d'API de façon sécurisée (jamais en clair sur le disque). |
+| `core/cache_manager.py` | Cache local avec taille limitée, pour ne jamais télécharger une scène satellite entière sans prévenir. |
+| `core/cog_reader.py` | Lit des images satellite « Cloud-Optimized GeoTIFF » en streaming, sans tout télécharger d'un coup. |
+| `core/h3_indexer.py` | Indexe les zones de recherche avec la grille hexagonale H3. |
+| `core/job_runner.py` | Fait tourner les appels réseau en tâche de fond dans QGIS, sans geler l'interface. |
+| `core/stac_client.py` | Cherche des images satellite sur plusieurs catalogues STAC à la fois. |
+| `processing/indices.py` | Calcule les indices spectraux (NDVI, NDWI...). |
+| `processing/atmospheric_correction.py` | Corrige les effets de l'atmosphère sur les images satellite. |
+| `processing/change_detection.py` | Détection de changement avancée (algorithmes CCDC/BFAST). |
+| `processing/inference.py` | Fait tourner un modèle d'IA pré-entraîné (foundation model) sur les images. |
+| `ui/search_panel.py` | Panneau de recherche d'images dans l'interface du plugin. |
+| `ui/preview_widget.py` | Aperçu miniature d'une image avant de la charger en pleine résolution. |
+| `ui/job_monitor.py` | Suivi visuel des tâches en cours (progression, logs, coût API estimé). |
+| `ui/api_keys_dialog.py` | Formulaire pour saisir ses clés d'API. |
+
+</details>
+
+<details>
+<summary><b>⚙️ Automatisation — <code>scripts/</code></b></summary>
+
+| Fichier (nom original) | Rôle en langage simple |
+|---|---|
+| `generate_stats.py` | Lit l'historique Git du dépôt et régénère automatiquement les statistiques et les graphiques SVG affichés en haut de ce README. |
+
+</details>
+
 ## 📫 Contact
 
 - GitHub : [@BastienLebrou](https://github.com/BastienLebrou)

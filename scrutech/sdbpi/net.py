@@ -18,8 +18,17 @@ class SourceError(RuntimeError):
 
 def make_session(user_agent: str, retries: int) -> requests.Session:
     """Session avec retry automatique sur 429/5xx et backoff exponentiel."""
+    # Une `requests.Session` réutilise la même connexion HTTP entre plusieurs appels
+    # (plus rapide que d'en ouvrir une nouvelle à chaque requête) et permet de fixer des
+    # en-têtes/réglages une fois pour toutes (ici : l'identité de l'appelant et le retry).
     session = requests.Session()
     session.headers.update({"User-Agent": user_agent, "Accept": "application/json"})
+    # `Retry` décrit une politique de nouvelles tentatives automatiques : si le serveur
+    # répond 429 (trop de requêtes) ou une erreur 5xx (panne serveur), on retente au lieu
+    # d'abandonner direct. `backoff_factor=0.8` fait grandir l'attente entre chaque essai
+    # (0.8s, puis 1.6s, puis 3.2s...) : "backoff exponentiel", pour ne pas marteler un
+    # service déjà en difficulté. `allowed_methods={"GET"}` limite ce comportement aux
+    # requêtes de lecture (retenter un POST pourrait dupliquer une action).
     retry = Retry(
         total=retries,
         connect=retries,
@@ -30,6 +39,8 @@ def make_session(user_agent: str, retries: int) -> requests.Session:
         raise_on_status=False,
         respect_retry_after_header=True,
     )
+    # Un "adapter" applique cette politique de retry à toutes les requêtes passant par
+    # cette session ; `mount()` le branche pour les deux protocoles http:// et https://.
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("https://", adapter)
     session.mount("http://", adapter)

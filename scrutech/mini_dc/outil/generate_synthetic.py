@@ -29,8 +29,12 @@ except Exception:
 
 def _centre_lambert93() -> tuple[float, float]:
     """Convertit le centre WGS84 de la commune en Lambert-93 (mètres)."""
+    # pyproj.Transformer sait convertir des coordonnées d'un CRS vers un autre.
+    # `always_xy=True` force l'ordre (longitude, latitude) en entrée/sortie — certains
+    # CRS utilisent par convention (latitude, longitude), ce qui prête à confusion ;
+    # cette option lève l'ambiguïté une fois pour toutes.
     tr = Transformer.from_crs(C.CRS_GEO, C.CRS_METRIQUE, always_xy=True)
-    x, y = tr.transform(*C.CENTRE_WGS84)
+    x, y = tr.transform(*C.CENTRE_WGS84)  # "*" déballe le tuple (lon, lat) en 2 arguments
     return x, y
 
 
@@ -44,6 +48,10 @@ def _save(gdf: gpd.GeoDataFrame, nom: str) -> None:
 
 def generer() -> None:
     """Génère toutes les couches sources et les écrit sur disque."""
+    # np.random.default_rng(SEED) crée un générateur de nombres "aléatoires" mais
+    # REPRODUCTIBLE : avec la même graine (SEED), on obtient exactement les mêmes
+    # tirages à chaque exécution. Essentiel ici car ces données sont fausses mais
+    # doivent rester identiques d'un lancement à l'autre pour comparer des résultats.
     rng = np.random.default_rng(C.SEED)
     cx, cy = _centre_lambert93()
     demi = C.TAILLE_AOI_M / 2

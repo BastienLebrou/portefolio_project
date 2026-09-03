@@ -30,6 +30,9 @@ def hex_grid(aoi: object, resolution: int = DEFAULT_RESOLUTION) -> gpd.GeoDataFr
     a = resolve_aoi(aoi)
     cells = _cells_for_geometry(a.geom, resolution)
     if not cells:
+        # Cas limite : une AOI si petite qu'aucun centre d'hexagone ne tombe dedans (plus
+        # petite qu'une cellule H3 à cette résolution). On force au moins UN hexagone :
+        # celui qui contient le centre de l'AOI, pour ne jamais renvoyer une grille vide.
         c = a.geom.centroid
         cells = [h3.latlng_to_cell(c.y, c.x, resolution)]
     polys = [_cell_polygon(c) for c in cells]
@@ -38,13 +41,21 @@ def hex_grid(aoi: object, resolution: int = DEFAULT_RESOLUTION) -> gpd.GeoDataFr
 
 def _cells_for_geometry(geom: BaseGeometry, resolution: int) -> list[str]:
     """All H3 cell ids whose centre falls within ``geom`` (Polygon or MultiPolygon)."""
+    # Un MultiPolygon est une géométrie composée de PLUSIEURS polygones séparés (ex: une
+    # zone d'étude avec deux îlots disjoints) ; .geoms les liste. Un Polygon simple n'a
+    # pas cet attribut, donc on le met dans une liste à un seul élément pour traiter les
+    # deux cas avec la même boucle.
     parts = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
-    cells: set[str] = set()
+    cells: set[str] = set()  # un set évite les hexagones en double si les polygones se touchent
     for part in parts:
         # H3 wants (lat, lng) rings; shapely coords are (lng, lat).
+        # `.exterior` = le contour extérieur du polygone ; `.interiors` = ses éventuels
+        # "trous" (des zones exclues à l'intérieur, comme un lac au milieu d'une forêt).
         outer = [(lat, lng) for lng, lat in part.exterior.coords]
         holes = [[(lat, lng) for lng, lat in ring.coords] for ring in part.interiors]
         poly = h3.LatLngPoly(outer, *holes)
+        # polygon_to_cells fait tout le travail : trouve tous les hexagones H3 de cette
+        # résolution dont le centre tombe dans le polygone.
         cells.update(h3.polygon_to_cells(poly, resolution))
     return sorted(cells)
 
@@ -52,4 +63,6 @@ def _cells_for_geometry(geom: BaseGeometry, resolution: int) -> list[str]:
 def _cell_polygon(cell: str) -> Polygon:
     """The hexagon geometry of an H3 cell as a WGS84 shapely Polygon."""
     boundary = h3.cell_to_boundary(cell)  # [(lat, lng), ...]
+    # On inverse à nouveau l'ordre des coordonnées : H3 raisonne en (lat, lng), shapely
+    # (et tout le reste de ScruTech) attend (lng, lat) = (x, y).
     return Polygon([(lng, lat) for lat, lng in boundary])

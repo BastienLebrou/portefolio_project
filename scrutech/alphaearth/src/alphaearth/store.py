@@ -43,7 +43,11 @@ def write(
     """Write embeddings + a provenance side-car; returns the parquet path (idempotent write)."""
     path = cache_path(aoi_id, year)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # compression="zstd" : un algorithme de compression rapide et efficace (meilleur
+    # compromis vitesse/taille que le gzip classique), standard pour Parquet aujourd'hui.
     gdf.to_parquet(path, compression="zstd", index=False)
+    # Un fichier "side-car" (à côté) .json documente D'OÙ vient ce cache : utile plus
+    # tard pour savoir si le résultat est encore à jour, ou pour du débogage.
     provenance = {
         "aoi_id": aoi_id,
         "year": year,

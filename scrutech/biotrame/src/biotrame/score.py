@@ -21,17 +21,30 @@ PRIORITAIRE, A_ETUDIER = 66.0, 33.0
 
 def priority_score(axes: dict[str, np.ndarray]) -> np.ndarray:
     """Geometric mean (×100) of the non-None axes, each clipped to 0-1."""
+    # Rappel : la moyenne ARITHMÉTIQUE de [1.0, 0.0] est 0.5 (ça a l'air "moyen"), alors
+    # que la moyenne GÉOMÉTRIQUE (racine n-ième du produit) de [1.0, 0.0] est 0 — un seul
+    # axe à zéro fait tomber tout le score à zéro. C'est voulu ici (voir docstring du
+    # module) : un hexagone doit être bon sur TOUS les axes, pas juste bon en moyenne.
+    # clip(0,1) force chaque valeur à rester dans l'intervalle attendu (sécurité contre
+    # une valeur aberrante en entrée).
     present = [
         np.clip(np.asarray(a, dtype=float), 0.0, 1.0) for a in axes.values() if a is not None
     ]
     if not present:
         raise ValueError("At least one axis is required to score.")
+    # np.prod(present, axis=0) multiplie les tableaux élément par élément (axe 0 = "à
+    # travers la liste des axes", donc hexagone par hexagone) ; élever à la puissance
+    # 1/n est la formule de la racine n-ième = moyenne géométrique de n valeurs.
     gmean = np.prod(present, axis=0) ** (1.0 / len(present))
     return gmean * 100.0
 
 
 def classify(score: np.ndarray) -> np.ndarray:
     """0 = secondaire, 1 = à étudier, 2 = prioritaire (thresholds on the 0-100 score)."""
+    # On part d'un tableau de zéros (classe "secondaire" par défaut), puis on relève la
+    # classe des hexagones qui dépassent chaque seuil. L'ordre compte : le second filtre
+    # (>= PRIORITAIRE, seuil plus haut) écrase la classe 1 mise par le premier filtre
+    # pour les hexagones qui dépassent les DEUX seuils.
     cls = np.zeros(np.shape(score), dtype="int8")
     cls[score >= A_ETUDIER] = 1
     cls[score >= PRIORITAIRE] = 2

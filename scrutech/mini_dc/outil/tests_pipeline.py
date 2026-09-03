@@ -19,6 +19,10 @@ import config as C
 def run_tests(con) -> list[tuple[str, bool, str]]:
     res = []
 
+    # `check` est une fonction définie À L'INTÉRIEUR de run_tests (une "fonction
+    # imbriquée") : elle n'existe que pendant l'exécution de run_tests et partage sa
+    # liste `res`, ce qui évite de la repasser en paramètre à chaque appel. Chaque test
+    # ci-dessous se résume ainsi à UNE requête SQL qui doit renvoyer une valeur précise.
     def check(nom, sql, attendu=0, comparateur="=="):
         val = con.execute(sql).fetchone()[0]
         if comparateur == "==":

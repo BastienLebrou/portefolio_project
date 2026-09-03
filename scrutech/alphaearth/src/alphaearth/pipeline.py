@@ -41,6 +41,11 @@ def detect_change_for_aoi(
     from alphaearth.change import flag_by_percentile
     from alphaearth.client import authenticate_gee, fetch_change_samples
 
+    # `progress` est une fonction optionnelle passée par l'appelant (ex: la barre de
+    # progression du plugin QGIS) pour être informé de l'avancement (pourcentage, message).
+    # Si personne n'en fournit, `report` devient une fonction qui ne fait rien
+    # (`lambda _pct, _msg: None`) : le reste du code peut appeler report(...) sans jamais
+    # se soucier de savoir si un callback existe vraiment.
     report = progress or (lambda _pct, _msg: None)
     report(15, "Authenticating to Google Earth Engine…")
     authenticate_gee(credentials_json=credentials_json)

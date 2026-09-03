@@ -90,6 +90,11 @@ GEOFILE_COLS_DEFAUT: dict[str, str] = {
 }
 
 
+# frozen=True rend chaque Config immuable une fois créée (impossible de faire
+# cfg.buffer_m = 20 après coup) : ça évite qu'une partie du code modifie discrètement la
+# configuration en cours de route. Pour "changer" un paramètre, on ne modifie donc jamais
+# l'objet existant : on en crée un NOUVEAU via `with_()` (voir plus bas), qui copie tout
+# sauf ce qu'on précise.
 @dataclass(frozen=True)
 class Config:
     """Paramètres d'une exécution. Immuable : on dérive des variantes via `with_`."""
@@ -116,6 +121,9 @@ class Config:
     user_agent: str = "vacance-poc/1.0 (POC detection batiments pro vacants)"
 
     # --- Chemins dérivés (pas de hardcode) --------------------------------- #
+    # @property permet d'appeler `cfg.cache_dir` comme un simple attribut (sans
+    # parenthèses), alors que c'est en fait calculé à chaque accès à partir de
+    # `base_dir` — pas besoin de le stocker/recalculer à la main partout ailleurs.
     @property
     def cache_dir(self) -> Path:
         return self.base_dir / "cache"
@@ -150,4 +158,8 @@ class Config:
 
     def with_(self, **changes) -> "Config":
         """Retourne une copie modifiée (dataclass immuable)."""
+        # `**changes` récupère tous les arguments nommés donnés à l'appel dans un
+        # dictionnaire (ex: with_(buffer_m=25) -> changes = {"buffer_m": 25}).
+        # `replace()` (de dataclasses) construit un NOUVEL objet Config identique à
+        # `self`, sauf les champs listés dans `changes`.
         return replace(self, **changes)

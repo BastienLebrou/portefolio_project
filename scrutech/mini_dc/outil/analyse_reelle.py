@@ -28,6 +28,11 @@ import json
 import geopandas as gpd
 from shapely import from_wkb
 
+# Ce script reprend la même logique que pipeline.py (voir ses commentaires pour le détail
+# des requêtes SQL DuckDB : macros H3, jointures par grille hexagonale, filtres en
+# cascade...), mais appliquée aux VRAIES données d'Alba-la-Romaine plutôt qu'au jeu
+# synthétique — avec un axe "énergie" simplifié (proxy de distance au réseau HTA, faute
+# de données de puissance disponible par poste).
 import config as C
 from db import connect
 from pipeline import setup_macros

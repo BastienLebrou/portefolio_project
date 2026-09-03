@@ -20,10 +20,18 @@ from core.constants import L93
 
 def reservoir_overlap(hexagons: gpd.GeoDataFrame, reservoirs: gpd.GeoDataFrame) -> pd.Series:
     """Fraction (0-1) of each hexagon's area covered by a reservoir, indexed by ``hex_id``."""
+    # to_crs(L93) : on reprojette en Lambert-93 (mètres) car on va calculer des SURFACES —
+    # impossible de le faire correctement en degrés WGS84 (un degré ne fait pas la même
+    # distance selon la latitude).
     hx = hexagons.to_crs(L93)
     if reservoirs is None or reservoirs.empty:
+        # Pas de réservoir à comparer = aucun enjeu détecté nulle part : on renvoie 0.0
+        # pour chaque hexagone plutôt que de planter ou renvoyer une valeur manquante.
         return pd.Series(0.0, index=hexagons["hex_id"], name="enjeu")
-    res_u = reservoirs.to_crs(L93).union_all()
+    res_u = reservoirs.to_crs(L93).union_all()  # fusionne tous les réservoirs en une seule forme
+    # intersection(res_u).area = la surface commune entre chaque hexagone et les
+    # réservoirs ; on la divise par la surface totale de l'hexagone pour obtenir une
+    # FRACTION (0 = aucun recouvrement, 1 = hexagone entièrement dans un réservoir).
     inter = hx.geometry.intersection(res_u).area
     frac = (inter / hx.geometry.area).clip(0.0, 1.0)
     return pd.Series(frac.to_numpy(), index=hexagons["hex_id"], name="enjeu")
@@ -37,6 +45,10 @@ def proximity(
     if features is None or features.empty:
         return pd.Series(0.0, index=hexagons["hex_id"], name=name)
     target = features.to_crs(L93).union_all()
+    # distance() donne la distance (en mètres) du centre de chaque hexagone à l'objet le
+    # plus proche. On transforme cette distance en un score de "proximité" entre 0 et 1 :
+    # à 0 m -> 1.0 (collé au réservoir/corridor), à max_m ou plus -> 0.0 (trop loin pour
+    # compter), et une décroissance linéaire entre les deux.
     dist = hx.geometry.centroid.distance(target)
     prox = (1.0 - dist / max_m).clip(0.0, 1.0)
     return pd.Series(prox.to_numpy(), index=hexagons["hex_id"], name=name)

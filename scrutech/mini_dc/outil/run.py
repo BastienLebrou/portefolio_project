@@ -56,8 +56,13 @@ def _wkb_gdf(con, sql: str, crs: int) -> gpd.GeoDataFrame:
     DuckDB sérialise la géométrie en WKB via ST_AsWKB ; on la décode côté
     Python (en convertissant les bytearray en bytes pour shapely).
     """
+    # fetchdf() récupère TOUT le résultat de la requête sous forme de DataFrame pandas
+    # (l'équivalent de fetchall(), mais déjà transformé en tableau exploitable).
     df = con.execute(sql).fetchdf()
     return gpd.GeoDataFrame(
+        # DuckDB renvoie les octets WKB en `bytearray` (mutable), alors que shapely
+        # attend des `bytes` (immuable) : bytes(b) fait juste cette petite conversion
+        # de type, valeur par valeur, avant que from_wkb() reconstruise les géométries.
         df.drop(columns=["wkb"]),
         geometry=from_wkb([bytes(b) for b in df["wkb"]]),
         crs=crs,

@@ -24,6 +24,10 @@ _LOADABLE = {".geojson", ".tif", ".tiff", ".gpkg", ".parquet"}
 
 def data_root() -> Path:
     """Store root: ``$SCRUTECH_DATA`` if set, else ``<repo>/scrutech/data``."""
+    # os.environ.get lit une variable d'environnement (définie par exemple avec
+    # `export SCRUTECH_DATA=/mon/dossier` avant de lancer le script) ; si elle n'est pas
+    # définie, on retombe sur un dossier local par défaut. C'est ce qui permet, sans
+    # changer une ligne de code, de basculer plus tard vers un dossier monté depuis S3.
     root = os.environ.get(ENV_ROOT)
     if root:
         return Path(root)
@@ -63,10 +67,15 @@ def cache_outputs(aoi_id: str, pilier: str, files: list[str | Path]) -> list[Pat
     for src in files:
         src = Path(src)
         if not src.exists():
-            continue
+            continue  # fichier annoncé mais absent : on l'ignore plutôt que planter
         dest = product_path(pilier, aoi_id, "output", filename=src.name)
         dest.parent.mkdir(parents=True, exist_ok=True)
+        # copy2 (contrairement à copy) préserve aussi les métadonnées du fichier
+        # (date de modification...), utile pour savoir quand un produit a été calculé.
         shutil.copy2(src, dest)
+        # Un fichier .qml (QGIS Map Layer style) à côté du résultat définit son style de
+        # rendu (couleurs, symboles) : si présent, on le copie aussi pour que la couche
+        # s'affiche déjà stylée quand quelqu'un la charge dans QGIS plus tard.
         qml = src.with_suffix(".qml")
         if qml.exists():
             shutil.copy2(qml, dest.with_suffix(".qml"))
@@ -81,10 +90,16 @@ def list_cached(aoi_id: str) -> list[Path]:
     map isn't loaded twice.
     """
     root = data_root()
+    # glob() cherche tous les fichiers correspondant à un motif ("*" = n'importe quel nom).
+    # Ici : n'importe quel pilier, ce aoi_id précis, dossier "output", n'importe quel fichier.
     hits = [p for p in root.glob(f"*/aoi={aoi_id}/output/*") if p.suffix.lower() in _LOADABLE]
+    # Certains pipelines exportent le même résultat vectoriel en 2 formats (.parquet pour
+    # le stockage, .geojson pour l'affichage direct) : {(dossier, nom_sans_extension), ...}
     geojson_stems = {(p.parent, p.stem) for p in hits if p.suffix.lower() == ".geojson"}
 
     def _is_parquet_twin(p: Path) -> bool:
+        """True si p est un .parquet qui a un .geojson jumeau (même dossier, même nom)."""
         return p.suffix.lower() == ".parquet" and (p.parent, p.stem) in geojson_stems
 
+    # On garde tout SAUF les .parquet qui font doublon avec un .geojson déjà listé.
     return sorted(p for p in hits if not _is_parquet_twin(p))

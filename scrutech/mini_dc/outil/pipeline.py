@@ -20,6 +20,12 @@ Le pipeline est une suite de modèles (tables) organisés en 3 couches :
 import config as C
 from db import table_count
 
+# NOTE DE LECTURE : ce fichier ne fait presque aucun calcul EN Python — chaque fonction
+# construit une requête SQL (les chaînes entre triple-guillemets f"""...""") et la fait
+# exécuter par DuckDB. Le rôle du Python ici est juste d'ORCHESTRER : dans quel ordre
+# lancer les requêtes, et injecter les paramètres de config.py dans le texte SQL via des
+# f-strings ({C.SURFACE_LIBRE_MIN_M2} etc.). Le "vrai" calcul géospatial (filtrage,
+# jointures, scoring) est fait par DuckDB, pas par des boucles Python.
 RAW = str(C.RAW_DIR).replace("\\", "/")
 
 
@@ -28,6 +34,10 @@ RAW = str(C.RAW_DIR).replace("\\", "/")
 # ===========================================================================
 def setup_macros(con) -> None:
     """Crée les fonctions SQL maison (DRY : définies une seule fois)."""
+    # Une MACRO SQL, c'est l'équivalent d'une fonction Python mais définie et appelée
+    # directement dans les requêtes SQL suivantes (h3_of(geometry, 9)) : ça évite de
+    # répéter la même formule de conversion dans chaque requête (principe DRY : "Don't
+    # Repeat Yourself").
     # h3_of(geom, res) : index H3 d'une géométrie Lambert-93.
     # On reprojette le centroïde en WGS84 (lat/lng) car H3 vit en sphérique.
     con.execute(f"""
@@ -144,6 +154,14 @@ def build_intermediate(con) -> dict:
     #   2) test exact ST_Intersects
     #   3) emprise au sol = surface de l'intersection (un bâtiment à cheval
     #      sur 2 parcelles n'est compté que pour sa part sur chacune)
+    #
+    # `h3_grid_disk(cellule, k)` renvoie la cellule elle-même + toutes ses voisines
+    # jusqu'à k "anneaux" de distance (k=1 = la cellule + son premier anneau de 6
+    # voisines). `list_contains(..., b.h3_res9)` ne garde que les paires (parcelle,
+    # bâtiment) dont les cellules H3 sont proches : sans ce préfiltre, comparer chaque
+    # parcelle à chaque bâtiment (un "produit cartésien") serait bien trop lent à
+    # l'échelle de la France entière. C'est l'idée clé du module : ne jamais tester la
+    # géométrie exacte (ST_Intersects, coûteux) qu'entre candidats déjà proches.
     con.execute(f"""
         CREATE OR REPLACE TABLE intermediate.int_parcelles_batiments AS
         WITH paires AS (
@@ -192,7 +210,14 @@ def build_intermediate(con) -> dict:
 #  COUCHE 3 — MARTS : les 5 filtres en cascade (entonnoir)
 # ===========================================================================
 def build_filters(con) -> dict:
-    """Applique les 5 filtres ; chaque table ne garde que les survivants."""
+    """Applique les 5 filtres ; chaque table ne garde que les survivants.
+
+    Motif "entonnoir" : le filtre 2 lit `marts.fct_filtre_01_foncier` (pas la table de
+    départ), le filtre 3 lit le résultat du filtre 2, etc. Chaque table est donc un
+    sous-ensemble de la précédente, de plus en plus petit — comme un tamis à trous de
+    plus en plus fins. Ça évite de refaire tourner les calculs coûteux des filtres
+    précédents sur des parcelles déjà éliminées.
+    """
 
     # ---- FILTRE 1 : FONCIER -------------------------------------------------
     # Habitat individuel résidentiel + surface libre suffisante.
@@ -252,6 +277,9 @@ def build_filters(con) -> dict:
               ON list_contains(h3_grid_disk(p.h3_res9, {C.H3_DISK_K['fibre']}), f.h3_res9)
         ),
         plus_proche AS (
+            -- arg_min(statut, d) renvoie le `statut` de la ligne qui a le plus petit
+            -- `d` (distance) dans son groupe : "le statut fibre du point le PLUS
+            -- PROCHE de cette parcelle", sans avoir à trier puis prendre le premier.
             SELECT id_parcelle,
                    arg_min(statut, d) AS fibre_statut,
                    MIN(d)             AS dist_fibre_m
@@ -297,6 +325,10 @@ def build_filters(con) -> dict:
 
     # ---- FILTRE 5 : RÉGLEMENTAIRE (exclusions strictes) --------------------
     # Rejet si la parcelle touche : tampon ABF 500 m, zone PPRI ou EBC.
+    # UNION (sans ALL) fusionne les 3 listes de parcelles à exclure EN DÉDOUBLONNANT :
+    # une parcelle en zone ABF ET inondable n'apparaît qu'une fois dans `violations`.
+    # Le NOT IN final garde tout ce qui n'est PAS dans cette liste noire — c'est
+    # l'inverse des filtres précédents (qui gardaient une liste blanche de survivants).
     con.execute(f"""
         CREATE OR REPLACE TABLE marts.fct_filtre_05_reglement AS
         WITH violations AS (

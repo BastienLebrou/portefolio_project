@@ -25,6 +25,9 @@ from alphaearth._columns import EMB_COLS
 DATASET = "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL"
 
 
+# @dataclass (sans frozen=True ici) génère automatiquement __init__/__repr__/__eq__ ;
+# les champs avec une valeur par défaut (band_indices, max_pixels) deviennent optionnels
+# à la création : AlphaEarthQuery(aoi_geojson=..., year=2023) suffit.
 @dataclass
 class AlphaEarthQuery:
     """One embeddings request: an AOI geometry, a year, and cost guard-rails."""
@@ -57,13 +60,21 @@ def authenticate_gee(auth_id: str = "gee_service", credentials_json: str | None 
     the external interpreter, which has no QgsAuthManager) → QgsAuthManager entry
     ``auth_id`` (config key ``json_credentials``, for in-QGIS use).
     """
+    # Les imports sont faits ICI (dans la fonction) et non en haut du fichier car `ee`
+    # (le SDK Google Earth Engine) et `qgis.core` ne sont disponibles que dans certains
+    # environnements d'exécution (l'interpréteur externe pour `ee`, QGIS lui-même pour
+    # `qgis.core`) : importer en haut de fichier ferait planter tout le module ailleurs.
     import json
     import os
 
     import ee
 
+    # `x or y` renvoie x s'il n'est pas vide/None, sinon y : on essaie d'abord l'argument
+    # explicite, puis la variable d'environnement.
     raw = credentials_json or os.environ.get("SCRUTECH_GEE_CREDENTIALS")
     if raw is None:
+        # Dernier recours : lire la clé stockée de façon chiffrée dans le gestionnaire
+        # d'authentification de QGIS (jamais un fichier en clair sur le disque).
         from qgis.core import QgsApplication
 
         config = QgsApplication.authManager().authMethodConfig(auth_id)
@@ -96,10 +107,19 @@ def _cosine_distance_image(img1, img2):
     """
     import ee
 
-    dot = img1.multiply(img2).reduce(ee.Reducer.sum())
-    n1 = img1.multiply(img1).reduce(ee.Reducer.sum()).sqrt()
-    n2 = img2.multiply(img2).reduce(ee.Reducer.sum()).sqrt()
+    # La "similarité cosinus" entre deux vecteurs mesure s'ils pointent dans la même
+    # direction (1 = identiques en direction, 0 = perpendiculaires, -1 = opposés),
+    # indépendamment de leur longueur. Formule : cos = (a·b) / (‖a‖ × ‖b‖).
+    # Ici chaque pixel a un vecteur de 64 valeurs (les 64 bandes) ; "reduce(sum)" fait la
+    # somme sur les bandes, ce qui calcule le produit scalaire (dot) et les normes (n1, n2)
+    # PIXEL PAR PIXEL, en une seule opération côté serveur Earth Engine (pas en Python).
+    dot = img1.multiply(img2).reduce(ee.Reducer.sum())  # produit scalaire a·b
+    n1 = img1.multiply(img1).reduce(ee.Reducer.sum()).sqrt()  # norme (longueur) de a
+    n2 = img2.multiply(img2).reduce(ee.Reducer.sum()).sqrt()  # norme (longueur) de b
     cosine = dot.divide(n1.multiply(n2))
+    # On renvoie "1 - cosinus" plutôt que le cosinus lui-même : ainsi 0 = aucun
+    # changement (vecteurs identiques) et une valeur qui grandit = changement croissant,
+    # plus intuitif à seuiller qu'une similarité qui décroît.
     return ee.Image(1).subtract(cosine).rename("change_distance")
 
 
@@ -121,10 +141,15 @@ def fetch_change_samples(
 
 def _dist_features_to_gdf(features: list[dict]) -> gpd.GeoDataFrame:
     """Parse a sampled ``change_distance`` FeatureCollection to a GDF (pure, testable)."""
+    # "pure, testable" = cette fonction ne fait aucun appel réseau, juste transformer des
+    # données déjà reçues -> on peut la tester avec de faux dictionnaires Python, sans
+    # connexion à Earth Engine ; c'est ce qui la sépare de fetch_change_samples ci-dessus.
     rows = [
         {"pixel_id": i, "change_distance": f.get("properties", {}).get("change_distance")}
         for i, f in enumerate(features)
     ]
+    # shape() (de shapely.geometry) convertit un dict GeoJSON générique en objet
+    # géométrique shapely utilisable (Point, Polygon...).
     geoms = [shape(f["geometry"]) for f in features]
     return gpd.GeoDataFrame(pd.DataFrame(rows), geometry=geoms, crs="EPSG:4326")
 

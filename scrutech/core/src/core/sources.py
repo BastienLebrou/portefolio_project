@@ -48,6 +48,10 @@ DEFAULT_RESERVOIR_KINDS = ("natura2000_sic", "natura2000_zps", "znieff1", "znief
 FOREST_NATURE_HINTS = ("forêt", "foret", "bois", "haie")
 
 
+# Le "*" dans une signature de fonction Python force tous les arguments qui suivent à
+# être passés par leur nom (`fetch_buildings(aoi, timeout=60)`), jamais par position
+# (`fetch_buildings(aoi, 60)` serait refusé) — ça évite les erreurs d'appel silencieuses
+# quand une fonction a beaucoup de paramètres optionnels.
 def fetch_buildings(aoi: object, *, timeout: int = 120) -> gpd.GeoDataFrame:
     """All BD TOPO buildings within the AOI (EPSG:2154). Columns: usage_1/2, nature, hauteur."""
     keep = ["cleabs", "usage_1", "usage_2", "nature", "hauteur"]
@@ -59,9 +63,15 @@ def fetch_forest(aoi: object, *, timeout: int = 120) -> gpd.GeoDataFrame:
     veg = fetch_bdtopo(aoi, VEGETATION_TYPENAME, ["cleabs", "nature"], timeout=timeout)
     if veg.empty or "nature" not in veg.columns:
         return veg
+    # fillna("") remplace les valeurs manquantes par une chaîne vide (évite une erreur sur
+    # le .lower() suivant), puis .str.lower() met tout en minuscules pour comparer sans
+    # se soucier de la casse ("Forêt" vs "forêt").
     nat = veg["nature"].fillna("").str.lower()
+    # Pour chaque ligne, `mask` vaut True si l'un des mots-clés de FOREST_NATURE_HINTS
+    # apparaît dans le texte de la colonne "nature" (ex: "forêt fermée de feuillus"
+    # contient "forêt" -> True). .apply() exécute cette petite fonction sur chaque ligne.
     mask = nat.apply(lambda s: any(h in s for h in FOREST_NATURE_HINTS))
-    return veg[mask].copy()
+    return veg[mask].copy()  # .copy() évite un avertissement pandas sur les vues partielles
 
 
 def fetch_roads(aoi: object, *, timeout: int = 120) -> gpd.GeoDataFrame:
@@ -86,6 +96,8 @@ def fetch_biodiversity_reservoirs(
         gdf = fetch_bdtopo(aoi, RESERVOIR_TYPENAMES[kind], ["nom_site"], timeout=timeout)
         if gdf.empty:
             continue
+        # On étiquette chaque couche avec son "kind" (natura2000_sic, znieff1, ...) avant
+        # de tout regrouper : ça permet, une fois fusionné, de savoir d'où vient chaque ligne.
         gdf["kind"] = kind
         if "nom_site" not in gdf.columns:
             gdf["nom_site"] = None
@@ -127,8 +139,11 @@ def fetch_bdtopo(
     endpoint (e.g. a regional DREAL server for the TVB). Returns a GeoDataFrame in EPSG:2154
     with the ``keep`` columns that exist (plus geometry).
     """
-    a: Aoi = resolve_aoi(aoi)
+    a: Aoi = resolve_aoi(aoi)  # normalise n'importe quelle forme d'AOI reçue en entrée
     aoi_l93 = a.to_l93()
+    # bounds = (minx, miny, maxx, maxy) : on interroge le serveur WFS avec un simple
+    # rectangle englobant (plus simple/rapide côté serveur qu'un polygone précis), puis
+    # on affine le résultat avec `clip` un peu plus bas.
     minx, miny, maxx, maxy = aoi_l93.bounds
 
     features = _paginated_wfs(typename, (minx, miny, maxx, maxy), timeout, wfs_url)
@@ -138,9 +153,14 @@ def fetch_bdtopo(
 
     gdf = gpd.GeoDataFrame.from_features(features, crs=L93)
     gdf = _force_2d(gdf)
+    # On ne garde que les colonnes demandées qui existent VRAIMENT dans la réponse (une
+    # couche WFS peut ne pas avoir tous les attributs attendus selon le territoire).
     cols = [c for c in keep if c in gdf.columns]
     gdf = gdf[[*cols, "geometry"]].copy()
     if clip:
+        # Le rectangle englobant (bbox) ramène des objets qui touchent le rectangle mais
+        # pas forcément l'AOI elle-même (un polygone n'est pas un rectangle) : `clip`
+        # filtre précisément sur l'intersection avec la vraie géométrie de l'AOI.
         gdf = gdf[gdf.intersects(aoi_l93)].copy()
     return gdf
 
@@ -149,10 +169,15 @@ def _paginated_wfs(
     typename: str, bbox_l93: tuple, timeout: int, wfs_url: str = WFS_URL
 ) -> list[dict]:
     """Page through a WFS GetFeature (EPSG:2154 bbox) and return raw GeoJSON features."""
+    # WFS (Web Feature Service) est un protocole standard pour interroger des couches
+    # géographiques via HTTP. Le serveur ne renvoie jamais tout d'un coup : il limite
+    # chaque réponse à WFS_PAGE_SIZE objets ("features"). On doit donc faire plusieurs
+    # requêtes successives ("pages"), chacune démarrant où la précédente s'est arrêtée
+    # (STARTINDEX), jusqu'à ce qu'une page revienne incomplète (= c'était la dernière).
     minx, miny, maxx, maxy = bbox_l93
     features: list[dict] = []
     start = 0
-    while True:
+    while True:  # boucle "tant que vrai" : on sort explicitement avec `break` plus bas
         params = {
             "SERVICE": "WFS",
             "VERSION": "2.0.0",
@@ -167,14 +192,20 @@ def _paginated_wfs(
         }
         resp = requests.get(wfs_url, params=params, timeout=timeout)
         resp.raise_for_status()
+        # `or []` protège contre le cas où .get("features") renverrait None au lieu
+        # d'une liste vide (réponse JSON inattendue) — évite un crash sur `len(page)`.
         page = resp.json().get("features", []) or []
-        features.extend(page)
+        features.extend(page)  # ajoute les éléments de `page` à la liste `features`
         got = len(page)
         start += got
         logger.info("WFS %s: %d features", typename, start)
         if got < WFS_PAGE_SIZE:
+            # Une page plus petite que la taille demandée = il n'y a plus rien après :
+            # c'était la dernière page, on arrête la boucle.
             break
         if start > 2_000_000:  # ponytail: guard-rail, tile the AOI if you ever hit this
+            # Garde-fou de sécurité : si on dépasse 2 millions d'objets, on arrête pour
+            # éviter une boucle infinie/coûteuse plutôt que de continuer indéfiniment.
             logger.warning("WFS %s: hit 2M guard-rail, result truncated", typename)
             break
     return features
@@ -182,6 +213,9 @@ def _paginated_wfs(
 
 def _force_2d(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """BD TOPO returns 3D geometries; flatten to 2D (Z is useless here), keeping the CRS."""
+    # BD TOPO fournit parfois une altitude (Z) en plus de X/Y ; comme aucun calcul ici
+    # n'en a besoin, on l'enlève pour simplifier (certains outils gèrent mal les
+    # géométries 3D). `shapely.force_2d` fait cette conversion géométrie par géométrie.
     crs = gdf.crs
     out = gdf.copy()
     out["geometry"] = gpd.GeoSeries(shapely.force_2d(gdf.geometry.values), index=gdf.index, crs=crs)

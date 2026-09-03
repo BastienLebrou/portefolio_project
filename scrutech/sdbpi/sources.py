@@ -55,6 +55,12 @@ def _force_2d(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 
 def _bbox_key(bbox: BBox) -> str:
+    """Empreinte courte et stable d'une bbox, pour nommer son fichier de cache.
+
+    Deux appels avec la même bbox (arrondie à 0.1) donnent toujours le même nom de
+    fichier : on peut donc vérifier "ce résultat existe-t-il déjà ?" par un simple
+    test d'existence de fichier, sans base de données.
+    """
     return hashlib.md5(",".join(f"{c:.1f}" for c in bbox).encode()).hexdigest()[:10]
 
 
@@ -90,6 +96,9 @@ def communes_in_bbox(bbox_wgs84: BBox, cfg: Config, session: requests.Session) -
     Limite assumée : une commune entièrement intérieure et plus fine que le pas peut
     être manquée -> pour une grande bbox, préférer le mode 'geo_file'."""
     minx, miny, maxx, maxy = bbox_wgs84
+    # np.linspace(min, max, 5) crée 5 valeurs régulièrement espacées entre min et max
+    # (bornes incluses) : combinées en xs × ys, ça donne une grille de 5×5 = 25 points
+    # test répartis sur toute la bbox.
     xs = np.linspace(minx, maxx, 5)
     ys = np.linspace(miny, maxy, 5)
     codes: set[str] = set()
