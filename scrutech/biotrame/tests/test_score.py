@@ -55,5 +55,8 @@ def test_corridors_drive_connectivity_when_present() -> None:
     )
     proxy = score_mesh(grid, reservoirs)
     real = score_mesh(grid, reservoirs, corridors=corridors)
+    # .equals() compare deux Series élément par élément (contrairement à `==` qui
+    # renverrait une série de booléens à agréger soi-même) : ici on vérifie qu'elles ne
+    # sont PAS identiques, preuve que passer des corridors change bien le résultat.
     # The connectivity field must differ when real corridors drive it.
     assert not proxy["connectivite"].equals(real["connectivite"])

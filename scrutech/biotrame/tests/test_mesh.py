@@ -12,6 +12,8 @@ def test_hex_grid_covers_aoi() -> None:
     grid = hex_grid(aoi, resolution=8)
     assert len(grid) > 10
     assert grid.crs.to_epsg() == 4326
+    # is_valid renvoie une série de True/False (une géométrie peut être "invalide" au
+    # sens géométrique : auto-intersection, etc.) ; .all() vérifie qu'AUCUNE ne l'est.
     assert grid.geometry.is_valid.all()
     assert grid["hex_id"].is_unique
     # The hexagons blanket the AOI: their union contains most of the box.

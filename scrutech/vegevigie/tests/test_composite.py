@@ -27,6 +27,11 @@ def test_monthly_median_takes_per_month_median() -> None:
     )
     monthly = monthly_median(cube)
     assert monthly.sizes["time"] == 2
+    # .isel (index select) prend le n-ième élément par POSITION (comme une liste
+    # Python) ; .sel (déjà vu ailleurs dans le projet) prend une valeur par ÉTIQUETTE
+    # (une date précise). Ici on veut juste "le premier mois du résultat", peu importe
+    # sa date exacte -> .isel est le bon choix. .item() extrait le nombre Python brut
+    # d'un tableau à une seule case (sinon on aurait un DataArray 0-D, pas un float).
     assert np.isclose(monthly.isel(time=0).item(), 0.4)
     assert np.isclose(monthly.isel(time=1).item(), 0.6)
 

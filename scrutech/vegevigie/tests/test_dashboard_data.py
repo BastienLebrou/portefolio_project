@@ -46,6 +46,9 @@ def test_find_outputs_discovers_and_picks_latest(tmp_path) -> None:
     assert out.duckdb is not None and out.timeline is not None
 
 
+# Un code couleur "#rrggbb" est du texte hexadécimal : hex_color[1:3] extrait les 2
+# caractères du rouge ("ff", par ex.), et int(..., 16) les convertit en nombre normal
+# en les interprétant en BASE 16 (hexadécimal) plutôt qu'en base 10 par défaut.
 def _r(hex_color: str) -> int:
     return int(hex_color[1:3], 16)
 

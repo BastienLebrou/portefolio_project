@@ -18,6 +18,10 @@ def test_build_settings_overrides_bbox_and_window() -> None:
 
 
 def test_build_settings_defaults_preserved() -> None:
+    # Seuls bbox/start/end sont fournis ici ; resolution/max_cloud_cover/data_dir restent
+    # à None (leurs valeurs par défaut dans build_settings) — le test vérifie qu'ils
+    # retombent bien sur config/default.yaml plutôt que d'être écrasés par une valeur
+    # bidon.
     s = build_settings((0.0, 0.0, 1.0, 1.0), 2020, 2020)
     # Untouched fields fall back to config/default.yaml.
     assert s.stac.collection == "sentinel-2-l2a"

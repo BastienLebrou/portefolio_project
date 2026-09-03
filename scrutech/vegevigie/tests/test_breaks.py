@@ -35,6 +35,10 @@ def test_pettitt_insufficient_data_is_nan() -> None:
 def test_break_dataset_and_year_on_time_chunked_cube() -> None:
     t = pd.date_range("2018-01-01", periods=24, freq="MS")
     step = np.concatenate([np.full(12, 0.2), np.full(12, 0.7)])
+    # broadcast_to répète le vecteur `step` sur les 2×2 pixels SANS dupliquer la mémoire
+    # (une "vue" partagée) ; .copy() en fait ensuite un vrai tableau indépendant, car un
+    # DataArray xarray a besoin de pouvoir être modifié/chunké normalement (une vue
+    # broadcastée ne le permet pas toujours).
     data = np.broadcast_to(step[:, None, None], (24, 2, 2)).copy()
     da = xr.DataArray(data, dims=("time", "y", "x"), coords={"time": t}).chunk({"time": 6})
 

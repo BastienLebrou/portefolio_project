@@ -2,6 +2,9 @@
 Aucun test de cette suite ne doit toucher le réseau réel.
 """
 
+# Même patron que test_auth_manager.py : tests "scaffold" désactivés (skip) qui
+# documentent déjà par leur nom ce qu'il faudra vérifier une fois stac_client.py
+# implémenté.
 import pytest
 
 

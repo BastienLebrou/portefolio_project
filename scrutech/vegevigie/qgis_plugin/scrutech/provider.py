@@ -21,6 +21,11 @@ from .algorithms.report_launch import ReportLaunchAlgorithm
 from .algorithms.sdbpi_vacance import SdbpiVacanceAlgorithm
 
 
+# Un QgsProcessingProvider est le "dossier" qui regroupe une famille d'algorithmes dans
+# la boîte à outils Processing de QGIS (comme "GDAL" ou "GRASS" y sont déjà des
+# dossiers) ; `id()`/`name()`/`longName()`/`icon()` ci-dessous ne sont que l'identité
+# affichée par QGIS, `loadAlgorithms()` est la seule méthode où se passe vraiment
+# quelque chose : enregistrer chaque algorithme du plugin.
 class ScruTechProvider(QgsProcessingProvider):
     """Groups the ScruTech algorithms under one Processing Toolbox entry."""
 

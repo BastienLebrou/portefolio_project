@@ -5,6 +5,9 @@ from pathlib import Path
 from core.storage import ENV_ROOT, data_root, db_path, product_path
 
 
+# Importer ENV_ROOT (plutôt que d'écrire "SCRUTECH_DATA" en dur) évite que le test se
+# désynchronise silencieusement si le nom de la variable d'environnement change un jour
+# dans storage.py : le test suit automatiquement la vraie constante utilisée par le code.
 def test_data_root_honours_env(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv(ENV_ROOT, str(tmp_path))
     assert data_root() == tmp_path

@@ -29,6 +29,11 @@ def test_harmonize_leaves_scl_untouched() -> None:
     assert np.array_equal(out["scl"].values, cube["scl"].values)
 
 
+# Ce test vérifie une propriété importante des fonctions "pures" du projet (voir
+# CLAUDE.md §7) : elles ne doivent JAMAIS modifier leurs arguments en place, seulement
+# renvoyer un nouveau résultat. Sans cette garantie, appeler harmonize_reflectance()
+# deux fois par erreur appliquerait l'offset deux fois — un bug silencieux difficile à
+# repérer. On copie les valeurs AVANT l'appel pour avoir une référence à comparer après.
 def test_harmonize_does_not_mutate_input() -> None:
     cube = _synthetic_cube()
     before = cube["red"].values.copy()

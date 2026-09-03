@@ -30,6 +30,9 @@ def missing_dependencies() -> list[str]:
     """Return the pip names of dependencies that fail to import."""
     import importlib
 
+    # importlib.import_module("odc.stac") importe un module à partir d'une CHAÎNE de
+    # caractères (le nom du package) plutôt que d'un `import` écrit en dur dans le code
+    # : indispensable ici puisque REQUIRED liste les noms dynamiquement, un par un.
     missing = []
     for module, dist in REQUIRED.items():
         try:

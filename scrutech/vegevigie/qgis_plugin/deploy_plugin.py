@@ -24,6 +24,9 @@ _IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
 
 def _venv_python() -> Path:
+    # os.name vaut "nt" sur Windows, "posix" sur macOS/Linux : l'intérieur d'un
+    # environnement virtuel Python n'a pas la même disposition de dossiers selon l'OS
+    # (Scripts/ + .exe sur Windows, bin/ sans extension ailleurs).
     sub = "Scripts/python.exe" if os.name == "nt" else "bin/python"
     return VEGEVIGIE / ".venv" / sub
 

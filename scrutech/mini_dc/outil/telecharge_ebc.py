@@ -13,6 +13,10 @@ Usage :
     python telecharge_ebc.py --insee 07005
 """
 
+# urllib (stdlib) fait le même travail que `requests` (utilisé dans d'autres scripts du
+# projet) mais sans dépendance externe à installer : urlencode() construit la chaîne
+# de paramètres d'URL, Request/urlopen envoient la requête HTTP. Plus verbeux que
+# `requests`, mais dispensé d'ajouter une dépendance pour ce petit script autonome.
 import sys
 import json
 import argparse
@@ -84,6 +88,10 @@ def telecharger(insee: str, out_dir) -> None:
     gdf = gpd.GeoDataFrame.from_features(features, crs=C.CRS_METRIQUE)
 
     # Filtre EBC : typepsc == '01'
+    # next(générateur, défaut) prend le PREMIER élément qui matche (ici, le premier nom
+    # de colonne en minuscules égal à "typepsc"), ou renvoie `None` si aucun ne convient
+    # — plus court qu'une boucle `for` avec un `break`, et sûr même si la boucle ne
+    # trouve jamais rien (contrairement à `[...][0]` qui lèverait une erreur sur liste vide).
     col = next((c for c in gdf.columns if c.lower() == "typepsc"), None)
     if col is None:
         print(f"  [!] colonne 'typepsc' absente ; colonnes = {list(gdf.columns)}")
@@ -113,6 +121,10 @@ def telecharger(insee: str, out_dir) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Télécharge les EBC d'une commune (GPU/WFS)")
+    # `X if False else Y` vaut TOUJOURS Y : la branche `if False` ne s'exécute jamais.
+    # Ici ça revient à écrire simplement default="07005" — C.COMMUNE_INSEE n'est en
+    # réalité jamais utilisé pour cette valeur par défaut (probablement un reste de
+    # bascule de configuration oublié ; à nettoyer si ce n'est pas voulu).
     ap.add_argument("--insee", default=C.COMMUNE_INSEE if False else "07005")
     ap.add_argument("--out", default=str(DATA_ALBA))
     a = ap.parse_args()

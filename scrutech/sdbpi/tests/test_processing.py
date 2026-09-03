@@ -46,6 +46,9 @@ def test_count_and_status_flags_vacant_candidate() -> None:
     counted = processing.count_etablissements(bati, sirene, buffer_m=15.0)
     result = processing.build_result(counted, "01053", "Bourg-en-Bresse")
 
+    # set_index bascule la colonne "id_bati" comme index du DataFrame : on peut alors
+    # retrouver une ligne précise par son identifiant avec .loc["b-900000", ...], plus
+    # lisible ici qu'un filtre result[result["id_bati"] == "b-900000"].
     by_id = result.set_index("id_bati")
     assert by_id.loc["b-900000", "statut_occupation"] == "OCCUPE"
     assert by_id.loc["b-900500", "statut_occupation"] == "VACANT_CANDIDAT"

@@ -57,6 +57,9 @@ def test_replace_partition_isolates_other_aois(tmp_path: Path) -> None:
     replace_partition(con, "vege_commune_stats", "insee-07005", _stats("insee-07005", 2))
     replace_partition(con, "vege_commune_stats", "insee-26001", _stats("insee-26001", 3))
     replace_partition(con, "vege_commune_stats", "insee-07005", _stats("insee-07005", 1))
+    # fetchall() renvoie une liste de tuples (aoi_id, count) ; dict(...) sur une liste de
+    # paires (clé, valeur) construit directement un dictionnaire {aoi_id: count} —
+    # plus lisible à comparer qu'une liste de tuples dans l'assertion qui suit.
     counts = dict(
         con.execute("SELECT aoi_id, count(*) FROM vege_commune_stats GROUP BY aoi_id").fetchall()
     )

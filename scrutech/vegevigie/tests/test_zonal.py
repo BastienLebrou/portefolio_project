@@ -20,6 +20,10 @@ CRS = "EPSG:32631"
 def _template() -> xr.DataArray:
     # Pixel centres at 0.5..3.5 so the grid covers [0,4] x [0,4].
     x = np.arange(0.5, 4, 1.0)
+    # Convention "north-up" standard en raster : la PREMIÈRE ligne du tableau
+    # correspond au NORD (y le plus grand), donc les coordonnées y doivent DÉCROÎTRE
+    # d'une ligne à l'autre (arange avec un pas négatif) — comme une image où la ligne
+    # 0 est en haut, pas en bas.
     y = np.arange(3.5, 0, -1.0)  # north-up (descending y)
     da = xr.DataArray(np.zeros((4, 4)), dims=("y", "x"), coords={"y": y, "x": x})
     return da.rio.write_crs(CRS)

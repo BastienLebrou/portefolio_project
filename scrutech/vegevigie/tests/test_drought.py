@@ -54,6 +54,10 @@ def test_anomaly_zscore_known_values() -> None:
     def builder(times, size):
         data = np.full((len(times), size, size), 0.5)
         jan = times.month == 1
+        # np.where(masque) sans autre argument renvoie les INDICES où le masque est
+        # True (ici, sous forme d'un tuple à un seul élément pour un tableau 1D, d'où
+        # le [0]) — pratique pour ensuite indexer `data` par position plutôt que par
+        # masque booléen, quand on veut cibler des éléments précis (jan_idx[0], [1]...).
         jan_idx = np.where(jan)[0]
         data[jan_idx[0]] = 0.4
         data[jan_idx[1]] = 0.6
@@ -98,6 +102,10 @@ def test_dry_year_has_negative_anomaly() -> None:
     cube = _monthly_cube(years=4, builder=builder)
     clim = monthly_climatology(cube)
     timeline = drought_timeline(ndvi_anomaly(cube, clim))
+    # `.sel(time=<tableau de True/False>)` est une sélection "booléenne" : au lieu de
+    # choisir UNE date précise, on garde tous les pas de temps où la condition est
+    # vraie (ici, ceux de l'année 2018) — pratique pour découper une série sur un
+    # critère plutôt que sur une position ou une valeur exacte.
     dry_mean = timeline.sel(time=timeline["time"].dt.year == 2018).mean().item()
     wet_mean = timeline.sel(time=timeline["time"].dt.year != 2018).mean().item()
     assert dry_mean < 0 < wet_mean or dry_mean < wet_mean

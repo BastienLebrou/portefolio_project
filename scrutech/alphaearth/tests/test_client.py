@@ -33,6 +33,9 @@ def test_features_to_gdf_parses_a_gee_collection() -> None:
         )
     gdf = _features_to_gdf(feats)
     assert len(gdf) == 2
+    # `<=` entre deux sets Python teste l'inclusion ("EMB_COLS est un sous-ensemble de
+    # gdf.columns"), pas une comparaison numérique — pratique pour vérifier que toutes
+    # les colonnes attendues sont présentes, même si `gdf` en a d'autres en plus.
     assert set(EMB_COLS) <= set(gdf.columns)
     assert gdf.crs.to_epsg() == 4326
     assert gdf["pixel_id"].tolist() == [0, 1]

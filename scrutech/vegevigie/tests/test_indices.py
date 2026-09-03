@@ -15,8 +15,12 @@ from vegevigie.indices import (
 
 def test_scl_keep_drop_partition_all_12_classes() -> None:
     # SCL defines classes 0..11; every one must be classified keep xor drop.
+    # `|` entre deux sets fait leur UNION (tous les éléments des deux, sans doublons).
     all_classes = SCL_KEEP_CLASSES | SCL_DROP_CLASSES
     assert all_classes == set(range(12))
+    # isdisjoint() est vrai si les deux sets n'ont AUCUN élément en commun : ensemble
+    # avec le test ci-dessus, ça prouve que les 12 classes SCL sont classées une fois
+    # chacune, ni oubliée ni comptée deux fois (garantie de partition complète).
     assert SCL_KEEP_CLASSES.isdisjoint(SCL_DROP_CLASSES)
 
 

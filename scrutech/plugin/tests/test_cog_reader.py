@@ -1,3 +1,6 @@
+# Même patron que test_auth_manager.py : tests "scaffold" désactivés (skip) qui
+# documentent déjà par leur nom ce qu'il faudra vérifier une fois cog_reader.py
+# implémenté (voir ses `raise NotImplementedError`).
 import pytest
 
 

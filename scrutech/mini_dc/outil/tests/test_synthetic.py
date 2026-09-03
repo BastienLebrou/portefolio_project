@@ -11,6 +11,9 @@ import generate_synthetic
 
 
 def test_centre_lambert93_is_in_metropolitan_france() -> None:
+    # Le préfixe "_" signale une fonction "privée" (usage interne au module) : rien
+    # n'empêche techniquement de l'appeler depuis un test, et c'est légitime ici pour
+    # isoler UNE petite fonction pure plutôt que de repasser par tout generer().
     x, y = generate_synthetic._centre_lambert93()
     # Lambert-93 bounds of metropolitan France (metres), loosely.
     assert 100_000 < x < 1_300_000
