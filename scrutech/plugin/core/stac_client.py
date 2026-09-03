@@ -29,6 +29,9 @@ class SceneResult:
     footprint_geojson: dict
 
 
+# Le pattern "un catalogue -> une réponse StacClient" cache au reste du plugin que
+# DEUX sources différentes (CDSE, MPC) sont interrogées : ailleurs dans le code, on
+# manipule juste des SceneResult, sans se soucier de leur provenance.
 class StacClient:
     def search(
         self,
