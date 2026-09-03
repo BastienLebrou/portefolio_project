@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
+
 # pydantic est une bibliothèque de VALIDATION de données : une classe qui hérite de
 # BaseModel déclare ses champs avec leur type, et pydantic vérifie automatiquement (à la
 # création de l'objet) que les valeurs reçues sont correctes — un entier là où on attend

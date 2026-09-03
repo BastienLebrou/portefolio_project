@@ -28,7 +28,8 @@ def reservoir_overlap(hexagons: gpd.GeoDataFrame, reservoirs: gpd.GeoDataFrame) 
         # Pas de réservoir à comparer = aucun enjeu détecté nulle part : on renvoie 0.0
         # pour chaque hexagone plutôt que de planter ou renvoyer une valeur manquante.
         return pd.Series(0.0, index=hexagons["hex_id"], name="enjeu")
-    res_u = reservoirs.to_crs(L93).union_all()  # fusionne tous les réservoirs en une seule forme
+    # union_all() fusionne tous les réservoirs en une seule forme
+    res_u = reservoirs.to_crs(L93).union_all()
     # intersection(res_u).area = la surface commune entre chaque hexagone et les
     # réservoirs ; on la divise par la surface totale de l'hexagone pour obtenir une
     # FRACTION (0 = aucun recouvrement, 1 = hexagone entièrement dans un réservoir).

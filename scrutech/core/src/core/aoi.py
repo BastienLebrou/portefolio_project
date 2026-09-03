@@ -19,8 +19,10 @@ from pathlib import Path
 # mais dont les lignes portent une forme géométrique (point, ligne, polygone) et un CRS.
 import geopandas as gpd
 import pandas as pd
+
 # requests = la bibliothèque standard pour faire des appels HTTP (ici vers des API web).
 import requests
+
 # shapely représente les formes géométriques elles-mêmes (indépendamment de tout CRS) :
 # `box(minx, miny, maxx, maxy)` construit un rectangle ; BaseGeometry est le type de base
 # commun à tous les polygones/lignes/points shapely.
@@ -216,7 +218,7 @@ def _hash(data: bytes) -> str:
 
 
 def _is_num(v: object) -> bool:
-    """True si v est un nombre (int/float) mais pas un booléen (True/False sont des int en Python !)."""
+    """True si v est un nombre (int/float) mais pas un booléen (True/False sont des int !)."""
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 

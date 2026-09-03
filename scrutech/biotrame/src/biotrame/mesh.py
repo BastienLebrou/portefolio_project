@@ -46,7 +46,8 @@ def _cells_for_geometry(geom: BaseGeometry, resolution: int) -> list[str]:
     # pas cet attribut, donc on le met dans une liste à un seul élément pour traiter les
     # deux cas avec la même boucle.
     parts = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
-    cells: set[str] = set()  # un set évite les hexagones en double si les polygones se touchent
+    # un set évite les hexagones en double si les polygones se touchent
+    cells: set[str] = set()
     for part in parts:
         # H3 wants (lat, lng) rings; shapely coords are (lng, lat).
         # `.exterior` = le contour extérieur du polygone ; `.interiors` = ses éventuels
