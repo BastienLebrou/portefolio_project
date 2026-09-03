@@ -26,6 +26,10 @@ except ImportError:  # pragma: no cover — very old QGIS
 
 def _scoped_or(owner: Any, scope: str, name: str) -> Any:
     """``owner.scope.name`` if that scope exists, else ``owner.name`` (QGIS 3 style)."""
+    # getattr(obj, nom, defaut) renvoie l'attribut s'il existe, sinon la valeur par
+    # défaut, sans lever d'exception — ici, si `owner.scope` (ex: `.Type`) n'existe pas
+    # (vieille API QGIS 3), on retombe sur `owner` lui-même, puis on cherche `name`
+    # directement dessus (l'ancien emplacement de la constante).
     return getattr(getattr(owner, scope, owner), name)
 
 

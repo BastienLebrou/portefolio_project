@@ -38,6 +38,8 @@ from . import _qgis_compat as _compat
 _BUFFER_SEGMENTS = 8
 
 
+# Même patron QGIS Processing que analyze_extent.py — mais entièrement en géométrie
+# QGIS native (QgsGeometry), donc aucun sous-processus externe requis ici non plus.
 class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
     """Forest/built-up interface (WUI): frontier line + contact band — native QGIS."""
 

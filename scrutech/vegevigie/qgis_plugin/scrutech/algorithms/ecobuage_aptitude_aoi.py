@@ -31,6 +31,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
     """Écobuage aptitude derived from an extent + a DEM (slope/access/exclusions auto)."""
 

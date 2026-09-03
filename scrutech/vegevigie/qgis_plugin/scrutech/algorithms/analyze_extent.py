@@ -52,6 +52,22 @@ _ENV_STRIP = (
 )
 
 
+# NOTE DE LECTURE — le patron commun à TOUS les algorithmes Processing de ScruTech
+# (les autres fichiers de ce dossier suivent exactement la même forme) :
+#   - `initAlgorithm()` : appelée une fois par QGIS pour DÉCLARER les paramètres du
+#     formulaire (un `QgsProcessingParameter...` par champ visible dans la boîte de
+#     dialogue : emprise, années, résolution...). C'est purement descriptif, aucun
+#     calcul ici.
+#   - `processAlgorithm()` : appelée quand l'utilisateur clique sur "Exécuter". Elle
+#     relit les valeurs saisies via `self.parameterAsXxx(parameters, CLE, context)`
+#     (une méthode différente selon le type attendu : parameterAsInt, parameterAsExtent,
+#     parameterAsVectorLayer...), fait le vrai travail, et renvoie un dict de résultats.
+#   - `feedback` (QgsProcessingFeedback) est le pont vers la barre de progression et le
+#     journal de QGIS : `feedback.setProgress(pct)`, `feedback.pushInfo(msg)`,
+#     `feedback.isCanceled()` pour réagir si l'utilisateur annule en cours de route.
+#   - Les méthodes name()/displayName()/group()/shortHelpString()/createInstance() sont
+#     de l'identité pure (nom affiché, aide, catégorie dans la boîte à outils) : aucune
+#     logique, juste ce que QGIS affiche à l'utilisateur.
 class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
     """Full VegeVigie pipeline over a user-drawn extent, in one run."""
 
@@ -306,6 +322,10 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             env=env,
             creationflags=creationflags,
         )
+        # On lit la sortie du sous-processus LIGNE PAR LIGNE au fur et à mesure qu'elle
+        # arrive (voir vegevigie/qgis_runner.py pour le format exact envoyé) : chaque
+        # "PROGRESS pct msg" met à jour la barre de progression QGIS en direct, et la
+        # ligne finale "RESULT {...}" (JSON) porte le résultat complet du calcul.
         payload: dict = {}
         assert proc.stdout is not None
         for raw in proc.stdout:

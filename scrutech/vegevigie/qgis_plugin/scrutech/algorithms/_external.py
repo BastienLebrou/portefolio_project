@@ -99,6 +99,11 @@ def run_spec(
             proc.terminate()
             raise RuntimeError("Canceled.")
         if line.startswith("PROGRESS "):
+            # "PROGRESS 42 Building datacube..." -> on découpe sur les ESPACES, mais
+            # seulement les deux premiers : partition(" ") coupe au premier espace
+            # rencontré et renvoie (avant, séparateur, après) ; on l'appelle deux fois
+            # pour extraire d'abord le mot "PROGRESS", puis séparer le pourcentage du
+            # message (qui, lui, peut contenir des espaces sans être redécoupé).
             _, _, rest = line.partition(" ")
             pct, _, msg = rest.partition(" ")
             with contextlib.suppress(ValueError):

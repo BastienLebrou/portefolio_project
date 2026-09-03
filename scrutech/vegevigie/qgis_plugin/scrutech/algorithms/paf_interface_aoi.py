@@ -29,6 +29,10 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py (voir ses commentaires pour le
+# détail de initAlgorithm/processAlgorithm/feedback) : ici on délègue systématiquement
+# le calcul à l'interpréteur externe via run_spec() (dans _external.py), qui relance
+# vegevigie.qgis_runner en sous-processus et relit son flux PROGRESS/RESULT.
 class InterfaceFromAoiAlgorithm(QgsProcessingAlgorithm):
     """Wildland-Urban Interface derived from an extent only (BD TOPO forest + buildings)."""
 

@@ -15,6 +15,11 @@ if str(_PLUGIN_DIR) not in sys.path:
 from .provider import ScruTechProvider  # noqa: E402 — after sys.path setup
 
 
+# QGIS impose une "forme" précise à tout plugin : une classe avec __init__(self, iface)
+# (`iface` est l'objet que QGIS fournit pour interagir avec son interface — barre
+# d'outils, menus, canevas carte...), puis QGIS appelle lui-même, à des moments précis
+# de son cycle de vie, les méthodes `initGui()` (au chargement du plugin) et `unload()`
+# (à sa désactivation). Ce n'est pas nous qui appelons ces méthodes : c'est QGIS.
 class ScruTechPlugin:
     """Thin QGIS plugin that owns a single Processing provider."""
 
@@ -24,6 +29,9 @@ class ScruTechPlugin:
         self.action = None
 
     def initProcessing(self) -> None:  # noqa: N802 — QGIS API name
+        # Un "Processing provider" est un groupe d'algorithmes affiché dans la boîte à
+        # outils "Traitements" de QGIS (au même titre que les outils natifs de QGIS ou
+        # ceux de GRASS/SAGA) : l'enregistrer le rend disponible partout dans QGIS.
         self.provider = ScruTechProvider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 
@@ -47,6 +55,10 @@ class ScruTechPlugin:
         processing.execAlgorithmDialog("scrutech:analyze_extent", {})
 
     def unload(self) -> None:
+        # Symétrique de initGui()/initProcessing() : quand l'utilisateur désactive ou
+        # désinstalle le plugin, QGIS appelle unload() pour qu'on retire proprement tout
+        # ce qu'on avait ajouté (bouton, entrée de menu, provider) — sinon ces éléments
+        # resteraient affichés alors que le plugin n'est plus actif.
         if self.action is not None:
             self.iface.removeToolBarIcon(self.action)
             self.iface.removePluginMenu("ScruTech", self.action)

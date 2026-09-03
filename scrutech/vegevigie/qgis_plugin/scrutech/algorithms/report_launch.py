@@ -28,6 +28,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
     """Open the ScruTech visual report (Streamlit) for a results folder."""
 
@@ -152,6 +153,11 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
     def _free_port(self, start: int) -> int:
         """Return ``start`` if free, else the next free port (so the URL is correct)."""
+        # connect_ex() essaie de se connecter au port et renvoie un code d'erreur au
+        # lieu de lever une exception (contrairement à connect()) : 0 = la connexion a
+        # réussi, donc quelque chose écoute déjà sur ce port (occupé) ; un code différent
+        # de 0 = personne n'écoute, le port est libre. On teste ainsi 20 ports de suite
+        # jusqu'à en trouver un de libre pour y lancer Streamlit.
         for port in range(start, start + 20):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 if s.connect_ex(("127.0.0.1", port)) != 0:

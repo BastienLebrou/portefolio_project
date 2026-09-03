@@ -27,6 +27,9 @@ from . import _qgis_compat as _compat
 _SOURCES = ["api", "geo_file", "grandlyon"]
 
 
+# Même patron QGIS Processing que analyze_extent.py — ici run_engine() lance le script
+# CLI du pilier sdbpi (run_vacance.py) tel quel, en lui passant les options en argv,
+# plutôt que de passer par le protocole JSON de vegevigie.qgis_runner.
 class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
     """Cross BD TOPO buildings with active SIRENE establishments to flag vacancy."""
 
@@ -103,6 +106,9 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
 
         insee = self.parameterAsString(parameters, self.INSEE, context).strip()
         buffer_m = self.parameterAsDouble(parameters, self.BUFFER, context)
+        # Un QgsProcessingParameterEnum affiche une liste déroulante mais renvoie
+        # seulement l'INDICE de l'option choisie (0, 1, 2...), pas son texte : on va
+        # donc chercher le vrai nom dans _SOURCES à cet indice.
         source = _SOURCES[self.parameterAsEnum(parameters, self.SOURCE, context)]
         python_exe = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
         if not python_exe:

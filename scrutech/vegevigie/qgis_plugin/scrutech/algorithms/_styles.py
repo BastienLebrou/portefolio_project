@@ -27,6 +27,11 @@ _DROUGHT_STOPS = [
 ]
 
 
+# Un fichier .qml est le format natif de QGIS pour décrire le STYLE d'une couche (ici,
+# quelle couleur donner à quelle valeur de pixel) : simplement du XML. QGIS charge
+# automatiquement un .qml portant le même nom qu'une couche à côté d'elle. En générant
+# ce texte nous-mêmes plutôt qu'en configurant le style à la main dans QGIS, chaque
+# résultat s'affiche déjà correctement stylé dès son premier chargement.
 def _qml(band: int, cmin: float, cmax: float, stops: list[tuple[float, str, str]]) -> str:
     items = "\n".join(
         f'          <item value="{v}" label="{lbl}" color="{c}" alpha="255"/>'

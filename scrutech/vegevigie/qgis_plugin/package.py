@@ -80,6 +80,12 @@ def make_zip() -> Path:
     zip_path = DIST / "scrutech.zip"
     if zip_path.exists():
         zip_path.unlink()
+    # "w" = créer/écraser le zip ; ZIP_DEFLATED = compresser réellement le contenu
+    # (le mode par défaut stocke sans compresser). rglob("*") liste récursivement TOUS
+    # les fichiers/dossiers sous PLUGIN. `path.relative_to(HERE)` est important : sans
+    # lui, zf.write utiliserait le chemin ABSOLU comme nom dans le zip (ex:
+    # "/home/.../scrutech/plugin.py"), ce qui casserait tout une fois dézippé ailleurs ;
+    # le chemin relatif garde juste "scrutech/plugin.py".
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(PLUGIN.rglob("*")):
             if "__pycache__" in path.parts or path.suffix == ".pyc":

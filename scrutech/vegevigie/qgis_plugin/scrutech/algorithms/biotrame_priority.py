@@ -33,6 +33,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
     """Hexagonal ecological-priority mesh (enjeu × connectivité × dégradation)."""
 

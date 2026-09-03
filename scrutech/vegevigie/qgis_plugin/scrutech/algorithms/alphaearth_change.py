@@ -34,6 +34,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
     """Year-over-year AlphaEarth change over an extent (GEE cosine distance)."""
 

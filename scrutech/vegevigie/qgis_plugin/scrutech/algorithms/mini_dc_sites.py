@@ -23,6 +23,8 @@ from qgis.PyQt.QtCore import QCoreApplication
 from . import _qgis_compat as _compat
 
 
+# Même patron QGIS Processing que analyze_extent.py — ici le sous-processus lance
+# directement le script mini_dc/run.py (pas vegevigie.qgis_runner) via run_engine().
 class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
     """Score cadastral parcels for mini-data-center siting (multi-criteria funnel)."""
 

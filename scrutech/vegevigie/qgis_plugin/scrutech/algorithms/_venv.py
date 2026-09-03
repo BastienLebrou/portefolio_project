@@ -21,6 +21,10 @@ def _python_in(venv: Path) -> Path:
 
 
 def _settings_get() -> str:
+    # QgsSettings est le "stockage de préférences" persistant de QGIS (survit à la
+    # fermeture du logiciel, comme les settings d'une appli desktop classique) : on s'en
+    # sert ici pour retenir l'interpréteur choisi une fois, afin de ne plus jamais
+    # redemander à l'utilisateur au lancement suivant.
     try:
         from qgis.core import QgsSettings
 
