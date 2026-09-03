@@ -10,6 +10,9 @@ from qgis.gui import QgisInterface
 from ..core.stac_client import StacClient
 
 
+# QDockWidget est un panneau Qt qu'on peut ancrer sur un bord de la fenêtre QGIS, faire
+# flotter, ou fermer — comme les panneaux natifs de QGIS (Couches, Navigateur...). En
+# hériter donne gratuitement tout ce comportement d'ancrage/fenêtrage.
 class SearchPanel(QDockWidget):
     def __init__(self, iface: QgisInterface, stac_client: StacClient):
         super().__init__("Rechercher des images satellite")

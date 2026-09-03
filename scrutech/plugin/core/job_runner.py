@@ -7,6 +7,11 @@ par ce module.
 from collections.abc import Callable
 from typing import Any
 
+# QgsTask est le mécanisme QGIS pour exécuter du travail EN ARRIÈRE-PLAN (un thread à
+# part) sans geler l'interface : `run()` s'exécute hors du thread principal (c'est là
+# qu'on met l'appel réseau bloquant), puis QGIS rappelle `finished()` sur le thread
+# principal une fois terminé (c'est là, et SEULEMENT là, qu'on a le droit de toucher
+# à l'interface graphique).
 from qgis.core import QgsTask
 
 

@@ -9,6 +9,9 @@ from qgis.PyQt.QtWidgets import QDialog
 from ..core.auth_manager import AuthManager, Provider
 
 
+# QDialog = une fenêtre modale ponctuelle (l'utilisateur la remplit puis la ferme),
+# contrairement à QDockWidget (un panneau qui reste ancré en permanence, voir
+# search_panel.py / job_monitor.py) : le bon choix pour un formulaire de configuration.
 class ApiKeysDialog(QDialog):
     def __init__(self, auth_manager: AuthManager):
         super().__init__()

@@ -8,6 +8,10 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+# Hériter à la fois de `str` et `Enum` donne un "enum de chaînes" : chaque membre EST
+# une string utilisable partout où une string est attendue (comparaison, sérialisation
+# JSON...), tout en restant une valeur fermée et nommée (Provider.GEE plutôt qu'une
+# chaîne libre "gee" qu'on pourrait mal orthographier ailleurs dans le code).
 class Provider(str, Enum):
     COPERNICUS_DATASPACE = "cdse"
     SENTINEL_HUB = "sentinel_hub"
@@ -30,6 +34,10 @@ class AuthManager:
     la résolution en valeur réelle se fait au point d'appel HTTP uniquement.
     """
 
+    # `raise NotImplementedError` marque une méthode comme "à écrire" : la SIGNATURE
+    # (nom, paramètres, type de retour) sert déjà de contrat/documentation pour le
+    # reste du plugin, avant même que le vrai code existe — pratique en phase de
+    # conception (ce fichier est un scaffold/spec, voir ROADMAP.md).
     def save_credentials(self, provider: Provider, **fields: str) -> Credentials:
         raise NotImplementedError
 
