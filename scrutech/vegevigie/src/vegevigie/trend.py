@@ -40,6 +40,10 @@ GREENING = 1
 
 def _mk_variance(values: np.ndarray, n: int) -> float:
     """Tie-corrected variance of the MK S statistic (matches pymannkendall)."""
+    # return_counts=True fait renvoyer à np.unique, en plus des valeurs distinctes, le
+    # nombre de fois où chacune apparaît : utile ici pour détecter les "ex-aequo"
+    # (plusieurs mois avec exactement la même valeur de NDVI), qui doivent réduire la
+    # variance de la statistique MK (d'où la formule de correction ci-dessous).
     unique, counts = np.unique(values, return_counts=True)
     if len(unique) == n:  # no ties
         return (n * (n - 1) * (2 * n + 5)) / 18.0
@@ -56,6 +60,9 @@ def mk_sen_1d(
     ``min_valid`` valid observations return all-NaN.
     """
     y = np.asarray(y, dtype="float64")
+    # np.flatnonzero(~np.isnan(y)) donne les POSITIONS (indices) des valeurs qui ne sont
+    # PAS manquantes (le `~` inverse le masque booléen isnan) : on garde ainsi trace des
+    # emplacements d'origine dans le temps, même après avoir retiré les trous.
     valid_idx = np.flatnonzero(~np.isnan(y))
     m = valid_idx.size
     if m < min_valid:
@@ -66,8 +73,12 @@ def mk_sen_1d(
     # the Theil-Sen slope divides the same differences by the *original* month
     # spacing (gaps preserved) — pairs involving NaN never enter either.
     yv = y[valid_idx]
+    # np.triu_indices(m, k=1) donne tous les couples d'indices (i, j) avec i < j parmi m
+    # éléments (le "triangle supérieur" d'une matrice m×m, sans la diagonale) : c'est
+    # l'ensemble de TOUTES les paires possibles de mesures, chacune comptée une seule
+    # fois (pas (i,j) ET (j,i), pas (i,i)) — exactement ce que demandent MK et Sen.
     iu, ju = np.triu_indices(m, k=1)
-    diffs = yv[ju] - yv[iu]
+    diffs = yv[ju] - yv[iu]  # toutes les différences "valeur plus tardive - plus ancienne"
 
     # --- MK on the NaN-skipped series ---
     s = float(np.sum(np.sign(diffs)))
@@ -118,6 +129,16 @@ def trend_dataset(
     if monthly.chunks is not None:
         monthly = monthly.chunk({time_dim: -1})
 
+    # `xr.apply_ufunc` applique une fonction numpy "brute" (qui ne connaît rien
+    # d'xarray) à un DataArray, en gérant tout le reste à notre place :
+    #   - input_core_dims=[[time_dim]] : `_kernel` reçoit, pour CHAQUE pixel, le tableau
+    #     1D de sa série temporelle complète (pas le cube entier d'un coup) ;
+    #   - vectorize=True : xarray se charge de rappeler `_kernel` pour chaque pixel
+    #     (x, y) — on n'écrit la logique que pour UNE série, pas pour toute la grille ;
+    #   - dask="parallelized" : si le cube est encore "paresseux" (dask), ce travail est
+    #     réparti sur les blocs/cœurs disponibles plutôt qu'exécuté d'un bloc ;
+    #   - output_core_dims=[[], [], [], []] : chaque sortie (slope, p, z, classe) est un
+    #     simple nombre par pixel (pas une nouvelle dimension temporelle).
     slope, pval, zscore, tclass = xr.apply_ufunc(
         _kernel,
         monthly,

@@ -11,6 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
+# pydantic est une bibliothèque de VALIDATION de données : une classe qui hérite de
+# BaseModel déclare ses champs avec leur type, et pydantic vérifie automatiquement (à la
+# création de l'objet) que les valeurs reçues sont correctes — un entier là où on attend
+# un entier, un texte respectant les contraintes (Field(ge=..., le=...) = "supérieur ou
+# égal à"/"inférieur ou égal à")... Si le fichier YAML contient une valeur invalide,
+# l'erreur est détectée tout de suite, avec un message clair, plutôt que de planter plus
+# tard au milieu d'un calcul.
 from pydantic import BaseModel, Field
 
 
@@ -44,6 +51,10 @@ class TimeConfig(BaseModel):
     start: int = Field(ge=2015, description="Sentinel-2 has no usable data before 2015")
     end: int
 
+    # model_post_init est appelée automatiquement par pydantic juste après la
+    # construction de l'objet : c'est l'endroit pour des vérifications qui portent sur
+    # PLUSIEURS champs à la fois (ici : la cohérence entre start et end), ce que
+    # `Field(...)` seul (qui ne voit qu'un champ à la fois) ne peut pas exprimer.
     def model_post_init(self, __context: object) -> None:
         if self.end < self.start:
             msg = f"time.end ({self.end}) must be >= time.start ({self.start})"

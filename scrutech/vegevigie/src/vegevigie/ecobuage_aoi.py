@@ -137,6 +137,13 @@ def _slope_percent(mnt_path: Path, bounds: tuple, transform, width: int, height:
             arr[arr == ds.nodata] = np.nan
         cell = abs(ds.transform.a)
 
+    # np.gradient calcule, pour chaque pixel d'altitude, la variation d'altitude entre
+    # ses voisins immédiats selon x (gx) et selon y (gy) — la pente locale dans chaque
+    # direction, divisée par `cell` (taille du pixel en mètres) pour être en vraie unité
+    # de pente (mètres montés par mètre parcouru), pas juste en "différence de valeurs".
+    # np.hypot(gx, gy) combine les deux composantes en une pente "toutes directions"
+    # confondues (théorème de Pythagore : la vraie pente ne suit pas forcément x ou y
+    # seuls, mais la direction de plus forte montée) ; ×100 convertit en pourcentage.
     gy, gx = np.gradient(arr, cell)
     slope_pct = np.hypot(gx, gy) * 100.0
     slope_pct = np.nan_to_num(slope_pct, nan=0.0)
@@ -166,6 +173,12 @@ def _access_from_roads(aoi, transform, width: int, height: int, access_max_m: fl
 
     from scipy.ndimage import distance_transform_edt
 
+    # distance_transform_edt calcule, pour chaque pixel FAUX (donc `~road_mask` : les
+    # pixels qui NE sont PAS une route), sa distance euclidienne au pixel VRAI le plus
+    # proche — ici, la route la plus proche. Résultat en nombre de pixels ; ×cell le
+    # convertit en mètres. C'est une façon rapide de calculer "distance à la route la
+    # plus proche" pour toute la grille d'un coup, sans comparer chaque pixel à chaque
+    # segment de route.
     cell = abs(transform.a)
     dist_m = distance_transform_edt(~road_mask) * cell
     return np.clip(1.0 - dist_m / access_max_m, 0.0, 1.0)

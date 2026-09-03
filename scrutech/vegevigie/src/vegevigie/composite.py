@@ -32,6 +32,10 @@ def monthly_median(ndvi: xr.DataArray, time_dim: str = "time") -> xr.DataArray:
     Resamples the time axis to month-start and takes the per-pixel median, skipping
     NaNs. Months with no valid observation come out as NaN.
     """
+    # .resample() regroupe les observations par intervalle de temps (ici, par mois
+    # calendaire grâce à MONTH_FREQ="MS") comme un groupby spécialisé sur les dates ;
+    # .median(skipna=True) calcule ensuite la médiane de chaque groupe en ignorant les
+    # éventuels NaN — un mois entièrement NaN reste NaN (rien à calculer une médiane).
     composite = ndvi.resample({time_dim: MONTH_FREQ}).median(skipna=True)
     return composite.rename("ndvi_monthly")
 

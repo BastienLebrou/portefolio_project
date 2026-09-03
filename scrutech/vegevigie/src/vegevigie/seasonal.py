@@ -23,7 +23,14 @@ def deseasonalize(monthly: xr.DataArray, time_dim: str = "time") -> xr.DataArray
 
     Pixel-wise, lazy on a dask-backed cube. Keeps the array name.
     """
+    # groupby(f"{time_dim}.month") regroupe TOUTES les observations de janvier
+    # ensemble (peu importe l'année), toutes celles de février ensemble, etc. — 12
+    # groupes. .mean(time_dim) donne alors la moyenne de chaque mois calendaire sur
+    # toutes les années disponibles : la "climatologie" (le profil saisonnier typique).
     climatology = monthly.groupby(f"{time_dim}.month").mean(time_dim)
+    # Refaire le même groupby puis soustraire `climatology` aligne automatiquement
+    # chaque valeur avec la moyenne DE SON PROPRE mois (xarray fait cette correspondance
+    # tout seul via les labels) : chaque janvier perd la moyenne des janviers, etc.
     anomaly = monthly.groupby(f"{time_dim}.month") - climatology
     return anomaly.rename(monthly.name)
 

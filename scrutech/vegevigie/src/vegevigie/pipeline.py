@@ -53,6 +53,10 @@ def build_settings(
     ``config/default.yaml`` (or ``base`` if given).
     """
     settings = base or load_settings()
+    # model_dump() convertit l'objet Settings (pydantic) en simple dictionnaire Python
+    # imbriqué ; on peut alors modifier certaines clés à la main (ci-dessous), avant de
+    # reconstruire un Settings validé avec model_validate() en fin de fonction — plus
+    # simple que de modifier chaque sous-objet pydantic un par un.
     payload = settings.model_dump()
     payload["aoi"]["small_bbox"] = list(bbox)
     payload["time"] = {"start": start_year, "end": end_year}
@@ -77,6 +81,10 @@ class PipelineResult:
     duckdb_path: Path | None = None
     timeline_parquet: Path | None = None
     scene_count: int = 0
+    # Pour une liste (mutable), on ne peut PAS écrire `written: list[Path] = []` en
+    # valeur par défaut : toutes les instances de PipelineResult partageraient alors la
+    # MÊME liste en mémoire (piège classique de Python). `field(default_factory=list)`
+    # dit à @dataclass d'appeler `list()` séparément pour CHAQUE nouvelle instance.
     written: list[Path] = field(default_factory=list)
 
 

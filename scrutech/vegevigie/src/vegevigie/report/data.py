@@ -33,6 +33,9 @@ class ReportInputs:
 
     def any(self) -> bool:
         """True if at least one pillar output was found."""
+        # vars(self) donne le dictionnaire {nom_du_champ: valeur} de l'instance — pratique
+        # ici pour parcourir TOUS les champs sans les lister un par un à la main (sauf
+        # "folder", qui n'est pas un résultat de pilier mais le dossier scanné).
         return any(v is not None for k, v in vars(self).items() if k != "folder")
 
     def present(self) -> list[str]:

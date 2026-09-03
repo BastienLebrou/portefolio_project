@@ -26,6 +26,11 @@ app = typer.Typer(
 
 logger = logging.getLogger("vegevigie")
 
+# `Annotated[Type, metadata]` attache une information supplémentaire à un type sans
+# changer le type lui-même : ici, `ConfigOpt` reste "un Path ou None" pour Python/mypy,
+# mais porte aussi la description de l'option `--config` pour typer. Définir ces alias
+# une fois permet de réutiliser exactement la même option (`--config`, `--verbose`...)
+# sur toutes les commandes ci-dessous sans réécrire `typer.Option(...)` à chaque fois.
 ConfigOpt = Annotated[
     Path | None,
     typer.Option("--config", help="Path to a YAML config file (default: config/default.yaml)."),
@@ -512,6 +517,12 @@ def run(
     for name, step in steps:
         typer.echo(f"── vegevigie {name} ──")
         try:
+            # Chaque commande typer (aoi(), search(), ...) appelle `raise typer.Exit(code=N)`
+            # pour s'arrêter — normalement ça termine tout le programme, mais ici on
+            # l'appelle comme une fonction Python normale à l'intérieur de `run`. On
+            # attrape donc cette exception nous-mêmes pour décider quoi faire : code 0 =
+            # l'étape s'est arrêtée proprement (souvent parce qu'elle était déjà en
+            # cache), on continue ; un code différent = vraie erreur, on arrête tout.
             step()
         except typer.Exit as exc:
             if exc.exit_code:  # non-zero -> a real failure; stop the pipeline

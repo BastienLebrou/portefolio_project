@@ -38,6 +38,9 @@ def rasterize_zones(communes: gpd.GeoDataFrame, template: xr.DataArray) -> xr.Da
     projected = communes.to_crs(crs)
     transform = template.rio.transform()
     out_shape = (template.sizes["y"], template.sizes["x"])
+    # `rasterize` (rasterio) attend une suite de (géométrie, valeur à peindre) : on lui
+    # donne chaque polygone commune avec SA position dans le tableau `communes` comme
+    # valeur — ça "peint" ainsi l'indice de la commune sur tous les pixels qu'elle couvre.
     shapes = ((geom, idx) for idx, geom in enumerate(projected.geometry))
     zones = rasterize(
         shapes,
@@ -60,11 +63,23 @@ def zone_groups(zones: xr.DataArray, n_zones: int) -> ZoneGroups:
     full-raster scan per (zone × statistic) with a single O(N log N) sort — the
     difference between seconds and minutes at department scale.
     """
-    z = np.asarray(zones.values).ravel()
+    # Idée : plutôt que de filtrer "quels pixels appartiennent à la commune 5 ?" à
+    # chaque statistique (un balayage complet du raster à chaque fois), on trie UNE FOIS
+    # tous les pixels par numéro de zone. Après le tri, les pixels d'une même commune se
+    # retrouvent forcément CÔTE À CÔTE (regroupés) — il ne reste qu'à retrouver où
+    # commence et où finit chaque groupe.
+    z = np.asarray(zones.values).ravel()  # aplatit la grille 2D en un simple vecteur 1D
+    # argsort renvoie les INDICES qui trieraient z (pas les valeurs triées elles-mêmes) ;
+    # kind="stable" garantit un ordre reproductible entre pixels de même zone.
     order = np.argsort(z, kind="stable")
     sorted_z = z[order]
+    # searchsorted trouve, par recherche dichotomique (rapide), l'endroit où chaque
+    # numéro de zone (0, 1, 2, ...) commence ("left") et finit ("right") dans le tableau
+    # trié : exactement les bornes du groupe de pixels de cette zone.
     starts = np.searchsorted(sorted_z, np.arange(n_zones), side="left")
     ends = np.searchsorted(sorted_z, np.arange(n_zones), side="right")
+    # Pour chaque zone, on récupère la tranche d'`order` correspondante : la liste des
+    # indices (positions dans le raster APLATI d'origine) des pixels de cette commune.
     return [order[s:e] for s, e in zip(starts, ends, strict=True)]
 
 

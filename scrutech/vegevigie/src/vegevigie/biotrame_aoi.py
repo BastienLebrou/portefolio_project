@@ -117,6 +117,11 @@ def _zonal_browning(grid, trend_tif: str | Path, browning_scale: float) -> pd.Se
     labels = rasterize(shapes, out_shape=arr.shape, transform=transform, fill=0, dtype="int32")
     labels = np.where(np.isfinite(arr), labels, 0)  # drop NaN pixels from their hexagon
 
+    # `ndimage.mean(valeurs, labels=..., index=idx)` calcule, EN UN SEUL APPEL, la
+    # moyenne des pixels de `arr` séparément pour chaque étiquette listée dans `idx` —
+    # ici, chaque étiquette est le numéro d'un hexagone (peint sur la grille juste avant
+    # par `rasterize`). C'est l'équivalent raster d'un `groupby(...).mean()` : une
+    # statistique "zonale" par hexagone, sans boucle Python explicite sur les hexagones.
     idx = np.arange(1, len(g) + 1)
     means = np.asarray(ndimage.mean(np.nan_to_num(arr), labels=labels, index=idx), dtype="float64")
     degradation = np.clip(-means / browning_scale, 0.0, 1.0)

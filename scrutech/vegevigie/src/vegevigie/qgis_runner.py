@@ -10,6 +10,16 @@ stack) and call:
 ``spec.json`` holds the run parameters. Progress is streamed as ``PROGRESS <pct>
 <msg>`` lines and the final output paths as a single ``RESULT <json>`` line, both
 parsed by the plugin.
+
+MÉCANISME DE COMMUNICATION ENTRE PROCESSUS : QGIS (processus A) lance ce script comme un
+sous-processus (processus B, avec un AUTRE interpréteur Python) et lit sa sortie standard
+(stdout) ligne par ligne pendant qu'il tourne. Comme les deux processus ne partagent pas
+de mémoire, on ne peut pas juste "retourner" un objet Python : on communique par du TEXTE
+simple sur un flux — chaque `print("PROGRESS ...")` est immédiatement lu côté QGIS pour
+mettre à jour sa barre de progression, et la ligne finale `print("RESULT ...")` porte le
+résultat encodé en JSON (un format texte universel, lisible par n'importe quel langage).
+`flush=True` force l'envoi immédiat de chaque ligne : sans lui, Python mettrait en mémoire
+tampon sa sortie, et QGIS ne recevrait les messages que par paquets, en retard.
 """
 
 from __future__ import annotations

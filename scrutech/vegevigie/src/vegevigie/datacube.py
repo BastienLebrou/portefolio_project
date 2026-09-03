@@ -102,9 +102,13 @@ def build_cube(
         bands=list(BAND_ALIASES),
         bbox=bbox,
         resolution=resolution,
+        # `chunks` dit à dask de découper le cube en blocs de chunk_size×chunk_size
+        # pixels plutôt que de tout charger comme un seul bloc géant : chaque opération
+        # ultérieure (NDVI, tendance...) pourra alors traiter les blocs un par un, sans
+        # jamais avoir besoin de faire tenir le cube entier en mémoire vive d'un coup.
         chunks={"x": chunk_size, "y": chunk_size},
         groupby="solar_day",
-    ).rename(BAND_ALIASES)
+    ).rename(BAND_ALIASES)  # renomme les bandes B04/B08/SCL en red/nir/scl (plus lisible)
     return harmonize_reflectance(cube)
 
 

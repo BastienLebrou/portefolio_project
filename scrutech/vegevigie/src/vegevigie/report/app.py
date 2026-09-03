@@ -110,6 +110,9 @@ def _raster_thumb(path: Path, title: str, cmap: str) -> None:
     with rasterio.open(path) as ds:
         arr = ds.read(1).astype("float64")
         if ds.nodata is not None:
+            # La valeur "nodata" (pixels hors zone d'analyse) est un simple nombre
+            # convenu (souvent -9999) : on la remplace par NaN pour que matplotlib
+            # l'affiche en transparent/vide plutôt que comme une fausse valeur.
             arr[arr == ds.nodata] = np.nan
     fig, ax = plt.subplots(figsize=(4, 3))
     im = ax.imshow(arr, cmap=cmap)

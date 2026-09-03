@@ -86,6 +86,13 @@ def forest_bati_interface(
         forest_u = forest_u.intersection(aoi_geom)
         bati_u = bati_u.intersection(aoi_geom)
 
+    # .buffer(contact_m) gonfle le bâti fusionné d'une marge de contact_m mètres dans
+    # toutes les directions : `reach` est donc "tout ce qui est à moins de contact_m
+    # d'une maison". .boundary donne le CONTOUR (la ligne) de la forêt plutôt que sa
+    # surface pleine : en l'intersectant avec `reach`, on ne garde que le morceau de
+    # lisière forestière qui tombe dans cette zone de contact — la ligne de front.
+    # `zone`, elle, garde la SURFACE (pas juste le contour) : toute la bande de forêt à
+    # l'intérieur de `reach`, la zone à débroussailler.
     reach = bati_u.buffer(contact_m)
     line = forest_u.boundary.intersection(reach)
     zone = forest_u.intersection(reach)

@@ -24,9 +24,14 @@ def slope_color(value: float | None) -> str:
     """Hex colour for a mean Sen's-slope value (None/NaN -> neutral grey)."""
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return NO_DATA_COLOR
+    # `_CMAP` (une "colormap" matplotlib) transforme un nombre entre 0 et 1 en couleur :
+    # 0 -> une extrémité de la palette (rouge, "browning"), 1 -> l'autre (vert,
+    # "greening"). Comme la pente réelle n'est pas entre 0 et 1 mais autour de
+    # ±_SLOPE_LIMIT, on la "clamp" (borne) d'abord dans cet intervalle, puis on la
+    # remet à l'échelle [0, 1] avant de demander sa couleur à la colormap.
     clamped = max(-_SLOPE_LIMIT, min(_SLOPE_LIMIT, value))
     unit = (clamped + _SLOPE_LIMIT) / (2 * _SLOPE_LIMIT)  # -> [0, 1]
-    return mcolors.to_hex(_CMAP(unit))
+    return mcolors.to_hex(_CMAP(unit))  # convertit la couleur (RVB) en code hexa "#rrggbb"
 
 
 @dataclass(frozen=True)

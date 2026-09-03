@@ -16,6 +16,9 @@ from pathlib import Path
 
 import matplotlib
 
+# "Agg" est un moteur de rendu matplotlib qui écrit directement dans un fichier image,
+# sans essayer d'ouvrir une fenêtre graphique — indispensable ici car ce script tourne
+# potentiellement sur un serveur/CI sans écran. Doit être choisi AVANT d'importer pyplot.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,6 +35,10 @@ def synthetic_scene(size: int = 200, seed: int = 7) -> tuple[np.ndarray, np.ndar
     blobs and a cloud-shadow strip, with an SCL band labelling them.
     """
     rng = np.random.default_rng(seed)
+    # np.mgrid[0:size, 0:size] fabrique deux grilles 2D : yy[i,j]=i et xx[i,j]=j pour
+    # chaque case (i, j) de l'image — utile pour calculer une valeur qui dépend de la
+    # POSITION du pixel (ex: un dégradé) sans boucle explicite. La division par `size`
+    # ramène les coordonnées dans l'intervalle [0, 1[.
     yy, xx = np.mgrid[0:size, 0:size] / size
 
     # Base surface reflectance: vegetation stronger (higher NIR, lower Red) SW.
