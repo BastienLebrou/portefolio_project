@@ -55,24 +55,34 @@ def mk_sen_1d(
     Returns ``(sen_slope, mk_pvalue, mk_z, trend_class)``. Pixels with fewer than
     ``min_valid`` valid observations return all-NaN.
     """
+    # PÉDAGOGIE — ce que fait ce noyau, en clair : sur la série NDVI d'UN pixel (une valeur
+    # par mois), on répond à « ça monte ou ça descend, est-ce significatif, et à quelle vitesse ».
     y = np.asarray(y, dtype="float64")
+
+    # 1) On repère les mois RÉELLEMENT observés (un nuage/gap = NaN). `valid_idx` garde leur
+    #    position d'origine sur l'axe du temps (essentiel pour la vitesse, plus bas).
     valid_idx = np.flatnonzero(~np.isnan(y))
     m = valid_idx.size
     if m < min_valid:
+        # Trop peu d'observations → on refuse de conclure (tout NaN), plutôt que de bluffer.
         return (np.nan, np.nan, np.nan, np.nan)
 
-    # One pairwise pass over the valid observations serves both statistics:
-    # MK's S uses the sign of each value difference (NaN-skipped series), while
-    # the Theil-Sen slope divides the same differences by the *original* month
-    # spacing (gaps preserved) — pairs involving NaN never enter either.
+    # 2) On compare CHAQUE mois à chaque autre mois (toutes les paires i<j), une seule fois.
+    #    `triu_indices` = les indices du triangle supérieur d'une matrice m×m → toutes les paires.
+    #    `diffs` = la variation de NDVI entre les deux mois de chaque paire. Ces paires servent
+    #    aux DEUX statistiques ci-dessous.
     yv = y[valid_idx]
     iu, ju = np.triu_indices(m, k=1)
     diffs = yv[ju] - yv[iu]
 
-    # --- MK on the NaN-skipped series ---
+    # 3) MANN-KENDALL — « ça monte ou ça descend ? ». On ne regarde QUE le signe de chaque
+    #    variation (+1 si ça a monté, −1 si ça a baissé, 0 si égal). La somme S de ces signes
+    #    est très positive si la série grimpe globalement, très négative si elle chute.
     s = float(np.sum(np.sign(diffs)))
-    var_s = _mk_variance(yv, m)
+    var_s = _mk_variance(yv, m)  # dispersion attendue de S sous l'hypothèse « pas de tendance »
 
+    # On standardise S en un score z (nb d'écarts-types à zéro). La « −1 / +1 » est la
+    # correction de continuité de Kendall (rapproche S de 0 d'un cran avant de diviser).
     if var_s <= 0:
         z = 0.0
     elif s > 0:
@@ -81,11 +91,18 @@ def mk_sen_1d(
         z = (s + 1) / np.sqrt(var_s)
     else:
         z = 0.0
+    # p-value bilatérale : probabilité d'observer un z aussi extrême par pur hasard.
+    # Petit p (< alpha) = la tendance est significative, pas un artefact.
     p = float(2 * norm.sf(abs(z)))
 
-    # --- Theil-Sen slope on original positions ---
+    # 4) PENTE DE THEIL-SEN — « à quelle vitesse ? ». Pour chaque paire, la pente = variation
+    #    de NDVI / nombre de mois écoulés (on utilise les positions D'ORIGINE, donc les trous
+    #    comptent). La MÉDIANE de toutes ces pentes est la tendance robuste : quelques mois
+    #    aberrants ne la déplacent quasiment pas (contrairement à une moyenne).
     slope = float(np.median(diffs / (valid_idx[ju] - valid_idx[iu])))
 
+    # 5) VERDICT — on ne classe « verdissement » / « brunissement » que si c'est significatif ;
+    #    sinon « pas de tendance » (on ne sur-interprète pas le bruit).
     significant = p < alpha
     if significant and z > 0:
         trend_class = float(GREENING)
