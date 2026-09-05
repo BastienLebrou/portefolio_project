@@ -20,7 +20,7 @@
 <text x="119.286" y="228" font-size="11" fill="#898781" text-anchor="middle">Mar</text>
 <path d="M 156.14 206.00 V 178.29 Q 156.14 174.29 160.14 174.29 H 176.14 Q 180.14 174.29 180.14 178.29 V 206.00 Z" fill="#2a78d6"/>
 <text x="168.143" y="228" font-size="11" fill="#898781" text-anchor="middle">Mer</text>
-<path d="M 205.00 206.00 V 183.57 Q 205.00 179.57 209.00 179.57 H 225.00 Q 229.00 179.57 229.00 183.57 V 206.00 Z" fill="#2a78d6"/>
+<path d="M 205.00 206.00 V 178.29 Q 205.00 174.29 209.00 174.29 H 225.00 Q 229.00 174.29 229.00 178.29 V 206.00 Z" fill="#2a78d6"/>
 <text x="217" y="228" font-size="11" fill="#898781" text-anchor="middle">Jeu</text>
 <path d="M 253.86 206.00 V 141.29 Q 253.86 137.29 257.86 137.29 H 273.86 Q 277.86 137.29 277.86 141.29 V 206.00 Z" fill="#2a78d6"/>
 <text x="265.857" y="228" font-size="11" fill="#898781" text-anchor="middle">Ven</text>
