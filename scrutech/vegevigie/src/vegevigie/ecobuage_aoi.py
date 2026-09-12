@@ -124,11 +124,12 @@ def _slope_percent(mnt_path: Path, bounds: tuple, transform, width: int, height:
     The DEM CRS tag may be missing; it is assumed to be Lambert-93 (its coordinates are).
     """
     import rasterio
+    from core.cog import raster_source
     from rasterio.warp import Resampling, reproject
     from rasterio.windows import from_bounds
 
     minx, miny, maxx, maxy = bounds
-    with rasterio.open(mnt_path) as ds:
+    with rasterio.open(raster_source(mnt_path)) as ds:
         pad = 200.0  # metres of margin so edge gradients are valid
         win = from_bounds(minx - pad, miny - pad, maxx + pad, maxy + pad, ds.transform)
         arr = ds.read(1, window=win, boundless=True, fill_value=np.nan).astype("float64")
