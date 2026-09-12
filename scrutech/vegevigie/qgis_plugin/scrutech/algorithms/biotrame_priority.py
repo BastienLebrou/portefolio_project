@@ -39,6 +39,7 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
     EXTENT = "EXTENT"
     RESOLUTION = "RESOLUTION"
     VEG_TREND = "VEG_TREND"
+    MNT = "MNT"
     TVB_WFS = "TVB_WFS"
     TVB_TYPENAME = "TVB_TYPENAME"
     PYTHON_EXE = "PYTHON_EXE"
@@ -95,6 +96,14 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterRasterLayer(
                 self.VEG_TREND,
                 self.tr("VegeVigie trend raster (optional — dégradation axis)"),
+                optional=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterFile(
+                self.MNT,
+                self.tr("DEM / MNT (.tif) pour zones humides (optionnel; vide = SCRUTECH_MNT env)"),
+                behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
             )
         )
@@ -156,12 +165,16 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         tvb_typename = self.parameterAsString(
             parameters, self.TVB_TYPENAME, context
         ).strip() or os.environ.get("SCRUTECH_TVB_TYPENAME", "")
+        mnt = self.parameterAsString(parameters, self.MNT, context).strip() or os.environ.get(
+            "SCRUTECH_MNT", ""
+        )
         spec = {
             "task": "biotrame_aoi",
             "bbox": list(bbox),
             "resolution": resolution,
             "out_folder": str(out_folder),
             "veg_trend_tif": self._raster_source(parameters, self.VEG_TREND, context),
+            "mnt_path": mnt or None,
             "tvb_wfs_url": tvb_wfs or None,
             "tvb_typename": tvb_typename or None,
         }

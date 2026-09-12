@@ -57,3 +57,13 @@ def test_corridors_drive_connectivity_when_present() -> None:
     real = score_mesh(grid, reservoirs, corridors=corridors)
     # The connectivity field must differ when real corridors drive it.
     assert not proxy["connectivite"].equals(real["connectivite"])
+
+
+def test_enjeu_boost_lifts_enjeu() -> None:
+    aoi = gpd.GeoDataFrame(geometry=[box(4.60, 44.50, 4.70, 44.60)], crs="EPSG:4326")
+    grid = hex_grid(aoi, resolution=8)
+    empty = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")  # no reservoirs → enjeu = 0
+    boost = pd.Series(0.8, index=grid["hex_id"])  # wetlands everywhere
+    scored = score_mesh(grid, empty, enjeu_boost=boost)
+    # Enjeu is lifted to the wetland potential even without reservoirs.
+    assert (scored["enjeu"] >= 0.79).all()

@@ -187,6 +187,7 @@ def _run_biotrame_aoi(spec: dict) -> int:
             out_dir=Path(spec["out_folder"]),
             resolution=int(spec.get("resolution", 8)),
             veg_trend_tif=spec.get("veg_trend_tif"),
+            mnt_path=spec.get("mnt_path"),
             corridor_max_m=float(spec.get("corridor_max_m", 2000.0)),
             tvb_wfs_url=spec.get("tvb_wfs_url"),
             tvb_typename=spec.get("tvb_typename"),

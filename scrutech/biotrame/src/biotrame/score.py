@@ -44,15 +44,20 @@ def score_mesh(
     degradation: pd.Series | None = None,
     corridor_max_m: float = 2000.0,
     corridors: gpd.GeoDataFrame | None = None,
+    enjeu_boost: pd.Series | None = None,
 ) -> gpd.GeoDataFrame:
     """Assemble the scored mesh: enjeu + connectivité (+ optional dégradation) → score + classe.
 
     ``degradation`` (if given) is a 0-1 Series indexed by ``hex_id`` computed raster-side by
     the orchestrator. ``corridors`` (real TVB) drive the connectivité axis when provided;
-    otherwise it falls back to proximity-to-reservoir. Returns the hexagons with the per-axis
-    columns, ``score`` and ``classe``.
+    otherwise it falls back to proximity-to-reservoir. ``enjeu_boost`` (0-1 Series, e.g. wetland
+    potential) lifts the enjeu axis by a max(): a cell matters if it is a reservoir OR a likely
+    wetland. Returns the hexagons with the per-axis columns, ``score`` and ``classe``.
     """
     enjeu = reservoir_overlap(hexagons, reservoirs)
+    if enjeu_boost is not None:
+        boost = enjeu_boost.reindex(hexagons["hex_id"]).fillna(0.0).to_numpy()
+        enjeu = pd.Series(np.maximum(enjeu.to_numpy(), boost), index=enjeu.index, name="enjeu")
     if corridors is not None and not corridors.empty:
         connect = corridor_proximity(hexagons, corridors, corridor_max_m)
     else:

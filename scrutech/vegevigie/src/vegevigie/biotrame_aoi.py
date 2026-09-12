@@ -33,6 +33,7 @@ def build_priority_mesh_from_aoi(
     *,
     resolution: int = 8,
     veg_trend_tif: str | Path | None = None,
+    mnt_path: str | Path | None = None,
     reservoir_kinds: tuple[str, ...] | None = None,
     corridor_max_m: float = 2000.0,
     browning_scale: float = 0.01,
@@ -65,6 +66,11 @@ def build_priority_mesh_from_aoi(
         report(65, "Zonal degradation from the VegeVigie trend raster…")
         degradation = _zonal_browning(grid, veg_trend_tif, browning_scale)
 
+    enjeu_boost = None
+    if mnt_path:
+        report(72, "Zones humides potentielles (humidité topographique du MNT)…")
+        enjeu_boost = _zonal_wetness(grid, mnt_path)
+
     report(80, "Crossing axes → priority score…")
     scored = score_mesh(
         grid,
@@ -72,6 +78,7 @@ def build_priority_mesh_from_aoi(
         degradation=degradation,
         corridor_max_m=corridor_max_m,
         corridors=corridors,
+        enjeu_boost=enjeu_boost,
     )
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -88,6 +95,7 @@ def build_priority_mesh_from_aoi(
         "n_reservoirs": int(len(reservoirs)),
         "connectivity_source": "tvb_corridors" if has_tvb else "reservoir_proximity_proxy",
         "axes": ["enjeu", "connectivite"] + (["degradation"] if degradation is not None else []),
+        "enjeu_boost": "zones_humides_mnt" if enjeu_boost is not None else None,
         "resolution": resolution,
     }
     report(100, f"Biotrame: {info['n_prioritaire']}/{info['n_hexagons']} hexagones prioritaires.")
@@ -122,3 +130,37 @@ def _zonal_browning(grid, trend_tif: str | Path, browning_scale: float) -> pd.Se
     degradation = np.clip(-means / browning_scale, 0.0, 1.0)
     degradation = np.nan_to_num(degradation, nan=0.0)
     return pd.Series(degradation, index=grid["hex_id"])
+
+
+def _zonal_wetness(grid, mnt_path: str | Path) -> pd.Series:
+    """Per-hexagon wetland potential (0-1) from the DEM (topographic wetness), zonal-averaged.
+
+    Reads the DEM window over the AOI (CRS assumed Lambert-93 if untagged), computes the
+    topographic wetness (flat + depression), then the mean per hexagon.
+    """
+    import rasterio
+    from rasterio.features import rasterize
+    from rasterio.windows import from_bounds
+    from scipy import ndimage
+
+    from vegevigie.wetland import topographic_wetness
+
+    g = grid.to_crs(L93)
+    minx, miny, maxx, maxy = g.total_bounds
+    with rasterio.open(mnt_path) as ds:
+        pad = 300.0  # metres, so the neighborhood filter has context at the edges
+        win = from_bounds(minx - pad, miny - pad, maxx + pad, maxy + pad, ds.transform)
+        dem = ds.read(1, window=win, boundless=True, fill_value=np.nan).astype("float64")
+        win_transform = ds.window_transform(win)
+        if ds.nodata is not None:
+            dem[dem == ds.nodata] = np.nan
+        cell = abs(ds.transform.a)
+
+    wetness = topographic_wetness(dem, cell)
+    shapes = [(geom, i + 1) for i, geom in enumerate(g.geometry) if geom is not None]
+    labels = rasterize(
+        shapes, out_shape=wetness.shape, transform=win_transform, fill=0, dtype="int32"
+    )
+    idx = np.arange(1, len(g) + 1)
+    means = np.asarray(ndimage.mean(wetness, labels=labels, index=idx), dtype="float64")
+    return pd.Series(np.nan_to_num(means, nan=0.0), index=grid["hex_id"])
