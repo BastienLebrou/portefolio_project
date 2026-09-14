@@ -103,9 +103,7 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
-                self.tr(
-                    "Python executable with the 'geoai' extra (auto-detected if empty)"
-                ),
+                self.tr("Python executable with the 'geoai' extra (auto-detected if empty)"),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
             )
