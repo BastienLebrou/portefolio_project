@@ -137,6 +137,10 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             str(app),
             "--server.port",
             str(port),
+            # Bind to loopback only: the report holds local analysis data and must not be
+            # reachable from the LAN/WAN (Streamlit otherwise listens on 0.0.0.0).
+            "--server.address",
+            "127.0.0.1",
             "--server.headless",
             "true",
             "--browser.gatherUsageStats",
