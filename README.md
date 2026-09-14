@@ -266,6 +266,15 @@ menacées par le climat en 2050 ? Prototype qui pose la chaîne ; les scores ré
 
 ## 🔬 Analyses en images
 
+**Biotrame — la maille qui intègre tout.** Sortie réelle du moteur sur une emprise en
+Ardèche : 412 hexagones H3 (r8) classés par croisement *enjeu × connectivité × dégradation*
+(réservoirs Natura 2000/ZNIEFF, zones humides déduites du MNT, tendance de verdissement). Les
+corridors rouges sont les mailles prioritaires pour la compensation écologique (ERC).
+
+<p align="center">
+  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Maille de priorité Biotrame (H3 r8) sur une AOI en Ardèche : hexagones classés prioritaire/à étudier/secondaire" width="62%">
+</p>
+
 Figures produites par le vrai code du pipeline VegeVigie (démos sur données synthétiques,
 reproductibles via `vegevigie run --small`) :
 
