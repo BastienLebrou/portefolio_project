@@ -81,3 +81,16 @@ def test_replace_partition_with_extra_keys(tmp_path: Path) -> None:
     replace_partition(con, "vege_timeline", "a", rows, extra_keys={"y0": 2018, "y1": 2025})
     assert con.execute("SELECT count(*) FROM vege_timeline").fetchone()[0] == 1
     con.close()
+
+
+def test_ident_rejects_injection_and_accepts_names() -> None:
+    from core.db import _ident
+
+    assert _ident("commune_stats") == "commune_stats"
+    assert _ident("_geom2") == "_geom2"
+    for bad in ('t"; DROP TABLE x;--', "a b", "2col", "tbl-1", "", "x);"):
+        try:
+            _ident(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"identifier not rejected: {bad!r}")

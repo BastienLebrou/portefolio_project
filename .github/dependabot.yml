@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Alertes et mises à jour des dépendances Python (CVE) des piliers packagés.
+  - package-ecosystem: "pip"
+    directory: "/scrutech/vegevigie"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "pip"
+    directory: "/scrutech/sdbpi"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+  # Actions GitHub (versions d'actions figées / vulnérables).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

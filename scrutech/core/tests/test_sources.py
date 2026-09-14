@@ -99,3 +99,14 @@ def test_fetch_biodiversity_reservoirs_combines_kinds(monkeypatch) -> None:
     assert list(gdf.columns) == ["kind", "nom_site", "geometry"] or "geometry" in gdf.columns
     assert (gdf["nom_site"] == "Site X").all()
     assert gdf.crs.to_epsg() == 2154
+
+
+def test_fetch_tvb_corridors_rejects_non_http_url() -> None:
+    import pytest
+
+    from core import sources
+
+    aoi = gpd.GeoDataFrame(geometry=[box(4.6, 44.5, 4.7, 44.6)], crs="EPSG:4326")
+    for bad in ("file:///etc/passwd", "ftp://x/y", "/local/path"):
+        with pytest.raises(ValueError, match="http"):
+            sources.fetch_tvb_corridors(aoi, "ms:corridors", wfs_url=bad)

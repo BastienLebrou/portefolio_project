@@ -146,7 +146,16 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             "--browser.gatherUsageStats",
             "false",
         ]
-        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
+
+        # The report only needs SCRUTECH_RESULTS; never hand credentials to it (it renders
+        # local data and has no use for GEE/R2 secrets) — least privilege for the child.
+        def _is_secret(k: str) -> bool:
+            up = k.upper()
+            return up.startswith(("R2_", "AWS_")) or any(
+                s in up for s in ("SECRET", "CREDENTIAL", "TOKEN", "PASSWORD")
+            )
+
+        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP and not _is_secret(k)}
         env["SCRUTECH_RESULTS"] = results
         feedback.pushInfo("Launching: " + " ".join(cmd))
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(

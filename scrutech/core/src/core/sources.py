@@ -109,6 +109,10 @@ def fetch_tvb_corridors(
     own ``typename``. Pass the region's ``wfs_url`` + ``typename`` (e.g. from the biotrame
     algorithm parameters). Returns the corridor geometries (EPSG:2154), clipped to the AOI.
     """
+    # A WFS endpoint is an http(s) service; refuse other schemes (file://, ftp://…) so a bad
+    # config value can't make GDAL/requests read something unexpected.
+    if not str(wfs_url).lower().startswith(("http://", "https://")):
+        raise ValueError(f"TVB WFS URL must be http(s): {wfs_url!r}")
     return fetch_bdtopo(aoi, typename, keep or [], timeout=timeout, wfs_url=wfs_url)
 
 

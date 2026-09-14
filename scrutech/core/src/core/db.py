@@ -12,6 +12,7 @@ idempotent and never leaves orphaned rows.
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,18 @@ from core.storage import db_path
 logger = logging.getLogger("scrutech")
 
 SCHEMA_SQL = Path(__file__).resolve().parents[3] / "storage" / "schema.sql"
+
+# Table/column names are interpolated into SQL (they can't be bound as parameters), so we
+# refuse anything that isn't a plain identifier — defence-in-depth against SQL injection even
+# though callers pass code-controlled names today.
+_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _ident(name: str) -> str:
+    """Return ``name`` if it is a safe SQL identifier, else raise ValueError."""
+    if not isinstance(name, str) or not _IDENT.match(name):
+        raise ValueError(f"Unsafe SQL identifier: {name!r}")
+    return name
 
 
 def connect(path: str | Path | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -66,10 +79,11 @@ def replace_partition(
     A GeoDataFrame's geometry is stored as DuckDB GEOMETRY (via WKB). Returns the
     number of rows inserted.
     """
+    table = _ident(table)
     conditions = ['"aoi_id" = ?']
     params: list[Any] = [aoi_id]
     for key, value in (extra_keys or {}).items():
-        conditions.append(f'"{key}" = ?')
+        conditions.append(f'"{_ident(key)}" = ?')
         params.append(value)
     con.execute(f'DELETE FROM "{table}" WHERE ' + " AND ".join(conditions), params)
 
@@ -78,8 +92,9 @@ def replace_partition(
         logger.info("replace_partition: %s aoi=%s -> 0 row (partition cleared)", table, aoi_id)
         return 0
 
-    cols = ", ".join(f'"{c}"' for c in frame.columns)
-    select = ", ".join("ST_GeomFromWKB(geom)" if c == "geom" else f'"{c}"' for c in frame.columns)
+    names = [_ident(c) for c in frame.columns]
+    cols = ", ".join(f'"{c}"' for c in names)
+    select = ", ".join("ST_GeomFromWKB(geom)" if c == "geom" else f'"{c}"' for c in names)
     con.register("_incoming", frame)
     try:
         con.execute(f'INSERT INTO "{table}" ({cols}) SELECT {select} FROM _incoming')
