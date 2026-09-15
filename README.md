@@ -31,6 +31,9 @@ la donnée toute seule, l'analyse, et rend des **cartes prêtes à ouvrir**.
 Chaque outil répond à **une question** que se posent les collectivités, les gestionnaires
 d'espaces naturels ou les bureaux d'études. Le tout forme une seule plateforme, **ScruTech**.
 
+> 🧭 **Tu explores le code ?** Commence par le [**guide du dépôt**](GUIDE.md) : il indique, pour
+> chaque outil, le fichier à ouvrir et ce qu'il fait.
+
 ## Un aperçu, en images
 
 La carte ci-dessous est une vraie sortie de l'outil sur une zone en Ardèche. Chaque hexagone
@@ -114,9 +117,9 @@ peut relancer à l'identique. Les grands blocs techniques :
 | Qualité du code | plus de 150 tests automatisés, intégration continue, typage |
 
 Le tout repose sur un **socle commun** (`core`) : une zone en entrée, et tout le reste en
-découle (lecture / écriture des données, base spatiale, rangement des résultats). Le détail
-complet est dans [`CARTOGRAPHIE.md`](scrutech/CARTOGRAPHIE.md) et la
-[politique de sécurité](SECURITY.md).
+découle (lecture / écriture des données, base spatiale, rangement des résultats). Pour trouver
+n'importe quel script, voir le [**guide du dépôt**](GUIDE.md) ; la
+[politique de sécurité](SECURITY.md) complète le tableau.
 
 </details>
 

@@ -1,5 +1,10 @@
 # Écobuage — aptitude au brûlage dirigé (analyse multicritère SIG)
 
+> **🧭 Où est le vrai code ?** Ce dossier contient le calcul « pur » (`ecobuage.py`) et des
+> notes. Le fichier qui **lance l'analyse sur une zone** est
+> [`../vegevigie/src/vegevigie/ecobuage_aoi.py`](../vegevigie/src/vegevigie/ecobuage_aoi.py).
+> Carte complète du dépôt : [GUIDE.md](../../GUIDE.md).
+
 Identifier et hiérarchiser les zones pertinentes pour l'écobuage sur un territoire
 pastoral. Méthodologie reproductible : pile de rasters-critères alignés → scoring
 pondéré 0-100 → 3 classes → GeoTIFF ouvrable en SIG.

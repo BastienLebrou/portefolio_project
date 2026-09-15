@@ -3,6 +3,7 @@
 /*
 !/.gitignore
 !/README.md
+!/GUIDE.md
 !/SECURITY.md
 !/.github/
 !/assets/
@@ -10,7 +11,6 @@
 !/scrutech/
 !/ROADMAP.md
 !/QGIS_PLUGIN.md
-!/PROMPT_audit_reorg.md
 
 # Artefacts / environnements — jamais versionnés
 __pycache__/

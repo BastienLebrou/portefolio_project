@@ -1,5 +1,10 @@
 # PAFF — Protection Automatisée des Feux de Forêt
 
+> **🧭 Où est le vrai code ?** Ce dossier ne contient que la conception (schémas, notes). Le
+> code qui **calcule l'interface forêt/bâti sur une zone** est
+> [`../vegevigie/src/vegevigie/interface.py`](../vegevigie/src/vegevigie/interface.py).
+> Carte complète du dépôt : [GUIDE.md](../../GUIDE.md).
+
 Dossier de conception issu de la réflexion « Lead Geodata Engineer » : architecture
 de données et pipelines d'analyse spatiale, avec un premier livrable implémenté —
 le calcul de l'**interface habitat-forêt (WUI)**.
