@@ -24,9 +24,9 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 
-from config import CRS_L93, CRS_WGS84, Config
-from net import SourceError, make_session
-from processing import (
+from sdbpi_config import CRS_L93, CRS_WGS84, Config
+from sdbpi_net import SourceError, make_session
+from sdbpi_processing import (
     build_result,
     clip_to_polygon,
     count_etablissements,
@@ -34,7 +34,7 @@ from processing import (
     sirene_to_points,
     summarize,
 )
-from sources import (
+from sdbpi_sources import (
     communes_in_bbox,
     fetch_batiments,
     fetch_commune,

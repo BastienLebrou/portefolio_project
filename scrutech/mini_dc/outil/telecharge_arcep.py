@@ -29,7 +29,7 @@ from pathlib import Path
 import pandas as pd
 import geopandas as gpd
 
-import config as C
+import mini_dc_config as C
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")

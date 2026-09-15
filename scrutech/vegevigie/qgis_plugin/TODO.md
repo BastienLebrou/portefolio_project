@@ -18,9 +18,10 @@
    proxy proximité tant que `SCRUTECH_TVB_WFS` (ou le paramètre d'algo) n'est pas
    renseigné (voir `scrutech/biotrame/TVB_SOURCES.md`). Rien à coder — reste en TODO
    pour validation du endpoint AURA depuis un réseau non restreint.
-6. **Scaffold `scrutech/plugin/` (spec v2, QGIS 4.0, STAC/SAR)** — mis en pause. Sera
-   repris plus tard comme fonctionnalité à part, avec son propre branding — pas fusionné
-   dans le hub v1 (`vegevigie/qgis_plugin/`).
+6. **Scaffold `scrutech/plugin_v2_paused/` (spec v2, QGIS 4.0, STAC/SAR)** — mis en pause,
+   renommé (2026-09-15) pour ne plus se confondre avec le hub v1 lors de la navigation
+   dans le dépôt. Sera repris plus tard comme fonctionnalité à part, avec son propre
+   branding — pas fusionné dans le hub v1 (`vegevigie/qgis_plugin/`).
 7. **Points en suspens** (palette icônes, `experimental=True`, version `0.4.0`, soumission
    au dépôt officiel QGIS) — actés comme non bloquants pour une v1 de test. À trancher au
    moment de la publication publique, pas avant.
@@ -117,6 +118,20 @@ Liste complète d'idées et point d'implantation par pilier : voir le message de
   haut). Le téléchargement réel (~375 Mo) n'a pas non plus été exercé depuis cet
   environnement (réseau restreint) ; seule la logique de pinning est vérifiée par les
   tests.
+
+### Durci (2026-09-15) — avant mise à disposition publique
+
+`segment_anything` (dépendance de `segment-geospatial`) charge le checkpoint en interne
+avec un `torch.load()` nu (pickle, RCE connue) — hors de notre contrôle. Ajout d'une porte
+de sécurité dans `segment_raster()` : le fichier (déjà vérifié sha256/TOFU) est d'abord
+rechargé nous-mêmes avec `weights_only=True` (`_reject_unsafe_checkpoint` dans
+`vegevigie/geoai_segment.py`) ; s'il contient autre chose qu'un état de tenseurs simple, il
+est rejeté avant d'atteindre le loader non sûr. Pas de `.safetensors` disponible côté Meta
+pour ce checkpoint — `weights_only=True` est le fallback documenté dans ce même TODO.
+2 tests ajoutés (`test_reject_unsafe_checkpoint_*`, `pytest.importorskip("torch")` — donc
+skip hors extra `geoai`, comme le reste de la suite torch). Les 4 points restants de la
+checklist § Sécurité (HTTPS, URL pinnée, cache hors repo, sha256 obligatoire) étaient déjà
+en place avant ce passage — vérifiés à cette occasion, rien à changer.
 
 ### Backlog restant (pas commencé, pas prioritaire pour l'instant)
 - Intégration écobuage : auto-dériver le raster critère combustible/embroussaillement

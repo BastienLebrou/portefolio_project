@@ -1,6 +1,6 @@
 """mini_dc offline anchor — the pure geodesy helper (no DuckDB, no network).
 
-Full pipeline validation lives in ``tests_pipeline.run_tests(con)`` (SQL invariants over a
+Full pipeline validation lives in ``mini_dc_checks.run_tests(con)`` (SQL invariants over a
 built DuckDB with the spatial extension); that is a DB-integration harness, not a unit test.
 This pins the one pure function so a refactor that breaks the AOI centring is caught in CI.
 """

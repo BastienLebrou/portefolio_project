@@ -1,4 +1,4 @@
-"""Put the mini_dc flat modules (config, generate_synthetic, …) on the path for tests."""
+"""Put the mini_dc flat modules (mini_dc_config, generate_synthetic, …) on the path for tests."""
 
 import sys
 from pathlib import Path

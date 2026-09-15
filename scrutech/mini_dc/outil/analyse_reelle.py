@@ -28,9 +28,9 @@ import json
 import geopandas as gpd
 from shapely import from_wkb
 
-import config as C
-from db import connect
-from pipeline import setup_macros
+import mini_dc_config as C
+from mini_dc_db import connect
+from mini_dc_pipeline import setup_macros
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")

@@ -8,7 +8,7 @@ hexagonale). On crée aussi les schémas logiques du projet.
 
 import duckdb
 
-from config import DB_PATH
+from mini_dc_config import DB_PATH
 
 
 SCHEMAS = ("staging", "intermediate", "marts", "ref")

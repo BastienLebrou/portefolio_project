@@ -17,7 +17,7 @@ Ici :
 - le **quai** = les fichiers `data/raw/*.parquet` (le « contrat »),
 - le **fournisseur fictif** = `generate_synthetic.py` (données inventées),
 - le **fournisseur réel** = `adapter_donnees_reelles.py` (cadastre, ARCEP…),
-- la **chaîne** = `pipeline.py`.
+- la **chaîne** = `mini_dc_pipeline.py`.
 
 → On peut changer la source de données sans jamais toucher au pipeline. C'est le
 premier réflexe d'ingénierie : **découpler** l'ingestion du traitement.
@@ -38,7 +38,7 @@ et qui a deux super-pouvoirs ici :
 Réflexe : **on garde le calcul DANS la base**. On n'aspire pas les données vers
 Python pour les retraiter. Le code Python ne fait qu'**orchestrer** des requêtes.
 
-`db.py` est le portier : il ouvre la base, charge les 2 extensions, crée les
+`mini_dc_db.py` est le portier : il ouvre la base, charge les 2 extensions, crée les
 schémas. Tout le monde passe par lui.
 
 ---
@@ -69,7 +69,7 @@ des voisins immédiats** (`h3_grid_disk`), au lieu de tout l'univers.
 Analogie : pour trouver tes voisins, tu ne sonnes pas à toutes les portes de
 France — tu regardes **ton pâté de maisons**. H3 = le pâté de maisons.
 
-Dans le code (`pipeline.py`), tu vois systématiquement :
+Dans le code (`mini_dc_pipeline.py`), tu vois systématiquement :
 ```sql
 JOIN ... ON list_contains(h3_grid_disk(p.h3_res9, k), autre.h3_res9)
        AND ST_Intersects(...)        -- test exact, seulement sur les candidats
@@ -82,7 +82,7 @@ Le H3 **présélectionne** (rapide), le `ST_*` **tranche** (exact). C'est le mot
 
 ---
 
-## 5. La chaîne en 3 couches (le fichier `pipeline.py`)
+## 5. La chaîne en 3 couches (le fichier `mini_dc_pipeline.py`)
 
 Comme en cuisine pro : on ne mélange pas l'épluchage et le dressage.
 
@@ -125,11 +125,11 @@ score = foncier + nuisances + fibre + énergie + réglementaire + bonus   (max 1
 ```
 
 Puis un classement commercial : **Premium** (≥ 90), **Bon** (≥ 70), **Moyen**.
-Les seuils sont dans `config.py` — un survivant des 5 filtres est déjà bon, donc
+Les seuils sont dans `mini_dc_config.py` — un survivant des 5 filtres est déjà bon, donc
 on place la barre « Premium » haut pour distinguer l'élite.
 
 Tous ces nombres (50 m², 5 m, 36 kVA, pondérations…) sont **centralisés dans
-`config.py`** : aucune « valeur magique » perdue dans une requête. Changer une
+`mini_dc_config.py`** : aucune « valeur magique » perdue dans une requête. Changer une
 règle = changer une ligne.
 
 ---
@@ -158,7 +158,7 @@ l'étape 3.
 
 ---
 
-## 9. Les tests (`tests_pipeline.py`)
+## 9. Les tests (`mini_dc_checks.py`)
 
 8 vérifications qui DOIVENT être vraies, sinon le résultat est faux :
 unicité des parcelles, géométries valides, score dans [0, 100], entonnoir
@@ -188,7 +188,7 @@ se répéter).
 3. **Mesurer en mètres** (EPSG:2154), pas en degrés.
 4. **Préfiltrer avec H3** avant tout test géométrique coûteux.
 5. **Entonnoir** : chaque filtre allège le suivant.
-6. **Tout paramétrer** dans `config.py`.
+6. **Tout paramétrer** dans `mini_dc_config.py`.
 7. **Tester et auditer** (8 tests + couche QA) : pas de livraison à l'aveugle.
 8. **Idempotence** (`CREATE OR REPLACE`) : on relance sans rien casser.
 

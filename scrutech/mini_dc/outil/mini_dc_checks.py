@@ -13,7 +13,7 @@ Chaque test renvoie (nom, ok, detail). Le pipeline échoue si un test casse.
 """
 
 
-import config as C
+import mini_dc_config as C
 
 
 def run_tests(con) -> list[tuple[str, bool, str]]:

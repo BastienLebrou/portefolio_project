@@ -15,10 +15,10 @@ est un **CANDIDAT à l'inoccupation**.
 
 ```
 sdbpi/                # projet AUTONOME (open data uniquement)
-├── config.py        # ZONE, BUFFER_M, USAGES_CIBLE, source SIRENE, mapping PLM, chemins (aucun hardcode)
-├── net.py           # session HTTP robuste (retry/backoff/timeout), erreurs claires
-├── sources.py       # acquisition + cache : commune, bâtiments WFS, SIRENE (+ expansion arrondissements)
-├── processing.py    # fonctions pures GeoPandas : filtre, jointure, statut, synthèse
+├── sdbpi_config.py      # ZONE, BUFFER_M, USAGES_CIBLE, source SIRENE, mapping PLM, chemins (aucun hardcode)
+├── sdbpi_net.py         # session HTTP robuste (retry/backoff/timeout), erreurs claires
+├── sdbpi_sources.py     # acquisition + cache : commune, bâtiments WFS, SIRENE (+ expansion arrondissements)
+├── sdbpi_processing.py  # fonctions pures GeoPandas : filtre, jointure, statut, synthèse
 ├── run_vacance.py   # orchestration + CLI
 ├── naf_rev2_subclasses.json  # 732 codes NAF figés (sous-partition anti-plafond API)
 ├── requirements.txt

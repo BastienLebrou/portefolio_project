@@ -23,11 +23,11 @@ except Exception:
 import geopandas as gpd
 from shapely import from_wkb
 
-import config as C
-from db import connect
+import mini_dc_config as C
+from mini_dc_db import connect
 import generate_synthetic
-import pipeline
-import tests_pipeline
+import mini_dc_pipeline as pipeline
+import mini_dc_checks as tests_pipeline
 
 
 def _print_funnel(stats: dict) -> None:

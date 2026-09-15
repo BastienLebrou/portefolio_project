@@ -17,7 +17,7 @@ import pandas as pd
 import requests
 import shapely
 
-from config import (
+from sdbpi_config import (
     CRS_L93,
     CRS_WGS84,
     GEOAPI_COMMUNE_URL,
@@ -36,7 +36,7 @@ from config import (
     WFS_URL,
     Config,
 )
-from net import SourceError, get_json
+from sdbpi_net import SourceError, get_json
 
 BBox = tuple[float, float, float, float]
 

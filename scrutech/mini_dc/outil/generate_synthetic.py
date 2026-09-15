@@ -19,7 +19,7 @@ from pyproj import Transformer
 from shapely.geometry import Polygon, Point, LineString, box
 from shapely.affinity import rotate
 
-import config as C
+import mini_dc_config as C
 
 try:  # console Windows en cp1252 -> on force l'UTF-8 pour les accents/symboles
     sys.stdout.reconfigure(encoding="utf-8")

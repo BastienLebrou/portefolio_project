@@ -18,6 +18,14 @@ HTTPS ; le sha256 obtenu est persisté à côté du poids ; toute réutilisation
 fichier local contre ce pin. Ça détecte une corruption/altération du fichier local après
 coup — pas une substitution dès le tout premier téléchargement (MITM), limite honnête du
 TOFU documentée plutôt que cachée.
+
+SÉCURITÉ DU CHARGEMENT : le fichier officiel est un ``.pth`` (pickle), pas un
+``.safetensors`` — Meta n'en publie pas. ``segment_anything`` (via ``segment-geospatial``)
+le charge en interne avec un ``torch.load()`` nu, un vecteur RCE connu de l'écosystème ML
+(pas hypothétique). On ne contrôle pas ce chargement interne, donc avant de lui confier le
+fichier on le pré-charge nous-mêmes avec ``weights_only=True`` (l'allow-list de PyTorch) :
+si ce chargement restreint échoue, le fichier contient autre chose que de simples tenseurs
+et on le rejette — même s'il a passé la vérification sha256 ci-dessus.
 """
 
 from __future__ import annotations
@@ -90,6 +98,26 @@ def ensure_model(cache_dir: Path | None = None, progress: ProgressFn | None = No
     return weights
 
 
+def _reject_unsafe_checkpoint(path: Path) -> None:
+    """Refuse ``path`` unless it loads clean under ``torch.load(weights_only=True)``.
+
+    This runs *before* ``segment_anything`` gets the file and does its own unrestricted
+    ``torch.load()``. If the restricted load fails, the pickle carries more than a plain
+    tensor state dict and we never hand it to the unsafe loader.
+    """
+    import torch
+
+    try:
+        state_dict = torch.load(path, map_location="cpu", weights_only=True)
+    except Exception as exc:
+        raise RuntimeError(
+            f"{path} failed the weights_only=True safety check (contains more than a "
+            "plain tensor state dict) — refusing to use it. Delete it and re-run to "
+            f"re-download from the official source. Underlying error: {exc}"
+        ) from exc
+    del state_dict
+
+
 @dataclass
 class SegmentResult:
     """Outputs of one segmentation run."""
@@ -124,6 +152,7 @@ def segment_raster(
             progress(pct, msg)
 
     ckpt = checkpoint or ensure_model(progress=progress)
+    _reject_unsafe_checkpoint(ckpt)
     out_dir.mkdir(parents=True, exist_ok=True)
     mask_tif = out_dir / "geoai_segments.tif"
     vector_gpkg = out_dir / "geoai_segments.gpkg"

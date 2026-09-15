@@ -22,7 +22,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-from config import CRS_L93, CRS_WGS84, Config
+from sdbpi_config import CRS_L93, CRS_WGS84, Config
 
 # Colonnes finales attendues en sortie (ordre du livrable).
 OUTPUT_COLS: tuple[str, ...] = (

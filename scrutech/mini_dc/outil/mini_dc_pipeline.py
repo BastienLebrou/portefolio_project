@@ -17,8 +17,8 @@ Le pipeline est une suite de modèles (tables) organisés en 3 couches :
   marts.*         -> les 5 filtres en cascade, le scoring, la heatmap
 """
 
-import config as C
-from db import table_count
+import mini_dc_config as C
+from mini_dc_db import table_count
 
 RAW = str(C.RAW_DIR).replace("\\", "/")
 

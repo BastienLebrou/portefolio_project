@@ -88,7 +88,7 @@ acceptée ou rejetée, superposé aux contraintes (ABF, PPRI, EBC) et aux résea
 
 ## 7. Ajuster les règles métier
 
-Tout se règle dans [outil/config.py](outil/config.py), sans toucher au code :
+Tout se règle dans [outil/mini_dc_config.py](outil/mini_dc_config.py), sans toucher au code :
 
 | Paramètre | Défaut | Rôle |
 |---|---|---|
@@ -120,7 +120,7 @@ publics (cadastre, BD TOPO, ARCEP, Enedis, Géorisques…) dans
 | `UnicodeEncodeError` | Console Windows cp1252 — déjà géré (sortie forcée en UTF-8) |
 | `h3 ... not found` | Pas d'internet au 1er lancement ; relancer une fois connecté |
 | `Tests : ÉCHEC` | Un invariant est cassé ; lire quel test est `[KO!]` et son détail |
-| 0 parcelle éligible | Seuils trop stricts dans `config.py`, ou données d'entrée vides |
+| 0 parcelle éligible | Seuils trop stricts dans `mini_dc_config.py`, ou données d'entrée vides |
 
 ---
 

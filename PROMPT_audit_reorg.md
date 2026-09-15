@@ -15,7 +15,8 @@ abstraction spéculative**, et une identité produit soignée.
 `vegevigie` (NDVI / tendance / sécheresse Sentinel-2), `paff` (interface habitat-forêt,
 feux), `sdbpi` (bâtiments professionnels inoccupés, BD TOPO × SIRENE), `ecobuage`
 (aptitude au brûlage dirigé), `mini_dc` (sélection de sites data centers),
-`climate_risk_analyzer` (EUDR + stress climatique), et `plugin` (scaffold QGIS). Un plugin
+`climate_risk_analyzer` (EUDR + stress climatique), et `plugin_v2_paused` (scaffold QGIS,
+renommé depuis `plugin/` le 2026-09-15). Un plugin
 QGIS « ScruTech » (hub Processing) vit déjà dans `scrutech/vegevigie/qgis_plugin/`.
 
 **Problème.** Les front-ends font tourner le lourd (odc-stac, xarray, rasterio, geopandas)
@@ -71,7 +72,8 @@ lisent le résultat **déjà calculé** par le backend et n'exigent plus la stac
 ## Charte graphique (identité ScruTech)
 
 Reprends le **logo ScruTech** fourni (globe filaire + satellite, « GÉODATA · ENGINEERING »)
-— place le fichier dans `scrutech/plugin/icons/` et décline-le. Palette :
+— place le fichier dans `scrutech/plugin_v2_paused/icons/` (renommé depuis `scrutech/plugin/`
+le 2026-09-15 pour ne plus se confondre avec le hub v1) et décline-le. Palette :
 
 | Rôle | Teinte |
 |---|---|

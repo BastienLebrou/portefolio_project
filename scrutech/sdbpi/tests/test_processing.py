@@ -5,7 +5,7 @@ from __future__ import annotations
 import geopandas as gpd
 from shapely.geometry import Point, box
 
-import processing
+import sdbpi_processing as processing
 
 L93 = "EPSG:2154"
 USAGES = frozenset({"Commercial et services", "Industriel"})

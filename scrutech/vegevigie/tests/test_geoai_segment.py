@@ -63,3 +63,24 @@ def test_ensure_model_rejects_a_tampered_cache(
 
     with pytest.raises(RuntimeError, match="checksum"):
         gs.ensure_model(cache_dir=tmp_path)
+
+
+def test_reject_unsafe_checkpoint_accepts_a_plain_state_dict(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    path = tmp_path / "good.pth"
+    torch.save({"weight": torch.zeros(2)}, path)
+
+    gs._reject_unsafe_checkpoint(path)  # must not raise
+
+
+def test_reject_unsafe_checkpoint_rejects_a_non_tensor_pickle(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+
+    class _NotATensor:
+        pass
+
+    path = tmp_path / "bad.pth"
+    torch.save(_NotATensor(), path)
+
+    with pytest.raises(RuntimeError, match="weights_only"):
+        gs._reject_unsafe_checkpoint(path)

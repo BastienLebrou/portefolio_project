@@ -72,5 +72,5 @@ Filtrer `eligible = true`, puis catégoriser sur `classe`
 ## Astuce
 
 Pour rejouer avec d'autres seuils (ex. surface libre mini, rayon ABF), modifier
-`config.py` puis relancer `python run.py` : toutes les couches SIG sont
+`mini_dc_config.py` puis relancer `python run.py` : toutes les couches SIG sont
 régénérées automatiquement.
