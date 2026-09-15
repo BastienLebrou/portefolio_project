@@ -9,8 +9,6 @@
 !/assets/
 !/scripts/
 !/scrutech/
-!/ROADMAP.md
-!/QGIS_PLUGIN.md
 
 # Artefacts / environnements — jamais versionnés
 __pycache__/

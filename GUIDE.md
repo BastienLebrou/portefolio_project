@@ -1,11 +1,11 @@
-# 🧭 Guide du dépôt — où trouver quoi
+# Guide du dépôt : où trouver quoi
 
 Ce dépôt regroupe plusieurs outils d'analyse de territoire sous une même plateforme,
 **ScruTech**. Ce fichier est la carte : pour chaque besoin, il te dit **quel fichier ouvrir**.
 
 ---
 
-## ⚠️ À comprendre en premier (sinon rien n'a de sens)
+## À comprendre en premier (sinon rien n'a de sens)
 
 Le moteur central, c'est **`scrutech/vegevigie/`**. C'est lui qui fait tourner presque tous
 les outils (VegeVigie, PAF, Écobuage, Biotrame).
@@ -24,7 +24,7 @@ s'exécute vraiment est ailleurs.
 
 ---
 
-## ▶️ Lancer un outil : 2 portes d'entrée, pas plus
+## Lancer un outil : 2 portes d'entrée, pas plus
 
 1. **En ligne de commande** : la commande `vegevigie` (définie dans `scrutech/vegevigie/`).
    Exemple pour une démo rapide : `vegevigie run --small`.
@@ -34,7 +34,7 @@ Tout le reste n'est appelé que par ces deux portes.
 
 ---
 
-## 🔎 Où est le code de chaque outil
+## Où est le code de chaque outil
 
 Pour chaque outil : le fichier qui **le lance sur une zone**, puis les fichiers de **calcul**
 qu'il utilise.
@@ -54,7 +54,7 @@ qu'il utilise.
 
 ---
 
-## 🧱 Le socle commun : `scrutech/core/src/core/`
+## Le socle commun : `scrutech/core/src/core/`
 
 Réutilisé par **tous** les outils. Si tu ne dois retenir qu'un dossier, c'est celui-là.
 
@@ -70,23 +70,23 @@ Réutilisé par **tous** les outils. Si tu ne dois retenir qu'un dossier, c'est 
 
 ---
 
-## 📄 Les documents du dépôt, et à quoi ils servent
+## Les documents du dépôt, et à quoi ils servent
 
 | Fichier | À quoi il sert |
 |---|---|
 | `README.md` | la vitrine : page d'accueil publique |
 | `GUIDE.md` | **ce fichier** : la carte pour s'y retrouver dans le code |
-| `ROADMAP.md` | ce qui est fait et ce qui reste à faire |
-| `QGIS_PLUGIN.md` | le cahier des charges de l'extension QGIS |
 | `SECURITY.md` | la politique de sécurité |
 | `scrutech/INSTALLATION.md` | comment un tiers utilise l'outil sans télécharger des Go de données |
+| `scrutech/vegevigie/qgis_plugin/TODO.md` | le suivi à jour de l'extension QGIS (ce qui est fait, ce qui reste) |
+| `scrutech/apprentissage/prompts/` | les prompts et cahiers des charges d'origine (archives : ils ne décrivent pas l'état actuel) |
 
 ---
 
-## 🙈 Ce que tu peux ignorer
+## Ce que tu peux ignorer
 
 - Les dossiers `*/tests/` : les tests automatiques (utiles à la machine, pas à la lecture).
 - Les dossiers `*/src/` : simple convention Python, le code y est rangé « proprement ».
 - `*/.venv/`, `__pycache__/` : environnement Python et cache, jamais à lire.
 - `scrutech/plugin_v2_paused/` : un chantier futur mis en pause.
-- `scrutech/apprentissage/` : mes notes et brouillons d'apprentissage.
+- `scrutech/apprentissage/` : mes notes, brouillons et prompts d'origine.

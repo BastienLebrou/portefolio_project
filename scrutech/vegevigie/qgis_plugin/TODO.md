@@ -1,7 +1,8 @@
 # TODO — Plugin QGIS ScruTech (mise en release)
 
 > Suivi d'exécution avant mise à disposition du plugin comme fonctionnalité utilisable.
-> Complète `QGIS_PLUGIN.md` (racine, cahier des charges) — ce fichier est la checklist
+> Complète le cahier des charges archivé
+> (`scrutech/apprentissage/prompts/qgis_plugin_cahier_des_charges_2026-07.md`) : ce fichier est la checklist
 > vivante. Dernière mise à jour : 2026-09-01, suite au point avec Bastien.
 
 ## État des points soulevés (session du 2026-09-01)
@@ -11,7 +12,7 @@
    pour ce test.
 2. **Build de packaging** — voir § Packaging & sécurité.
 3. **Tests plugin (pytest-qgis / chargement QGIS headless)** — Bastien s'en charge
-   prochainement. Pas d'action pour l'instant, cf. `QGIS_PLUGIN.md` § Tests & packaging
+   prochainement. Pas d'action pour l'instant, cf. le cahier des charges archivé (`qgis_plugin_cahier_des_charges_2026-07.md`) § Tests & packaging
    pour le cahier des charges.
 4. **Test bootstrap** — voir § Bootstrap.
 5. **Vraie TVB régionale (biotrame)** — déjà désactivée par défaut : le pilier reste sur le

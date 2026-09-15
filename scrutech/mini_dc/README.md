@@ -8,15 +8,15 @@ Ce dossier contient les **prompts et méthodologie** pour construire un outil co
 
 ---
 
-## 📁 Fichiers du dossier
+## 📁 Prompts d'origine (archivés)
 
-### `PROMPT.md`
+### Prompt SIG : [`mini_dc.md`](../apprentissage/prompts/mini_dc.md)
 **Prompt expert SIG** pour identifier les parcelles éligibles.
 - 5 étapes de filtrage spatial (foncier, nuisances, connectivité, énergie, réglementaire)
 - Appliquable directement dans QGIS, ArcGIS, ou script Python/PostGIS
 - **Public :** Géomaticien, data scientist SIG
 
-### `PROMPT_WORD_DOC.md`
+### Prompt document Word : [`mini_dc_doc_word.md`](../apprentissage/prompts/mini_dc_doc_word.md)
 **Prompt pour Claude web** générant un document Word complet.
 - Explication complète de la méthodologie (9 sections)
 - Table des matières auto-générée, tableaux, mise en forme professionnelle
@@ -27,12 +27,12 @@ Ce dossier contient les **prompts et méthodologie** pour construire un outil co
 ## 🚀 Démarrage rapide
 
 ### Option 1 : Utiliser le prompt SIG directement
-1. Ouvre `PROMPT.md`
+1. Ouvre [`mini_dc.md`](../apprentissage/prompts/mini_dc.md)
 2. Copie son contenu
 3. Colle dans QGIS (Python console), ou un script Python/SQL
 
 ### Option 2 : Générer un document Word explicatif
-1. Ouvre `PROMPT_WORD_DOC.md`
+1. Ouvre [`mini_dc_doc_word.md`](../apprentissage/prompts/mini_dc_doc_word.md)
 2. Copie le contenu (du titre jusqu'à "INSTRUCTIONS POUR CLAUDE WEB")
 3. Colle sur https://claude.ai (conversation nouvelle)
 4. Ajoute : *"Génère-moi un document Word `.docx` avec cette structure, formaté professionnellement."*

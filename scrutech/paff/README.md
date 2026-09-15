@@ -13,7 +13,7 @@ le calcul de l'**interface habitat-forêt (WUI)**.
 
 | Fichier | Description |
 |---|---|
-| [`architecture_3_sujets.md`](architecture_3_sujets.md) | Réflexion d'architecture pour 3 sujets stratégiques : PAFF, carrefours de biodiversité (graphes spatiaux), trame blanche (acoustique). Sources/API, stockage S3, libs & algos Python, restitution web, et le backbone commun. |
+| [`paf_architecture_3_sujets.md`](../apprentissage/prompts/paf_architecture_3_sujets.md) (archivé) | Réflexion d'architecture pour 3 sujets stratégiques : PAFF, carrefours de biodiversité (graphes spatiaux), trame blanche (acoustique). Sources/API, stockage S3, libs & algos Python, restitution web, et le backbone commun. |
 | [`interface_wui.md`](interface_wui.md) | Le premier module implémenté : calcul de la frontière forêt↔bâti (Wildland-Urban Interface) dans une emprise. Concept, algorithme, usage CLI, vérification. |
 | [`schema_paff_interface.svg`](schema_paff_interface.svg) | Schéma d'implantation : des deux couches (forêt VégéVigie + bâti) à la boucle PAFF temps réel. |
 
