@@ -9,11 +9,11 @@ actif géolocalisé dedans (ou à proximité immédiate) = CANDIDAT vacant.
 # PRIORISER une vérification terrain. Voir l'avertissement dans processing.py.
 
 Exemples :
-    python run_vacance.py --insee 01053
-    python run_vacance.py --insee 01053 --buffer 25
-    python run_vacance.py --bbox 5.21,46.19,5.25,46.22
-    python run_vacance.py --emprise emprise_etude.parquet --source grandlyon   # Grand Lyon
-    python run_vacance.py --insee 69123 --source geo_file --geo-file C:/data/sirene_geo_69.parquet
+    python run_vacancy.py --insee 01053
+    python run_vacancy.py --insee 01053 --buffer 25
+    python run_vacancy.py --bbox 5.21,46.19,5.25,46.22
+    python run_vacancy.py --emprise emprise_etude.parquet --source grandlyon   # Grand Lyon
+    python run_vacancy.py --insee 69123 --source geo_file --geo-file C:/data/sirene_geo_69.parquet
 """
 from __future__ import annotations
 

@@ -16,7 +16,7 @@ qu'elles respectent le format du quai, l'usine tourne.
 Ici :
 - le **quai** = les fichiers `data/raw/*.parquet` (le « contrat »),
 - le **fournisseur fictif** = `generate_synthetic.py` (données inventées),
-- le **fournisseur réel** = `adapter_donnees_reelles.py` (cadastre, ARCEP…),
+- le **fournisseur réel** = `adapt_real_data.py` (cadastre, ARCEP…),
 - la **chaîne** = `mini_dc_pipeline.py`.
 
 → On peut changer la source de données sans jamais toucher au pipeline. C'est le

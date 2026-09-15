@@ -19,7 +19,7 @@ sdbpi/                # projet AUTONOME (open data uniquement)
 ├── sdbpi_net.py         # session HTTP robuste (retry/backoff/timeout), erreurs claires
 ├── sdbpi_sources.py     # acquisition + cache : commune, bâtiments WFS, SIRENE (+ expansion arrondissements)
 ├── sdbpi_processing.py  # fonctions pures GeoPandas : filtre, jointure, statut, synthèse
-├── run_vacance.py   # orchestration + CLI
+├── run_vacancy.py   # orchestration + CLI
 ├── naf_rev2_subclasses.json  # 732 codes NAF figés (sous-partition anti-plafond API)
 ├── requirements.txt
 ├── cache/           # téléchargements mis en cache (créé au 1er run)
@@ -36,26 +36,26 @@ pip install -r requirements.txt
 
 ```powershell
 # Commune (crash-test recommandé)
-python run_vacance.py --insee 01053
+python run_vacancy.py --insee 01053
 
 # Buffer plus large (recommandé en zone industrielle, voir plus bas)
-python run_vacance.py --insee 01053 --buffer 30
+python run_vacancy.py --insee 01053 --buffer 30
 
 # Emprise bbox WGS84 (minx,miny,maxx,maxy)
-python run_vacance.py --bbox 5.21,46.19,5.25,46.22
+python run_vacancy.py --bbox 5.21,46.19,5.25,46.22
 
 # Restreindre les usages cibles
-python run_vacance.py --insee 01053 --usages "Industriel"
+python run_vacancy.py --insee 01053 --usages "Industriel"
 
 # Emprise polygonale depuis un fichier (.parquet/.gpkg/.geojson) en EPSG:2154
 # + source SIRENE en masse "Métropole de Lyon" (idéal pour une emprise Grand Lyon)
-python run_vacance.py --emprise emprise_etude.parquet --source grandlyon
+python run_vacancy.py --emprise emprise_etude.parquet --source grandlyon
 
 # Source SIRENE = fichier départemental pré-géocodé (passage à l'échelle)
-python run_vacance.py --insee 69123 --source geo_file --geo-file C:\data\sirene_geo_69.parquet
+python run_vacancy.py --insee 69123 --source geo_file --geo-file C:\data\sirene_geo_69.parquet
 
 # Ignorer le cache
-python run_vacance.py --insee 01053 --no-cache
+python run_vacancy.py --insee 01053 --no-cache
 ```
 
 Trois manières de définir la zone (exclusives) : `--insee`, `--bbox`, `--emprise`.

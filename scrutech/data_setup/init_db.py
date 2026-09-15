@@ -3,7 +3,7 @@
 Idempotent: safe to re-run — every table is CREATE ... IF NOT EXISTS, so this both
 bootstraps a fresh store and applies new tables to an existing one.
 
-Run:  python scrutech/storage/init_db.py
+Run:  python scrutech/data_setup/init_db.py
 Env:  SCRUTECH_DATA=<dir>   (default: scrutech/data/)
 """
 

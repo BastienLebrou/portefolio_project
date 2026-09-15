@@ -111,7 +111,7 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
             )
 
         sdbpi_dir = Path(__file__).resolve().parents[1] / "sdbpi"
-        script = sdbpi_dir / "run_vacance.py"
+        script = sdbpi_dir / "run_vacancy.py"
         if not script.exists():
             raise QgsProcessingException(self.tr(f"Bundled SDBPi engine not found: {script}"))
 

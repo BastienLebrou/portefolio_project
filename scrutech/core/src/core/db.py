@@ -22,7 +22,7 @@ from core.storage import db_path
 
 logger = logging.getLogger("scrutech")
 
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "storage" / "schema.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3] / "data_setup" / "schema.sql"
 
 # Table/column names are interpolated into SQL (they can't be bound as parameters), so we
 # refuse anything that isn't a plain identifier — defence-in-depth against SQL injection even
@@ -61,7 +61,7 @@ def _load_spatial(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def apply_schema(con: duckdb.DuckDBPyConnection, schema: Path | None = None) -> None:
-    """Apply ``storage/schema.sql`` — every statement is CREATE ... IF NOT EXISTS."""
+    """Apply ``data_setup/schema.sql`` — every statement is CREATE ... IF NOT EXISTS."""
     sql = (schema or SCHEMA_SQL).read_text(encoding="utf-8")
     con.execute(sql)
 

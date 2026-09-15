@@ -12,7 +12,7 @@ per-source OK/FAILED summary.
 ⚠️ Endpoints are best-known (2026) but were **not web-verified**. Expect some to need a
 fix on first run — the URL of each source is a single constant in ``SOURCES`` below.
 
-Run:  python scrutech/storage/download_aura.py
+Run:  python scrutech/data_setup/download_aura.py
 """
 
 from __future__ import annotations

@@ -79,7 +79,7 @@ Cette commande **génère** les données synthétiques, **exécute** le pipeline
 
 ## 6. Contrôle visuel dans QGIS
 
-Voir [outil/GUIDE_CONTROLE_SIG.md](outil/GUIDE_CONTROLE_SIG.md). En résumé :
+Voir [outil/guide_controle_sig.md](outil/guide_controle_sig.md). En résumé :
 charge `data/outputs/sig/parcelles_qa.parquet`, style **catégorisé** sur le champ
 `etape_rejet` → tu vois immédiatement, en couleur, pourquoi chaque parcelle est
 acceptée ou rejetée, superposé aux contraintes (ABF, PPRI, EBC) et aux réseaux.
@@ -106,9 +106,9 @@ Modifie, relance `python run.py` : toutes les couches sont régénérées.
 
 ## 8. Données réelles
 
-Voir [outil/DONNEES_REELLES.md](outil/DONNEES_REELLES.md). On dépose les fichiers
+Voir [outil/donnees_reelles.md](outil/donnees_reelles.md). On dépose les fichiers
 publics (cadastre, BD TOPO, ARCEP, Enedis, Géorisques…) dans
-`data/sources_reelles/`, on lance `python adapter_donnees_reelles.py`, puis
+`data/sources_reelles/`, on lance `python adapt_real_data.py`, puis
 `python run.py --no-generate`.
 
 ---
@@ -129,5 +129,5 @@ publics (cadastre, BD TOPO, ARCEP, Enedis, Géorisques…) dans
 L'architecture est **déjà optimisée** : DuckDB en base, jointures par **index
 H3**, **entonnoir** (chaque filtre travaille sur moins de lignes), partition
 `dept`. Pour traiter un département réel : déposer les données via l'adapter et
-relancer — aucun changement de code. Voir [EXPLICATION_CODE.md](EXPLICATION_CODE.md)
+relancer — aucun changement de code. Voir [explication_code.md](explication_code.md)
 pour le pourquoi de ces choix.

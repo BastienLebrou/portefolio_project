@@ -30,7 +30,7 @@ setx R2_ACCESS_KEY_ID "..."
 setx R2_SECRET_ACCESS_KEY "..."
 setx R2_BUCKET "scrutech-data"
 
-python scrutech/storage/publish_r2.py "C:/.../ressources/mnt.tif" --as mnt/france.tif --cogify
+python scrutech/data_setup/publish_r2.py "C:/.../ressources/mnt.tif" --as mnt/france.tif --cogify
 ```
 
 `publish_r2.py` convertit le MNT en COG (`core.cog.to_cog`) puis l'envoie sur R2 (API S3).

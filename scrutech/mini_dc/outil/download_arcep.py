@@ -1,5 +1,5 @@
 """
-telecharge_arcep.py — Télécharge les données fibre ARCEP "Ma connexion internet"
+download_arcep.py — Télécharge les données fibre ARCEP "Ma connexion internet"
 pour une commune, et produit une couche de points immeubles avec leur statut
 de déploiement fibre (FTTH).
 
@@ -16,8 +16,8 @@ Sortie : Data_alba/fibre.parquet (GeoParquet, EPSG:2154), prête pour l'analyse.
 Colonnes : id_locale, statut_deploiement, operateur, imb_type, nb_logements.
 
 Usage :
-    python telecharge_arcep.py                       # Alba (07005), dept 07
-    python telecharge_arcep.py --dept 07 --insee 07005
+    python download_arcep.py                       # Alba (07005), dept 07
+    python download_arcep.py --dept 07 --insee 07005
 """
 
 import sys

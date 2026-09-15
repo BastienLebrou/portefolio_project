@@ -1,5 +1,5 @@
 """
-telecharge_ebc.py — Télécharge les Espaces Boisés Classés (EBC) d'une commune
+download_ebc.py — Télécharge les Espaces Boisés Classés (EBC) d'une commune
 depuis le Géoportail de l'Urbanisme (Géoplateforme IGN), via WFS.
 
 Source  : WFS https://data.geopf.fr/wfs/ows
@@ -9,8 +9,8 @@ Filtre  : typepsc = '01'  (code CNIG = Espace Boisé Classé)
 Sortie  : Data_alba/ebc.parquet  (GeoParquet, EPSG:2154), prête pour l'analyse.
 
 Usage :
-    python telecharge_ebc.py                 # commune d'Alba (bbox auto)
-    python telecharge_ebc.py --insee 07005
+    python download_ebc.py                 # commune d'Alba (bbox auto)
+    python download_ebc.py --insee 07005
 """
 
 import sys

@@ -8,7 +8,7 @@ Ce dépôt regroupe plusieurs outils d'analyse de territoire sous une même plat
 ## À comprendre en premier (sinon rien n'a de sens)
 
 Le moteur central, c'est **`scrutech/vegevigie/`**. C'est lui qui fait tourner presque tous
-les outils (VegeVigie, PAF, Écobuage, Biotrame).
+les outils (VegeVigie, PAFF, Écobuage, Biotrame).
 
 Du coup, certains dossiers portent le nom d'un outil mais sont **presque vides** : le code qui
 s'exécute vraiment est ailleurs.
@@ -43,10 +43,10 @@ qu'il utilise.
 |---|---|---|
 | **VegeVigie** (verdissement, sécheresse) | `vegevigie/src/vegevigie/pipeline.py` | `trend.py`, `drought.py`, `seasonal.py`, `breaks.py` |
 | **Biotrame** (zones prioritaires) | `vegevigie/src/vegevigie/biotrame_aoi.py` | `biotrame/src/biotrame/mesh.py`, `score.py`, `aggregate.py` ; `vegevigie/src/vegevigie/wetland.py` (zones humides) |
-| **PAF** (forêt ↔ maisons) | `vegevigie/src/vegevigie/interface.py` | `core/sources.py` (bâti, forêt) |
+| **PAFF** (forêt ↔ maisons) | `vegevigie/src/vegevigie/interface.py` | `core/sources.py` (bâti, forêt) |
 | **Écobuage** (aptitude au brûlage) | `vegevigie/src/vegevigie/ecobuage_aoi.py` | `ecobuage/ecobuage.py` ; `core/sources.py` (routes, bâti) |
 | **AlphaEarth** (changement annuel) | `alphaearth/src/alphaearth/pipeline.py` | `client.py`, `change.py`, `classifier.py` |
-| **SDBPi** (bâtiments vides) | `sdbpi/run_vacance.py` | `sdbpi_processing.py`, `sdbpi_sources.py` |
+| **SDBPi** (bâtiments vides) | `sdbpi/run_vacancy.py` | `sdbpi_processing.py`, `sdbpi_sources.py` |
 | **Mini data centers** (choix de sites) | `mini_dc/outil/run.py` | `mini_dc_pipeline.py`, `mini_dc_checks.py` |
 | **Climate Risk** (fournisseurs, EUDR) | `climate_risk_analyzer/` (plugin QGIS) | prototype |
 
@@ -67,6 +67,26 @@ Réutilisé par **tous** les outils. Si tu ne dois retenir qu'un dossier, c'est 
 | `storage.py` | range les résultats de façon ordonnée |
 | `cog.py` | lit les rasters « allégés » (cloud), sans tout télécharger |
 | `constants.py` | les repères communs (systèmes de coordonnées) |
+
+Les scripts qui **préparent la donnée** (téléchargement, création de la base, publication dans
+le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/data_setup/`.
+
+---
+
+## Nommage : deviner un chemin
+
+- **Dossier d'outil** : le nom court de l'outil, en minuscules (`vegevigie/`, `biotrame/`,
+  `paff/`, `mini_dc/`). Exception : l'extension QGIS nomme ses algorithmes PAFF `paf_*`.
+- **Paquet Python installable** : `<outil>/src/<outil>/` + `pyproject.toml` (`core`, `biotrame`,
+  `alphaearth`, `vegevigie`). Exception voulue : `ecobuage/ecobuage.py` reste un fichier
+  unique, embarqué tel quel dans l'extension.
+- **Projets à plat** (`sdbpi/`, `mini_dc/outil/`) : modules partagés préfixés `<outil>_*.py` ;
+  scripts lançables nommés par un verbe anglais (`run.py`, `run_vacancy.py`, `download_arcep.py`).
+- **Lancer un outil sur une zone** : `<outil>_aoi.py`.
+- **Noms de fichiers `.py`** : en anglais.
+- **Docs** : un `README.md` par dossier. Les noms conventionnels (`README`, `GUIDE`, `SECURITY`,
+  `INSTALLATION`, `TODO`, `CLAUDE`) sont en MAJUSCULES, tous les autres docs en minuscules
+  (`schema_bdd.md`, `tvb_sources.md`).
 
 ---
 

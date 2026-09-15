@@ -17,7 +17,7 @@
 4. **Test bootstrap** — voir § Bootstrap.
 5. **Vraie TVB régionale (biotrame)** — déjà désactivée par défaut : le pilier reste sur le
    proxy proximité tant que `SCRUTECH_TVB_WFS` (ou le paramètre d'algo) n'est pas
-   renseigné (voir `scrutech/biotrame/TVB_SOURCES.md`). Rien à coder — reste en TODO
+   renseigné (voir `scrutech/biotrame/tvb_sources.md`). Rien à coder — reste en TODO
    pour validation du endpoint AURA depuis un réseau non restreint.
 6. **Scaffold `scrutech/plugin_v2_paused/` (spec v2, QGIS 4.0, STAC/SAR)** — mis en pause,
    renommé (2026-09-15) pour ne plus se confondre avec le hub v1 lors de la navigation

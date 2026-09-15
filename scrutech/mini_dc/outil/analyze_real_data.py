@@ -1,13 +1,13 @@
 """
-analyse_reelle.py — Analyse RÉELLE multi-axes sur Alba-la-Romaine (07005).
+analyze_real_data.py — Analyse RÉELLE multi-axes sur Alba-la-Romaine (07005).
 
 Données réelles (dossier Data_alba/, EPSG:2154) :
   - commune.parquet   : contour officiel (AOI)
   - parcelles.parquet : 6 415 parcelles cadastrales
   - batiment.parquet  : bâti BD TOPO (USAGE1, NB_LOGTS, NB_ETAGES...)
-  - fibre.parquet      : immeubles ARCEP + statut FTTH (telecharge_arcep.py)
+  - fibre.parquet      : immeubles ARCEP + statut FTTH (download_arcep.py)
   - ligne_hta.parquet : réseau HTA 20 kV (proxy d'accès énergie)
-  - ebc.parquet        : Espaces Boisés Classés (telecharge_ebc.py)
+  - ebc.parquet        : Espaces Boisés Classés (download_ebc.py)
 
 Axes évalués (réels) :
   1. FONCIER       : présence d'un bâtiment résidentiel individuel + surface libre > 50 m²

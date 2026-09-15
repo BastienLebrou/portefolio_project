@@ -1,5 +1,5 @@
 """
-adapter_donnees_reelles.py — Convertit des données PUBLIQUES réelles vers le
+adapt_real_data.py — Convertit des données PUBLIQUES réelles vers le
 contrat d'entrée du pipeline (les fichiers data/raw/*.parquet).
 
 Idée directrice (geo-data engineer) : le pipeline ne connaît qu'UN contrat
@@ -8,9 +8,9 @@ cet adapter le remplit avec des données réelles. Le reste (staging, filtres,
 scoring, heatmap) tourne EXACTEMENT pareil — zéro modification.
 
 Mode d'emploi :
-  1. Télécharger les sources (voir DONNEES_REELLES.md) et les déposer dans
+  1. Télécharger les sources (voir donnees_reelles.md) et les déposer dans
      data/sources_reelles/ .
-  2. python adapter_donnees_reelles.py            # convertit ce qui est présent
+  2. python adapt_real_data.py            # convertit ce qui est présent
   3. python run.py --no-generate                  # exécute le pipeline dessus
 
 L'adapter est TOLÉRANT : pour chaque couche il cherche le premier nom de colonne
