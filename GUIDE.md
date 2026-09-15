@@ -108,5 +108,4 @@ le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/d
 - Les dossiers `*/tests/` : les tests automatiques (utiles à la machine, pas à la lecture).
 - Les dossiers `*/src/` : simple convention Python, le code y est rangé « proprement ».
 - `*/.venv/`, `__pycache__/` : environnement Python et cache, jamais à lire.
-- `scrutech/plugin_v2_paused/` : un chantier futur mis en pause.
 - `scrutech/apprentissage/` : mes notes, brouillons et prompts d'origine.

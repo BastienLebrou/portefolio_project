@@ -19,10 +19,12 @@
    proxy proximité tant que `SCRUTECH_TVB_WFS` (ou le paramètre d'algo) n'est pas
    renseigné (voir `scrutech/biotrame/tvb_sources.md`). Rien à coder — reste en TODO
    pour validation du endpoint AURA depuis un réseau non restreint.
-6. **Scaffold `scrutech/plugin_v2_paused/` (spec v2, QGIS 4.0, STAC/SAR)** — mis en pause,
-   renommé (2026-09-15) pour ne plus se confondre avec le hub v1 lors de la navigation
-   dans le dépôt. Sera repris plus tard comme fonctionnalité à part, avec son propre
-   branding — pas fusionné dans le hub v1 (`vegevigie/qgis_plugin/`).
+6. **Scaffold v2 de l'extension (spec QGIS 4.0, STAC/SAR)** : mis en pause, puis retiré de
+   l'arbre le 2026-09-15. Son dernier état est conservé par le tag git
+   `archive/plugin-v2-paused` (`git checkout archive/plugin-v2-paused -- scrutech/plugin_v2_paused`),
+   son prompt dans `scrutech/apprentissage/prompts/qgis_extension_v2.md`. Sera repris plus tard
+   comme fonctionnalité à part, avec son propre branding, pas fusionné dans le hub v1
+   (`vegevigie/qgis_plugin/`).
 7. **Points en suspens** (palette icônes, `experimental=True`, version `0.4.0`, soumission
    au dépôt officiel QGIS) — actés comme non bloquants pour une v1 de test. À trancher au
    moment de la publication publique, pas avant.
