@@ -2,352 +2,128 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-  <img src="assets/banner-light.svg" alt="Bastien Lebrou — Géomatique, ingénierie de données géospatiales, télédétection" width="100%">
+  <img src="assets/banner-light.svg" alt="Bastien Lebrou — Géomatique, données géospatiales, télédétection" width="100%">
 </picture>
 
-**Ingénierie de données géospatiales · Télédétection · Aide à la décision territoriale**
+<br>
 
-[![CI](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml/badge.svg)](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml)
-[![Portfolio](https://github.com/BastienLebrou/portefolio_project/actions/workflows/portfolio.yml/badge.svg)](https://github.com/BastienLebrou/portefolio_project/actions/workflows/portfolio.yml)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab)](https://www.python.org/)
-[![QGIS](https://img.shields.io/badge/QGIS-Processing-589632)](https://qgis.org/)
-[![Licence](https://img.shields.io/badge/licence-MIT-495057)](#)
+<img src="https://github.com/BastienLebrou.png?size=240" width="130" alt="Photo de profil de Bastien Lebrou">
+
+### Bastien Lebrou
+
+**Je fais parler les cartes.** J'analyse des territoires à partir d'images satellites et de
+données publiques pour répondre à des questions concrètes.
+
+`Portfolio géomatique & données` · `projet personnel` · `open source`
+
+[![Mes projets](https://img.shields.io/badge/GitHub-@BastienLebrou-181717?logo=github)](https://github.com/BastienLebrou)
+[![E-mail](https://img.shields.io/badge/E--mail-me%20contacter-0b7285?logo=maildotru&logoColor=white)](mailto:bastienlebrou1@gmail.com)
+[![Ça tourne](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml/badge.svg)](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml)
 
 </div>
 
-## Positionnement
+## En deux mots
 
-Je transforme des questions de territoire en **pipelines reproductibles, testés et
-cartographiables** : de l'image satellite ou de l'open data jusqu'à des couches SIG prêtes à la
-décision. La logique de fond est constante : le backend calcule, QGIS lit, et chaque résultat
-est régénérable à la commande.
+Imaginez une **boîte à outils** qui regarde un bout de territoire depuis l'espace et le croise
+avec les données publiques disponibles. On lui désigne une zone sur la carte, elle va chercher
+la donnée toute seule, l'analyse, et rend des **cartes prêtes à ouvrir**.
 
-Ce dépôt réunit ces travaux dans une plateforme unique, **ScruTech**, dont les composants
-partagent un socle technique commun. Il sert autant de démonstration d'ingénierie que de boîte à
-outils opérationnelle pour l'analyse environnementale et l'aménagement.
+Chaque outil répond à **une question** que se posent les collectivités, les gestionnaires
+d'espaces naturels ou les bureaux d'études. Le tout forme une seule plateforme, **ScruTech**.
 
-## Domaines d'intervention
+## Un aperçu, en images
 
-| Domaine | Capacités | Technologies clés |
-|---|---|---|
-| **Télédétection & datacubes** | séries temporelles Sentinel-2, indices spectraux, composites | STAC, xarray / dask, rasterio, odc-stac |
-| **Data engineering géospatial** | pipelines reproductibles, stockage analytique, tuilage | DuckDB spatial, GeoParquet, COG, index H3, PMTiles |
-| **Analyse spatiale & multicritère** | scoring MCDA, jointures spatiales, maillage, connectivité | GeoPandas, Shapely, PostGIS |
-| **Statistiques environnementales** | détection de tendance et de rupture, anomalies | Mann-Kendall, pente de Sen, Pettitt, VCI |
-| **Restitution & outillage SIG** | plugin QGIS, cartographie, tableaux de bord, WebGIS | QGIS Processing, Streamlit, styles QML |
-| **Industrialisation** | tests, typage, intégration continue, packaging | pytest, ruff, mypy, GitHub Actions, uv |
-
-## La plateforme ScruTech
-
-Un principe directeur : **une emprise en entrée (AOI), tout le reste en dérive.** On désigne une
-zone sur la carte, la plateforme va chercher la donnée (satellite ou open data), calcule, et
-renvoie des couches prêtes à ouvrir dans QGIS. Chaque composant répond à une question métier
-distincte, mais tous reposent sur le même socle `core` : résolution d'emprise, I/O GeoParquet,
-base DuckDB spatial, layout de stockage `aoi=…/produit/`. Le même moteur tourne en CLI, en batch
-ou en un clic via le plugin QGIS Processing.
-
-```mermaid
-flowchart TB
-    subgraph Socle["Socle core — partagé par tous les composants"]
-        AOI["resolve_aoi<br/>une emprise = une analyse"]
-        IO["io · lecture/écriture GeoParquet"]
-        DB["db · DuckDB spatial"]
-        ST["storage · layout aoi=.../produit/"]
-        AOI --> IO --> DB --> ST
-    end
-    Socle --> P
-    subgraph P["Composants d'analyse"]
-        V["VegeVigie"]
-        AE["AlphaEarth"]
-        PA["PAF · WUI"]
-        EC["Écobuage"]
-        SD["SDBPi"]
-        MD["Mini data centers"]
-        CR["Climate Risk"]
-    end
-    P --> BIO["Biotrame<br/>maille d'intégration"]
-    BIO --> QGIS["Plugin QGIS ScruTech<br/>Processing · 1 clic"]
-    P --> QGIS
-    P --> WEB["Couches · dashboards · WebGIS"]
-```
-
-### Biotrame, la brique d'intégration
-
-Là où les autres composants produisent chacun un indicateur, **Biotrame les croise** sur une
-maille hexagonale H3 pour hiérarchiser un territoire. C'est la couche qui répond à la séquence
-**Éviter, Réduire, Compenser (ERC)** : où sont les mailles prioritaires pour la compensation
-écologique ?
-
-Ci-dessous, une sortie réelle du moteur sur une emprise en Ardèche : 412 hexagones H3 (r8)
-classés par croisement *enjeu × connectivité × dégradation* (réservoirs Natura 2000 / ZNIEFF,
-zones humides déduites du MNT, tendance de verdissement). Les corridors rouges sont les mailles
-prioritaires.
+La carte ci-dessous est une vraie sortie de l'outil sur une zone en Ardèche. Chaque hexagone
+est une petite zone du territoire, coloriée selon son importance pour la nature : **en rouge**,
+les zones prioritaires ; **en orange**, celles à regarder de plus près ; **en gris**, le reste.
 
 <p align="center">
-  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Maille de priorité Biotrame (H3 r8) sur une AOI en Ardèche : hexagones classés prioritaire, à étudier, secondaire" width="60%">
+  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Carte en nid d'abeilles : zones prioritaires pour la nature en Ardèche" width="60%">
 </p>
-
-➡️ [Moteur Biotrame & sources TVB](scrutech/biotrame/)
-
----
-
-## Composants
-
-Sept composants, chacun adressant une question métier. Le statut indique la maturité : de la
-fondation posée au pipeline testé sur données réelles.
-
-### VegeVigie — sentinelle de la végétation
-
-[![statut](https://img.shields.io/badge/statut-op%C3%A9rationnel-2f9e44)](scrutech/vegevigie/)
-[![tests](https://img.shields.io/badge/tests-60%2B%20hors--ligne-2f9e44)](scrutech/vegevigie/)
-
-<img align="right" width="360" src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des tendances de verdissement et de brunissement produite par VegeVigie">
-
-**Enjeu.** La forêt verdit-elle ou dépérit-elle, où, et à quel point souffre-t-elle de la
-sécheresse ? On empile dix ans de Sentinel-2 sur un même lieu et on mesure la pente du signal,
-commune par commune.
-
-**Approche.** Recherche STAC (Planetary Computer), datacube `xarray` / `dask`, masquage des
-nuages par bande SCL, NDVI puis composites mensuels médians. Mann-Kendall et pente de Sen
-appliqués **par pixel** (vectorisés, validés contre `pymannkendall`), puis anomalies NDVI
-(z-score) et VCI pour le stress hydrique, enfin agrégation zonale et classement communal DuckDB.
-
-**Livrables.** CLI `typer` idempotente et cachée (`aoi → search → cube → ndvi → trend → drought
-→ zonal`), rasters de tendance et de sécheresse, statistiques communales, plus de 60 tests
-hors-ligne.
-
-```mermaid
-flowchart LR
-    A["STAC · Sentinel-2 L2A"] --> B["Datacube xarray<br/>masquage nuages SCL"]
-    B --> C["NDVI · composites mensuels"]
-    C --> D["Tendances MK + Sen"]
-    C --> E["Sécheresse · anomalies + VCI"]
-    D --> F["Stats communales<br/>DuckDB · GeoParquet"]
-    E --> F
-    F --> G["Cartes QGIS · dashboard"]
-```
-
-➡️ [Code, démos et méthodologie](scrutech/vegevigie/) · [Plugin QGIS ScruTech](scrutech/vegevigie/qgis_plugin/)
-
----
-
-### AlphaEarth — empreintes satellite (Google DeepMind)
-
-[![statut](https://img.shields.io/badge/statut-op%C3%A9rationnel-2f9e44)](scrutech/alphaearth/)
-[![dépendances](https://img.shields.io/badge/d%C3%A9pendances-lourdes%20(optionnel)-495057)](scrutech/alphaearth/)
-
-**Enjeu.** Google a « résumé » chaque pixel de la planète en 64 chiffres qui capturent sa nature
-(forêt, eau, bâti). On s'en sert pour classer un territoire avec très peu d'exemples, et pour
-repérer ce qui a changé d'une année sur l'autre.
-
-**Approche.** Embeddings `SATELLITE_EMBEDDING/V1` (64 dimensions, annuel, 10 m) servis sur Google
-Earth Engine. Requête authentifiée par **QgsAuthManager** (jamais de clé en dur) avec estimation
-du coût quota, cache GeoParquet par (AOI, année) avec provenance, classification Random Forest à
-validation croisée obligatoire, détection de changement par distance cosine entre deux années
-(un vrai changement de surface, pas un artefact atmosphérique).
-
-**Livrables.** Carte d'occupation du sol, carte de changement inter-annuel. Dépendances lourdes
-(`earthengine-api`, `scikit-learn`) isolées : composant optionnel à interpréteur externe.
-
-```mermaid
-flowchart LR
-    A["Google Earth Engine<br/>embeddings 64-D · 10 m · annuel"] --> B["fetch<br/>auth QgsAuthManager"]
-    B --> C["cache GeoParquet<br/>(AOI, année) · idempotent"]
-    C --> D1["Random Forest<br/>50-200 labels + validation croisée"]
-    C --> D2["distance cosine<br/>année N vs N+1"]
-    D1 --> E["carte d'occupation du sol"]
-    D2 --> F["carte de changement"]
-```
-
-➡️ [Moteur AlphaEarth](scrutech/alphaearth/)
-
----
-
-### PAF — interface habitat-forêt (WUI)
-
-[![statut](https://img.shields.io/badge/statut-op%C3%A9rationnel-2f9e44)](scrutech/paff/)
-
-**Enjeu.** Où la forêt touche-t-elle les habitations ? C'est là que l'incendie menace et que le
-débroussaillement est une obligation légale. Débroussaillement (OLD 50 m), chaleur radiante et
-sautes de braises se jouent tous dans une bande étroite autour de cette ligne de contact.
-
-**Approche.** Cœur pur GeoPandas / Shapely en CRS métrique (Lambert-93) : union des forêts et du
-bâti, buffer `contact_m` autour du bâti, intersection `boundary ∩ buffer` pour la ligne
-d'interface, `forêt ∩ buffer` pour la bande OLD à traiter.
-
-**Livrables.** Métriques (km de frontière, hectares de bande, bâti exposé), exports GeoParquet
-(L93) et GeoJSON (WGS84) pour le WebGIS. Intégré au moteur `vegevigie`.
-
-```mermaid
-flowchart LR
-    A["Forêt (VegeVigie)"] --> U["union + reprojection L93"]
-    B["Bâti"] --> R["buffer contact_m<br/>OLD 50 m"]
-    U --> L["frontière = lisière ∩ portée<br/>interface_line"]
-    R --> L
-    U --> Z["bande OLD = forêt ∩ portée<br/>interface_zone"]
-    R --> Z
-    L --> O["métriques + GeoParquet / GeoJSON"]
-    Z --> O
-```
-
-➡️ [Conception, schéma et documentation PAF](scrutech/paff/)
-
----
-
-### Écobuage — aptitude au brûlage dirigé
-
-[![statut](https://img.shields.io/badge/statut-op%C3%A9rationnel-2f9e44)](scrutech/ecobuage/)
-
-**Enjeu.** Sur quelles parcelles pastorales le brûlage contrôlé est-il pertinent et sûr ? On
-note chaque zone de 0 à 100 selon la végétation, la pente, l'accès et les enjeux, puis on trie
-en trois catégories.
-
-**Approche.** Analyse multicritère : pile de rasters-critères alignés (même grille et CRS),
-chacun ramené en 0-1 puis pondéré (poids sommant à 100), avec masque d'exclusion dur (Natura
-2000, proximité du bâti, hors landes et parcours). `aptitude()` calcule la somme pondérée,
-`classify()` applique les seuils (≥ 66 / 33-66 / < 33). Réutilise les indices VegeVigie (NDVI,
-NBR, tendance).
-
-**Livrables.** Raster GeoTIFF classé en trois catégories : prioritaire, à étudier, à exclure.
-
-```mermaid
-flowchart LR
-    subgraph C["Critères pondérés (Σ = 100)"]
-      C1["Biomasse sèche<br/>NDVI/NBR · 25"]
-      C2["Embroussaillement<br/>tendance NDVI · 25"]
-      C3["Pente 15-40%<br/>MNT · 20"]
-      C4["Accessibilité<br/>dist. routes · 15"]
-      C5["Historique feux · 15"]
-    end
-    C --> N["normalisation 0-1"]
-    N --> W["somme pondérée → 0-100"]
-    X["Exclusions<br/>Natura 2000 · bâti · hors-lande"] --> W
-    W --> K["3 classes<br/>prioritaire / à étudier / à exclure"]
-    K --> G["GeoTIFF"]
-```
-
-➡️ [Méthodologie et moteur de scoring](scrutech/ecobuage/)
-
----
-
-### SDBPi — bâtiments professionnels inoccupés
-
-[![statut](https://img.shields.io/badge/statut-op%C3%A9rationnel-2f9e44)](scrutech/sdbpi/)
-[![validation](https://img.shields.io/badge/valid%C3%A9-19%20572%20b%C3%A2timents-2f9e44)](scrutech/sdbpi/)
-
-**Enjeu.** Quels locaux commerciaux ou industriels semblent vides ? On vérifie s'il existe une
-entreprise active enregistrée à cette adresse ; si non, le bâtiment devient un candidat à
-contrôler sur le terrain (indice, pas certitude).
-
-**Approche.** Croisement **BD TOPO (bâti) × SIRENE (activité)**, méthode de type Cerema.
-Acquisition paginée WFS BD TOPO (COUNT plafonné, `STARTINDEX`) et SIRENE (partition par section
-NAF pour contourner le plafond de 10 000), filtre usage professionnel, jointure spatiale
-tolérante au buffer (la géolocalisation SIRENE est à l'adresse BAN, décalée du footprint).
-
-**Livrables.** Statut d'occupation par bâtiment, exports GeoPackage et GeoParquet (L93). Testé
-sur Bourg-en-Bresse et une emprise Grand Lyon (19 572 bâtiments professionnels, avec analyse de
-sensibilité au buffer).
-
-```mermaid
-flowchart LR
-    A["Emprise<br/>INSEE / bbox / polygone"] --> B["BD TOPO bâti (WFS paginé)<br/>filtre usage pro"]
-    A --> C["SIRENE établissements actifs<br/>géolocalisés"]
-    B --> J["jointure spatiale tolérante<br/>buffer 15-30 m"]
-    C --> J
-    J --> S["statut : VACANT_CANDIDAT / OCCUPE"]
-    S --> O["GeoPackage + GeoParquet (L93)"]
-```
-
-➡️ [Pipeline et résultats](scrutech/sdbpi/)
-
----
-
-### Mini data centers résidentiels — sélection de sites
-
-[![statut](https://img.shields.io/badge/statut-%C3%A9tude%20m%C3%A9thodologique-e8590c)](scrutech/mini_dc/)
-
-**Enjeu.** Où peut-on implanter un petit data center chez des particuliers ? On élimine
-successivement les parcelles impossibles (trop petites, sans fibre, sans électricité suffisante,
-interdites), puis on note celles qui restent.
-
-**Approche.** Cible cloud-native : dbt-duckdb spatial, GeoParquet partitionné par département,
-index **H3** (r9) et R-tree DuckDB, tuilage PMTiles. Cinq filtres successifs (foncier,
-nuisances, fibre ARCEP, énergie Enedis, réglementaire) puis score 0-100. Approche coût-d'abord
-(140 M de parcelles via grille H3), validation spatiale stricte (`ST_IsValid`, validation
-croisée spatiale plutôt que K-Fold classique).
-
-**Livrables.** Analyse réelle multi-axes sur Alba-la-Romaine (export GeoPackage et styles QML).
-
-```mermaid
-flowchart LR
-    A["Parcelles cadastre<br/>+ open data"] --> F1["1 · Foncier & bâti<br/>surface libre > 50 m²"]
-    F1 --> F2["2 · Nuisances & sécurité"]
-    F2 --> F3["3 · Fibre ARCEP"]
-    F3 --> F4["4 · Énergie Enedis 36 kVA"]
-    F4 --> F5["5 · Réglementaire<br/>ABF / PPRI / EBC"]
-    F5 --> S["scoring 0-100"]
-    S --> O["GeoParquet · index H3 · PMTiles"]
-```
-
-➡️ [Méthodologie, prompts SIG et outil](scrutech/mini_dc/)
-
----
-
-### Climate Risk Analyzer (EUDR)
-
-[![statut](https://img.shields.io/badge/statut-fondation%20v0.1-868e96)](scrutech/climate_risk_analyzer/)
-
-**Enjeu.** Mes fournisseurs sont-ils installés sur des zones récemment déboisées, ou menacées
-par le climat en 2050 ? Un prototype qui pose la chaîne pour la conformité EUDR et l'ESG ; les
-scores réels viendront.
-
-**Approche.** Plugin QGIS : import CSV de coordonnées fournisseurs, couche de points temporaire,
-scores EUDR et climat (**mock** pour l'instant), style de risque, tableau par fournisseur. Le
-branchement sur les vraies sources (Hansen / GFC, projections climatiques) reste à faire.
-
-```mermaid
-flowchart LR
-    A["CSV coordonnées fournisseurs"] --> B["couche de points"]
-    B --> C["score risque EUDR<br/>déforestation"]
-    B --> D["stress climatique 2050"]
-    C --> E["style de risque<br/>+ résultats par fournisseur"]
-    D --> E
-```
-
-➡️ [Plugin Climate Risk](scrutech/climate_risk_analyzer/)
-
-## Résultats en images
-
-Figures produites par le vrai code du pipeline VegeVigie (démonstrations sur données
-synthétiques, reproductibles via `vegevigie run --small`).
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des tendances NDVI par pixel" width="100%"><br>
-      <sub><b>Tendances par pixel</b> — verdissement et brunissement, Mann-Kendall + pente de Sen</sub>
+      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des zones qui verdissent ou dépérissent" width="100%"><br>
+      <sub><b>La forêt verdit-elle ou dépérit-elle ?</b><br>Vert = ça pousse, rouge = ça décline</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte des anomalies de sécheresse" width="100%"><br>
-      <sub><b>Stress hydrique</b> — anomalies NDVI (z-score) et indice VCI</sub>
+      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte du stress dû à la sécheresse" width="100%"><br>
+      <sub><b>Où la végétation a-t-elle soif ?</b><br>Les zones en stress hydrique ressortent</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="scrutech/vegevigie/docs/commune_ranking_demo.png" alt="Classement des communes" width="100%"><br>
-      <sub><b>Classement communal</b> — agrégation zonale et requêtes DuckDB</sub>
+      <sub><b>Quelles communes surveiller ?</b><br>Un classement, commune par commune</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/monthly_ndvi_timeseries.png" alt="Série temporelle NDVI mensuelle" width="100%"><br>
-      <sub><b>Séries temporelles</b> — composites NDVI mensuels, robustes aux nuages</sub>
+      <img src="scrutech/vegevigie/docs/monthly_ndvi_timeseries.png" alt="Évolution de la végétation mois par mois" width="100%"><br>
+      <sub><b>Comment ça évolue dans le temps ?</b><br>La santé de la végétation, mois après mois</sub>
     </td>
   </tr>
 </table>
 
-## Activité du dépôt
+## Les outils, une question chacun
 
-Chiffres et graphiques **générés automatiquement toutes les 48 heures** depuis l'historique Git
-réel (script [`scripts/generate_stats.py`](scripts/generate_stats.py), sans dépendance externe).
+| | Outil | La question à laquelle il répond |
+|:---:|---|---|
+| 🌿 | **VegeVigie** | La forêt se porte-t-elle bien ? En empilant dix ans de photos satellite, l'outil repère où la végétation pousse, où elle décline, et où elle souffre de la sécheresse. |
+| 🕸️ | **Biotrame** | Où concentrer les efforts pour la nature ? En croisant tous les indicateurs sur une grille, l'outil met en avant les zones prioritaires (compensation écologique). |
+| 🛰️ | **AlphaEarth** | Qu'est-ce qui a changé sur le terrain d'une année à l'autre ? On s'appuie sur des « empreintes » satellite de Google pour classer le paysage et repérer les évolutions. |
+| 🔥 | **PAF** | Où le feu menace-t-il les maisons ? L'outil trace la ligne exacte où la forêt touche les habitations, là où le débroussaillement est obligatoire. |
+| 🌾 | **Écobuage** | Quelles parcelles peut-on brûler sans danger ? Chaque zone reçoit une note selon la végétation, la pente, l'accès et les protections en place. |
+| 🏚️ | **SDBPi** | Quels locaux commerciaux semblent vides ? On croise les bâtiments et les entreprises actives : pas d'entreprise enregistrée à l'adresse, bâtiment à vérifier. |
+| 🏢 | **Mini data centers** | Où installer un petit data center chez des particuliers ? On écarte les terrains impossibles, puis on note ceux qui restent. |
+| 🌍 | **Climate Risk** | Mes fournisseurs sont-ils sur des zones déboisées ou menacées par le climat ? Un prototype de conformité (réglementation européenne EUDR). |
+
+Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/vegevigie/) ·
+[Biotrame](scrutech/biotrame/) · [AlphaEarth](scrutech/alphaearth/) · [PAF](scrutech/paff/) ·
+[Écobuage](scrutech/ecobuage/) · [SDBPi](scrutech/sdbpi/) ·
+[Mini data centers](scrutech/mini_dc/) · [Climate Risk](scrutech/climate_risk_analyzer/).
+
+## Comment ça marche
+
+Toujours le même principe, quel que soit l'outil : on part d'une zone, on finit avec des cartes.
+
+```mermaid
+flowchart LR
+    A["🗺️ Une zone<br/>sur la carte"] --> B["📡 L'outil va chercher<br/>la donnée tout seul<br/>(satellite, open data)"]
+    B --> C["⚙️ Il analyse<br/>et croise"]
+    C --> D["🗂️ Des cartes prêtes<br/>à ouvrir dans QGIS"]
+```
+
+Et tout se lance aussi **en un clic** depuis QGIS, le logiciel de cartographie que connaissent
+les géomaticiens, grâce à une extension dédiée.
+
+<details>
+<summary><b>🔧 Pour les curieux : sous le capot</b></summary>
+
+<br>
+
+Rien n'est bricolé à la main : chaque analyse est un **programme reproductible**, testé, qu'on
+peut relancer à l'identique. Les grands blocs techniques :
+
+| Domaine | Outils employés |
+|---|---|
+| Images satellites & séries temporelles | Sentinel-2, STAC, xarray / dask, rasterio |
+| Traitement de données géo | GeoPandas, Shapely, PostGIS, DuckDB spatial, GeoParquet |
+| Statistiques de tendance | Mann-Kendall, pente de Sen, Pettitt, VCI |
+| Analyse multicritère & maillage | scoring pondéré, grille hexagonale H3, connectivité |
+| Restitution | extension QGIS, cartes, tableaux de bord, tuiles web |
+| Qualité du code | plus de 150 tests automatisés, intégration continue, typage |
+
+Le tout repose sur un **socle commun** (`core`) : une zone en entrée, et tout le reste en
+découle (lecture / écriture des données, base spatiale, rangement des résultats). Le détail
+complet est dans [`CARTOGRAPHIE.md`](scrutech/CARTOGRAPHIE.md) et la
+[politique de sécurité](SECURITY.md).
+
+</details>
+
+## Le projet en chiffres
+
+Ces chiffres se mettent à jour **tout seuls, tous les deux jours**, à partir de l'historique réel
+du projet.
 
 <!-- AUTO-STATS:START -->
 | 📦 Commits | 📅 Jours actifs | 🗂️ Projets |
@@ -363,15 +139,18 @@ réel (script [`scripts/generate_stats.py`](scripts/generate_stats.py), sans dé
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/activity-dark.svg">
-  <img src="assets/activity-light.svg" alt="Commits par semaine sur les 26 dernières semaines" width="100%">
+  <img src="assets/activity-light.svg" alt="Activité du projet, semaine par semaine" width="100%">
 </picture>
+
+<details>
+<summary>Voir la répartition des langages et des jours de travail</summary>
 
 <table>
   <tr>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="assets/languages-dark.svg">
-        <img src="assets/languages-light.svg" alt="Répartition des langages du dépôt" width="100%">
+        <img src="assets/languages-light.svg" alt="Répartition des langages du projet" width="100%">
       </picture>
     </td>
     <td width="50%">
@@ -383,67 +162,14 @@ réel (script [`scripts/generate_stats.py`](scripts/generate_stats.py), sans dé
   </tr>
 </table>
 
-## La stack en un schéma
+</details>
 
-```mermaid
-flowchart LR
-    subgraph Sources
-        S1[Sentinel-2 · STAC]
-        S2[IGN · limites admin]
-        S3[Open data<br/>ARCEP · EBC · cadastre]
-    end
-    subgraph Traitement
-        T1[xarray · dask<br/>datacubes]
-        T2[GeoPandas · Shapely]
-        T3[Stats de tendance<br/>MK · Sen · VCI]
-        T4[DuckDB spatial<br/>GeoParquet]
-    end
-    subgraph Livrables
-        L1[Cartes & couches QGIS]
-        L2[Classements territoriaux]
-        L3[Dashboards]
-        L4[Plugin QGIS ScruTech]
-    end
-    S1 --> T1 --> T3 --> T4
-    S2 --> T2 --> T4
-    S3 --> T2
-    T4 --> L1 & L2 & L3
-    T3 --> L4
-```
+## Me contacter
 
-## Qualité et industrialisation
-
-- **Tests d'abord.** Chaque composant s'exécute hors-ligne sur données synthétiques ou mockées ;
-  plus de 150 tests automatisés.
-- **Intégration continue.** Lint (ruff), typage (mypy), tests (pytest) à chaque push via GitHub
-  Actions ; veille de dépendances (Dependabot).
-- **Reproductibilité.** Environnements verrouillés (uv / `uv.lock`), CLI idempotentes et cachées,
-  stockage analytique versionnable (GeoParquet, COG).
-- **Sécurité.** Aucun secret en dépôt, secrets par variables d'environnement, requêtes HTTP
-  systématiquement bornées, validation des entrées aux frontières de confiance
-  ([politique de sécurité](SECURITY.md)).
-
-## Entretien automatique de la page
-
-Cette page s'entretient seule : un workflow GitHub Actions
-([`portfolio.yml`](.github/workflows/portfolio.yml)) tourne **tous les deux jours**, régénère les
-statistiques et les graphiques SVG (thèmes clair et sombre) depuis l'historique Git, puis
-committe le résultat.
-
-```mermaid
-flowchart LR
-    A([cron · 48 h]) --> B[generate_stats.py<br/>lecture de l'historique Git]
-    B --> C[SVG clair/sombre<br/>+ tableau de stats]
-    C --> D[Commit & push]
-    D --> E([README toujours à jour])
-```
-
-## Contact
+Je cherche un poste de **géomaticien** (Métropole de Lyon ou en télétravail). Discutons-en.
 
 - GitHub : [@BastienLebrou](https://github.com/BastienLebrou)
 - E-mail : [bastienlebrou1@gmail.com](mailto:bastienlebrou1@gmail.com)
-- Recherche un poste de **géomaticien / ingénieur données géospatiales** (Métropole de Lyon ou à
-  distance).
 
-<sub>Les statistiques et visuels de cette page sont calculés depuis l'historique Git réel du
-dépôt. Rien n'est saisi à la main.</sub>
+<sub>Les chiffres et graphiques de cette page sont calculés depuis l'historique réel du projet.
+Rien n'est saisi à la main.</sub>
