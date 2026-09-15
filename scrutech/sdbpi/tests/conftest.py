@@ -1,4 +1,4 @@
-"""Put the SDBPi flat modules (config, processing, …) on the path for tests."""
+"""Put the SDBPi flat modules (sdbpi_config, sdbpi_processing, …) on the path for tests."""
 
 import sys
 from pathlib import Path

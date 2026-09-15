@@ -42,9 +42,9 @@ qu'il utilise.
 | Outil | Fichier qui le lance | Briques de calcul |
 |---|---|---|
 | **VegeVigie** (verdissement, sécheresse) | `vegevigie/src/vegevigie/pipeline.py` | `trend.py`, `drought.py`, `seasonal.py`, `breaks.py` |
-| **Biotrame** (zones prioritaires) | `vegevigie/src/vegevigie/biotrame_aoi.py` | `biotrame/src/biotrame/mesh.py`, `score.py`, `aggregate.py` |
+| **Biotrame** (zones prioritaires) | `vegevigie/src/vegevigie/biotrame_aoi.py` | `biotrame/src/biotrame/mesh.py`, `score.py`, `aggregate.py` ; `vegevigie/src/vegevigie/wetland.py` (zones humides) |
 | **PAF** (forêt ↔ maisons) | `vegevigie/src/vegevigie/interface.py` | `core/sources.py` (bâti, forêt) |
-| **Écobuage** (aptitude au brûlage) | `vegevigie/src/vegevigie/ecobuage_aoi.py` | `ecobuage/ecobuage.py`, `wetland.py` |
+| **Écobuage** (aptitude au brûlage) | `vegevigie/src/vegevigie/ecobuage_aoi.py` | `ecobuage/ecobuage.py` ; `core/sources.py` (routes, bâti) |
 | **AlphaEarth** (changement annuel) | `alphaearth/src/alphaearth/pipeline.py` | `client.py`, `change.py`, `classifier.py` |
 | **SDBPi** (bâtiments vides) | `sdbpi/run_vacance.py` | `sdbpi_processing.py`, `sdbpi_sources.py` |
 | **Mini data centers** (choix de sites) | `mini_dc/outil/run.py` | `mini_dc_pipeline.py`, `mini_dc_checks.py` |
