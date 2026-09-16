@@ -1,13 +1,13 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-  <img src="assets/banner-light.svg" alt="Bastien Lebrou — Géomatique, données géospatiales, télédétection" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/mantis-banner-dark.png">
+  <img src="assets/mantis-banner-light.png" alt="ScruTech — voir ce que l'œil ne voit pas" width="100%">
 </picture>
 
-<br>
+<br><br>
 
-<img src="https://github.com/BastienLebrou.png?size=240" width="130" alt="Photo de profil de Bastien Lebrou">
+<img src="https://github.com/BastienLebrou.png?size=240" width="118" alt="Photo de profil de Bastien Lebrou">
 
 ### Bastien Lebrou
 
@@ -16,23 +16,45 @@ données publiques pour répondre à des questions concrètes.
 
 `Portfolio géomatique & données` · `projet personnel` · `open source`
 
-[![Mes projets](https://img.shields.io/badge/GitHub-@BastienLebrou-181717?logo=github)](https://github.com/BastienLebrou)
-[![E-mail](https://img.shields.io/badge/E--mail-me%20contacter-0b7285?logo=maildotru&logoColor=white)](mailto:bastienlebrou1@gmail.com)
+[![Mes projets](https://img.shields.io/badge/GitHub-@BastienLebrou-661C1A?logo=github&logoColor=white)](https://github.com/BastienLebrou)
+[![E-mail](https://img.shields.io/badge/E--mail-me%20contacter-5C6A30?logo=maildotru&logoColor=white)](mailto:bastienlebrou1@gmail.com)
 [![Ça tourne](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml/badge.svg)](https://github.com/BastienLebrou/portefolio_project/actions/workflows/ci.yml)
 
 </div>
 
 ## En deux mots
 
-Imaginez une **boîte à outils** qui regarde un bout de territoire depuis l'espace et le croise
-avec les données publiques disponibles. On lui désigne une zone sur la carte, elle va chercher
-la donnée toute seule, l'analyse, et rend des **cartes prêtes à ouvrir**.
+Le cartographe lit le territoire couche après couche. Mais sous ces couches, des **données
+invisibles le façonnent**. **ScruTech** met la technologie au cœur du regard pour les rendre
+lisibles : on lui désigne une zone sur la carte, elle va chercher la donnée toute seule
+(satellite, open data), l'analyse, et rend des **cartes prêtes à décider**.
 
-Chaque outil répond à **une question** que se posent les collectivités, les gestionnaires
-d'espaces naturels ou les bureaux d'études. Le tout forme une seule plateforme, **ScruTech**.
+Chaque outil répond à **une question**. VegeVigie, Écobuage, Mini DC… **ne sont que des
+outils** d'une seule et même plateforme.
 
-> 🧭 **Tu explores le code ?** Commence par le [**guide du dépôt**](GUIDE.md) : il indique, pour
-> chaque outil, le fichier à ouvrir et ce qu'il fait.
+> 🧭 Tu explores le code ? Commence par le [**guide du dépôt**](GUIDE.md) : pour chaque outil, il
+> dit quel fichier ouvrir et ce qu'il fait.
+
+## Mantis, le regard du projet
+
+<table>
+  <tr>
+    <td width="34%" align="center">
+      <img src="assets/mantis.png" alt="Mantis, la mascotte de ScruTech : une crevette-mante qui tient des jumelles" width="230">
+    </td>
+    <td>
+
+**Mantis, la crevette-mante.** Son système visuel est le plus complexe du règne animal : seize
+types de photorécepteurs (contre trois chez l'humain), l'ultraviolet, la lumière polarisée. Elle
+perçoit ce que nous ne voyons pas.
+
+C'est exactement le geste de ScruTech : révéler les **forces invisibles qui façonnent le
+territoire**. Mantis est la mascotte-guide du projet — elle présente, vulgarise et relie les
+outils, jumelles à la main.
+
+  </td>
+  </tr>
+</table>
 
 ## Un aperçu, en images
 
@@ -74,14 +96,14 @@ les zones prioritaires ; **en orange**, celles à regarder de plus près ; **en 
 | 🌿 | **VegeVigie** | La forêt se porte-t-elle bien ? En empilant dix ans de photos satellite, l'outil repère où la végétation pousse, où elle décline, et où elle souffre de la sécheresse. |
 | 🕸️ | **Biotrame** | Où concentrer les efforts pour la nature ? En croisant tous les indicateurs sur une grille, l'outil met en avant les zones prioritaires (compensation écologique). |
 | 🛰️ | **AlphaEarth** | Qu'est-ce qui a changé sur le terrain d'une année à l'autre ? On s'appuie sur des « empreintes » satellite de Google pour classer le paysage et repérer les évolutions. |
-| 🔥 | **PAFF** | Où le feu menace-t-il les maisons ? L'outil trace la ligne exacte où la forêt touche les habitations, là où le débroussaillement est obligatoire. |
+| 🔥 | **PAF** | Où le feu menace-t-il les maisons ? L'outil trace la ligne exacte où la forêt touche les habitations, là où le débroussaillement est obligatoire. |
 | 🌾 | **Écobuage** | Quelles parcelles peut-on brûler sans danger ? Chaque zone reçoit une note selon la végétation, la pente, l'accès et les protections en place. |
 | 🏚️ | **SDBPi** | Quels locaux commerciaux semblent vides ? On croise les bâtiments et les entreprises actives : pas d'entreprise enregistrée à l'adresse, bâtiment à vérifier. |
 | 🏢 | **Mini data centers** | Où installer un petit data center chez des particuliers ? On écarte les terrains impossibles, puis on note ceux qui restent. |
 | 🌍 | **Climate Risk** | Mes fournisseurs sont-ils sur des zones déboisées ou menacées par le climat ? Un prototype de conformité (réglementation européenne EUDR). |
 
 Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/vegevigie/) ·
-[Biotrame](scrutech/biotrame/) · [AlphaEarth](scrutech/alphaearth/) · [PAFF](scrutech/paff/) ·
+[Biotrame](scrutech/biotrame/) · [AlphaEarth](scrutech/alphaearth/) · [PAF](scrutech/paff/) ·
 [Écobuage](scrutech/ecobuage/) · [SDBPi](scrutech/sdbpi/) ·
 [Mini data centers](scrutech/mini_dc/) · [Climate Risk](scrutech/climate_risk_analyzer/).
 
@@ -90,6 +112,7 @@ Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/vegevigie/) ·
 Toujours le même principe, quel que soit l'outil : on part d'une zone, on finit avec des cartes.
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F1E8D2','primaryBorderColor':'#661C1A','primaryTextColor':'#2B261D','lineColor':'#5C6A30','fontFamily':'IBM Plex Sans, Segoe UI, sans-serif'}}}%%
 flowchart LR
     A["🗺️ Une zone<br/>sur la carte"] --> B["📡 L'outil va chercher<br/>la donnée tout seul<br/>(satellite, open data)"]
     B --> C["⚙️ Il analyse<br/>et croise"]
@@ -174,5 +197,5 @@ Je cherche un poste de **géomaticien** (Métropole de Lyon ou en télétravail)
 - GitHub : [@BastienLebrou](https://github.com/BastienLebrou)
 - E-mail : [bastienlebrou1@gmail.com](mailto:bastienlebrou1@gmail.com)
 
-<sub>Les chiffres et graphiques de cette page sont calculés depuis l'historique réel du projet.
-Rien n'est saisi à la main.</sub>
+<sub>Mantis et l'identité visuelle sont maison. Les chiffres et graphiques sont calculés depuis
+l'historique réel du projet — rien n'est saisi à la main.</sub>
