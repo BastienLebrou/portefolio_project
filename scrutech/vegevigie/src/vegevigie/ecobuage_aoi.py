@@ -29,7 +29,7 @@ _DEFAULT_WEIGHTS = {"combustible": 25.0, "embroussaillement": 25.0, "slope": 20.
 
 def build_aptitude_from_aoi(
     aoi: object,
-    mnt_path: str | Path,
+    mnt_path: str | Path | None,
     out_dir: Path,
     *,
     resolution: float = 25.0,
@@ -43,7 +43,10 @@ def build_aptitude_from_aoi(
     weights: dict[str, float] | None = None,
     progress=None,
 ) -> tuple[Path, Path, dict]:
-    """Build écobuage aptitude + class rasters for the AOI. Returns (aptitude, classes, info)."""
+    """Build écobuage aptitude + class rasters for the AOI. Returns (aptitude, classes, info).
+
+    ``mnt_path`` None: the IGN DEM of the zone is downloaded (LiDAR HD, RGE ALTI in its gaps).
+    """
     import ecobuage
     from core.aoi import resolve_aoi
 
@@ -55,8 +58,10 @@ def build_aptitude_from_aoi(
     transform, width, height = _grid(geom_l93.bounds, resolution)
     logger.info("Écobuage grid: %dx%d @ %.0f m (L93).", width, height, resolution)
 
+    if mnt_path is None:
+        mnt_path = _download_mnt(a, geom_l93.bounds, out_dir, resolution, report)
     report(20, "Slope from the DEM…")
-    slope_pct = _slope_percent(Path(mnt_path), geom_l93.bounds, transform, width, height)
+    slope_pct = _slope_percent(mnt_path, geom_l93.bounds, transform, width, height)
 
     report(45, "Accessibility from BD TOPO roads…")
     access = _access_from_roads(a, transform, width, height, access_max_m)
@@ -97,6 +102,7 @@ def build_aptitude_from_aoi(
 
     info = {
         "criteria": used,
+        "mnt_path": str(mnt_path),
         "n_prioritaire": int((classes == 2).sum()),
         "n_a_etudier": int((classes == 1).sum()),
         "n_a_exclure": int((classes == 0).sum()),
@@ -118,18 +124,33 @@ def _grid(bounds: tuple, resolution: float):
     return from_origin(minx, maxy, resolution, resolution), width, height
 
 
-def _slope_percent(mnt_path: Path, bounds: tuple, transform, width: int, height: int) -> np.ndarray:
+def _download_mnt(aoi, bounds: tuple, out_dir: Path, resolution: float, report) -> Path:
+    """No DEM given: fetch the IGN one for the zone, at 5 m if it fits, else at ``resolution``."""
+    from core.sources import MNT_MAX_PX, fetch_mnt
+
+    minx, miny, maxx, maxy = bounds
+    fits_5m = (maxx - minx + 400) * (maxy - miny + 400) / 25.0 <= MNT_MAX_PX
+    dem_res = 5.0 if fits_5m else float(resolution)
+    report(10, f"Téléchargement du MNT IGN de la zone ({dem_res:g} m)…")
+    path, _info = fetch_mnt(aoi, out_dir / "mnt_ign.tif", resolution=dem_res, margin_m=200.0)
+    return path
+
+
+def _slope_percent(
+    mnt_path: str | Path, bounds: tuple, transform, width: int, height: int
+) -> np.ndarray:
     """Read the DEM window over the AOI, compute slope (%), resample to the target grid.
 
     The DEM CRS tag may be missing; it is assumed to be Lambert-93 (its coordinates are).
     """
     import rasterio
-    from core.cog import raster_source
+    from core.cog import raster_source, require_lambert93
     from rasterio.warp import Resampling, reproject
     from rasterio.windows import from_bounds
 
     minx, miny, maxx, maxy = bounds
     with rasterio.open(raster_source(mnt_path)) as ds:
+        require_lambert93(ds.crs)
         pad = 200.0  # metres of margin so edge gradients are valid
         win = from_bounds(minx - pad, miny - pad, maxx + pad, maxy + pad, ds.transform)
         arr = ds.read(1, window=win, boundless=True, fill_value=np.nan).astype("float64")
@@ -137,6 +158,11 @@ def _slope_percent(mnt_path: Path, bounds: tuple, transform, width: int, height:
         if ds.nodata is not None:
             arr[arr == ds.nodata] = np.nan
         cell = abs(ds.transform.a)
+    if not np.isfinite(arr).any():
+        raise ValueError(
+            "Le MNT ne couvre pas la zone d'étude : choisissez un MNT qui la recouvre, ou "
+            "laissez le champ vide pour télécharger le MNT IGN."
+        )
 
     gy, gx = np.gradient(arr, cell)
     slope_pct = np.hypot(gx, gy) * 100.0

@@ -384,7 +384,9 @@ def zonal(
     mean_anomaly = min_vci = None
     if drought_path.exists():
         drought = open_zarr(drought_path)
-        mean_anomaly = drought["ndvi_anomaly"].mean("time")
+        from vegevigie.drought import drought_summary
+
+        mean_anomaly = drought_summary(drought["ndvi_anomaly"])["recent_anomaly"]
         min_vci = drought["vci"].min("time")
 
     typer.echo(f"Aggregating trend/drought rasters to {len(communes)} communes...")

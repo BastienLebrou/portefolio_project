@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_load_cached(spec)
     if task == "geoai_segment":
         return _run_geoai_segment(spec)
+    if task == "mnt_aoi":
+        return _run_mnt_aoi(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -83,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
         + json.dumps(
             {
                 "trend_tif": _s(result.trend_tif),
+                "trend_class_tif": _s(result.trend_class_tif),
+                "stress_tif": _s(result.stress_tif),
                 "break_tif": _s(result.break_tif),
                 "drought_tif": _s(result.drought_tif),
                 "zonal_parquet": _s(result.zonal_parquet),
@@ -157,7 +161,7 @@ def _run_ecobuage_aoi(spec: dict) -> int:
     try:
         apt_path, cls_path, info = build_aptitude_from_aoi(
             tuple(spec["bbox"]),
-            spec["mnt_path"],
+            spec.get("mnt_path"),
             out_dir=Path(spec["out_folder"]),
             resolution=float(spec.get("resolution", 25.0)),
             veg_trend_tif=spec.get("veg_trend_tif"),
@@ -228,6 +232,27 @@ def _run_geoai_segment(spec: dict) -> int:
         "n_objects": result.n_objects,
     }
     print("RESULT " + json.dumps(payload), flush=True)
+    return 0
+
+
+def _run_mnt_aoi(spec: dict) -> int:
+    """IGN DEM of the AOI (LiDAR HD, RGE ALTI in its gaps), tiled download then mosaic."""
+    from core.sources import fetch_mnt
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        path, info = fetch_mnt(
+            tuple(spec["bbox"]),
+            Path(spec["out_path"]),
+            resolution=float(spec.get("resolution", 5.0)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+    print("RESULT " + json.dumps({"mnt_path": str(path), **info}), flush=True)
     return 0
 
 

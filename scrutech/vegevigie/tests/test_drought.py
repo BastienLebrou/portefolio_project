@@ -109,3 +109,22 @@ def test_drought_dataset_structure() -> None:
     ds = drought_dataset(cube)
     assert set(ds.data_vars) == {"ndvi_anomaly", "vci"}
     assert ds["ndvi_anomaly"].dims == ("time", "y", "x")
+
+
+def test_drought_summary_is_not_the_zero_mean_anomaly() -> None:
+    from vegevigie.drought import drought_summary
+
+    def builder(times, size):
+        month = times.month.to_numpy()
+        base = 0.55 + 0.2 * np.sin(2 * np.pi * (month - 4) / 12)
+        base = np.where(times.year.to_numpy() == times.year.max(), base - 0.15, base)  # dry year
+        noise = np.random.default_rng(0).normal(0, 0.01, size=len(times))
+        return np.repeat((base + noise)[:, None, None], size, axis=1).repeat(size, axis=2)
+
+    anomaly = drought_dataset(_monthly_cube(4, builder=builder))["ndvi_anomaly"]
+    summary = drought_summary(anomaly)
+    # Averaged over its own window the anomaly is 0 everywhere: that was the blank layer.
+    assert abs(float(anomaly.mean())) < 1e-9
+    assert bool((summary["recent_anomaly"] < -1).all())  # the dry last year stands out
+    freq = summary["stress_frequency"]
+    assert bool(((freq > 0) & (freq <= 100)).all())

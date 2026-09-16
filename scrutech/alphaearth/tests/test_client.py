@@ -51,3 +51,15 @@ def test_dist_features_to_gdf_parses_change_distance() -> None:
     assert gdf["change_distance"].tolist() == [0.05, 0.8]
     assert gdf.crs.to_epsg() == 4326
     assert gdf["pixel_id"].tolist() == [0, 1]
+
+
+def test_explain_gee_error_names_the_missing_role() -> None:
+    from alphaearth.client import explain_gee_error
+
+    msg = (
+        "Caller does not have required permission to use project scrutech. Grant the caller "
+        "the roles/serviceusage.serviceUsageConsumer role"
+    )
+    text = explain_gee_error(msg)
+    assert "Service Usage Consumer" in text and msg in text
+    assert explain_gee_error("boom").startswith("Earth Engine a refusé")

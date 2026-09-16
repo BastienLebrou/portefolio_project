@@ -71,8 +71,10 @@ class PipelineResult:
 
     settings: Settings
     trend_tif: Path | None = None
+    trend_class_tif: Path | None = None
     break_tif: Path | None = None
     drought_tif: Path | None = None
+    stress_tif: Path | None = None
     zonal_parquet: Path | None = None
     duckdb_path: Path | None = None
     timeline_parquet: Path | None = None
@@ -119,7 +121,7 @@ def run_pipeline(
     )
     from vegevigie.composite import build_monthly_ndvi
     from vegevigie.datacube import build_cube
-    from vegevigie.drought import drought_dataset, drought_timeline
+    from vegevigie.drought import drought_dataset, drought_summary, drought_timeline
     from vegevigie.indices import masked_ndvi
     from vegevigie.trend import trend_dataset
 
@@ -178,7 +180,7 @@ def run_pipeline(
         settings.paths.processed / f"trend_sen_slope_{start}_{end}.tif",
         "sen_slope",
     )
-    _write_band(
+    result.trend_class_tif = _write_band(
         trend["trend_class"],
         crs,
         settings.paths.processed / f"trend_class_{start}_{end}.tif",
@@ -201,32 +203,48 @@ def run_pipeline(
             "break_year",
         )
 
-    report(80, "Drought anomaly + VCI…")
-    drought = drought_dataset(monthly).compute()
-    mean_anomaly = drought["ndvi_anomaly"].mean("time")
-    min_vci = drought["vci"].min("time")
-    result.drought_tif = _write_band(
-        mean_anomaly,
-        crs,
-        settings.paths.processed / f"drought_anomaly_{start}_{end}.tif",
-        "mean_anomaly",
-    )
-    timeline = drought_timeline(drought["ndvi_anomaly"]).compute()
-    result.timeline_parquet = settings.paths.processed / f"drought_timeline_{start}_{end}.parquet"
-    timeline.to_dataframe().reset_index().to_parquet(result.timeline_parquet)
+    # Drought = deviation from each pixel's own monthly normal: needs >= 2 years of history.
+    recent_anomaly = min_vci = None
+    if has_multiple_years(monthly):
+        report(80, "Écart à la normale (anomalie de NDVI) et fréquence de stress…")
+        drought = drought_dataset(monthly).compute()
+        summary = drought_summary(drought["ndvi_anomaly"])
+        recent_anomaly = summary["recent_anomaly"]
+        min_vci = drought["vci"].min("time")
+        result.drought_tif = _write_band(
+            recent_anomaly,
+            crs,
+            settings.paths.processed / f"drought_anomaly_{start}_{end}.tif",
+            "recent_anomaly",
+        )
+        result.stress_tif = _write_band(
+            summary["stress_frequency"],
+            crs,
+            settings.paths.processed / f"drought_frequency_{start}_{end}.tif",
+            "stress_frequency",
+        )
+        timeline = drought_timeline(drought["ndvi_anomaly"]).compute()
+        result.timeline_parquet = (
+            settings.paths.processed / f"drought_timeline_{start}_{end}.parquet"
+        )
+        timeline.to_dataframe().reset_index().to_parquet(result.timeline_parquet)
+    else:
+        report(80, "Sécheresse non calculée : il faut au moins 2 années pour la normale.")
 
     if zones is not None and len(zones):
         report(92, f"Zonal aggregation over {len(zones)} zones…")
         result.zonal_parquet, result.duckdb_path = _run_zonal(
-            settings, zones, trend, mean_anomaly, min_vci, start, end
+            settings, zones, trend, recent_anomaly, min_vci, start, end
         )
 
     result.written = [
         p
         for p in (
             result.trend_tif,
+            result.trend_class_tif,
             result.break_tif,
             result.drought_tif,
+            result.stress_tif,
             result.zonal_parquet,
             result.timeline_parquet,
         )
@@ -240,8 +258,8 @@ def _run_zonal(
     settings: Settings,
     zones: gpd.GeoDataFrame,
     trend: xr.Dataset,
-    mean_anomaly: xr.DataArray,
-    min_vci: xr.DataArray,
+    mean_anomaly: xr.DataArray | None,
+    min_vci: xr.DataArray | None,
     start: int,
     end: int,
 ) -> tuple[Path, Path]:

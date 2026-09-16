@@ -35,3 +35,17 @@ def test_to_cog_produces_a_readable_cog(tmp_path) -> None:
     with rasterio.open(cog) as ds:
         assert ds.driver in ("GTiff", "COG")  # COG is a GTiff with an enforced layout
         assert ds.read(1).shape == (512, 512)
+
+
+def test_require_lambert93_refuses_other_crs() -> None:
+    import pytest
+    from rasterio.crs import CRS
+
+    from core.cog import require_lambert93
+
+    require_lambert93(None)  # untagged: still assumed Lambert-93
+    require_lambert93(CRS.from_epsg(2154))
+    with pytest.raises(ValueError, match="degrés"):
+        require_lambert93(CRS.from_epsg(4326))  # e.g. Copernicus DEM
+    with pytest.raises(ValueError, match="EPSG:32631"):
+        require_lambert93(CRS.from_epsg(32631))

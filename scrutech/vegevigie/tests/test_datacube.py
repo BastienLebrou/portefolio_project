@@ -34,3 +34,20 @@ def test_harmonize_does_not_mutate_input() -> None:
     before = cube["red"].values.copy()
     harmonize_reflectance(cube)
     assert np.array_equal(cube["red"].values, before)
+
+
+def test_offset_only_for_scenes_from_baseline_04() -> None:
+    import pandas as pd
+
+    from vegevigie.datacube import baseline_offsets
+
+    times = xr.DataArray(pd.to_datetime(["2021-06-28T10:30", "2023-06-28T10:30"]), dims="time")
+    items = [
+        {"properties": {"datetime": "2021-06-28T10:30:21Z", "s2:processing_baseline": "03.00"}},
+        {"properties": {"datetime": "2023-06-28T10:30:21Z", "s2:processing_baseline": "05.10"}},
+    ]
+    offsets = baseline_offsets(items, times)
+    assert offsets.values.tolist() == [0.0, BOA_OFFSET]
+    cube = xr.Dataset({"red": ("time", [1200, 1200])}, coords={"time": times.values})
+    # Same digital number: 2021 carries no offset (0.12), 2023 does (0.02).
+    assert np.allclose(harmonize_reflectance(cube, offsets)["red"].values, [0.12, 0.02])

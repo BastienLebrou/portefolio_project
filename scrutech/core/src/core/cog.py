@@ -48,3 +48,23 @@ def raster_source(path: str | Path) -> str:
     if s.startswith("s3://"):
         return "/vsis3/" + s[len("s3://") :]
     return s
+
+
+def require_lambert93(crs: object, what: str = "Le MNT") -> None:
+    """Refuse a raster whose CRS is known and is not Lambert-93 (the grid the maths assume).
+
+    An untagged raster (``crs`` None) is still assumed to be Lambert-93, as before.
+    """
+    if crs is None:
+        return
+    if getattr(crs, "is_geographic", False):
+        raise ValueError(
+            f"{what} est en degrés ({crs}) : il doit être projeté en Lambert-93 (EPSG:2154). "
+            "Laissez le champ vide pour télécharger le MNT IGN de la zone."
+        )
+    epsg = crs.to_epsg()  # type: ignore[attr-defined]
+    if epsg is not None and epsg != 2154:
+        raise ValueError(
+            f"{what} est en EPSG:{epsg} : il doit être en Lambert-93 (EPSG:2154). "
+            "Laissez le champ vide pour télécharger le MNT IGN de la zone."
+        )

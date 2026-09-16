@@ -139,7 +139,7 @@ def _zonal_wetness(grid, mnt_path: str | Path) -> pd.Series:
     topographic wetness (flat + depression), then the mean per hexagon.
     """
     import rasterio
-    from core.cog import raster_source
+    from core.cog import raster_source, require_lambert93
     from rasterio.features import rasterize
     from rasterio.windows import from_bounds
     from scipy import ndimage
@@ -149,6 +149,7 @@ def _zonal_wetness(grid, mnt_path: str | Path) -> pd.Series:
     g = grid.to_crs(L93)
     minx, miny, maxx, maxy = g.total_bounds
     with rasterio.open(raster_source(mnt_path)) as ds:
+        require_lambert93(ds.crs)
         pad = 300.0  # metres, so the neighborhood filter has context at the edges
         win = from_bounds(minx - pad, miny - pad, maxx + pad, maxy + pad, ds.transform)
         dem = ds.read(1, window=win, boundless=True, fill_value=np.nan).astype("float64")

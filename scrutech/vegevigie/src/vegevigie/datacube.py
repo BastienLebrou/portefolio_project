@@ -45,6 +45,12 @@ BAND_ALIASES: dict[str, str] = {"B04": "red", "B08": "nir", "SCL": "scl"}
 # Sentinel-2 L2A harmonization (processing baseline >= 04.00).
 BOA_SCALE = 1.0 / 10000.0
 BOA_OFFSET = -1000.0  # applied in DN space before scaling
+# Planetary Computer serves L2A as ESA produced it: baseline 04.00+ scenes (ESA switch on
+# 2022-01-25) carry the -1000 offset, older ones do NOT. Offsetting every scene biased
+# pre-2022 NDVI and faked a break in January 2022 (checked on PC items: 2021 = 03.00,
+# 2023 = 05.10).
+OFFSET_BASELINE = 4.0
+OFFSET_START_DATE = "2022-01-25"  # fallback for an item without s2:processing_baseline
 
 BBox = tuple[float, float, float, float]
 
@@ -61,7 +67,8 @@ def _sign_items(backend: StacBackend, item_dicts: list[dict[str, Any]]) -> list[
     return signed
 
 
-def harmonize_reflectance(cube: xr.Dataset) -> xr.Dataset:
+def harmonize_reflectance(cube: xr.Dataset, offset: Any = BOA_OFFSET) -> xr.Dataset:
+    # offset: scalar, or per-time DataArray from baseline_offsets() for mixed baselines.
     """Apply the Sentinel-2 BOA offset+scale to Red/NIR; leave SCL (a class code) as-is.
 
     Pure transform on an xarray Dataset — kept separate so it's unit-testable and so
@@ -70,8 +77,26 @@ def harmonize_reflectance(cube: xr.Dataset) -> xr.Dataset:
     out = cube.copy()
     for band in ("red", "nir"):
         if band in out:
-            out[band] = (out[band] + BOA_OFFSET) * BOA_SCALE
+            out[band] = (out[band] + offset) * BOA_SCALE
     return out
+
+
+def baseline_offsets(item_dicts: list[dict[str, Any]], times: xr.DataArray) -> xr.DataArray:
+    """Per-``time`` BOA offset: ``BOA_OFFSET`` for baseline >= 04.00 scenes, 0 before."""
+    import xarray as xr
+
+    has_offset: dict[str, bool] = {}
+    for item in item_dicts:
+        props = item.get("properties", {})
+        day = str(props.get("datetime", ""))[:10]
+        baseline = props.get("s2:processing_baseline")
+        # ponytail: one flag per solar day; a day mixing both baselines keeps the last one.
+        has_offset[day] = (
+            float(baseline) >= OFFSET_BASELINE if baseline else day >= OFFSET_START_DATE
+        )
+    days = [str(t)[:10] for t in times.values]
+    values = [BOA_OFFSET if has_offset.get(d, d >= OFFSET_START_DATE) else 0.0 for d in days]
+    return xr.DataArray(values, dims="time", coords={"time": times.values})
 
 
 def build_cube(
@@ -105,7 +130,7 @@ def build_cube(
         chunks={"x": chunk_size, "y": chunk_size},
         groupby="solar_day",
     ).rename(BAND_ALIASES)
-    return harmonize_reflectance(cube)
+    return harmonize_reflectance(cube, baseline_offsets(item_dicts, cube["time"]))
 
 
 def write_zarr(cube: xr.Dataset, path: Path, force: bool = False) -> Path:

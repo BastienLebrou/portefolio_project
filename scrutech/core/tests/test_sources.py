@@ -110,3 +110,30 @@ def test_fetch_tvb_corridors_rejects_non_http_url() -> None:
     for bad in ("file:///etc/passwd", "ftp://x/y", "/local/path"):
         with pytest.raises(ValueError, match="http"):
             sources.fetch_tvb_corridors(aoi, "ms:corridors", wfs_url=bad)
+
+
+def test_fetch_mnt_tiles_fills_lidar_gaps_and_caps_size(tmp_path, monkeypatch) -> None:
+    import numpy as np
+    import pytest
+    import rasterio
+
+    def fake_elevation(layer, bbox, width, height, timeout):
+        if "LIDAR" in layer:
+            arr = np.full((height, width), 400.0, dtype="float32")
+            arr[0, :] = np.nan  # LiDAR HD not flown on the first row of each tile
+            return arr
+        return np.full((height, width), 500.0, dtype="float32")  # RGE ALTI
+
+    monkeypatch.setattr(sources, "_wms_elevation", fake_elevation)
+    monkeypatch.setattr(sources, "MNT_TILE_PX", 4)
+    aoi = (4.585, 44.553, 4.586, 44.554)  # ~80 x 110 m
+    path, info = sources.fetch_mnt(aoi, tmp_path / "mnt.tif", resolution=10.0)
+
+    with rasterio.open(path) as ds:
+        dem = ds.read(1)
+        assert ds.crs.to_epsg() == 2154
+    assert info["mnt_tiles"] > 1  # the loop really tiled the zone
+    assert sorted(np.unique(dem).tolist()) == [400.0, 500.0]  # no hole left
+    monkeypatch.setattr(sources, "MNT_MAX_PX", 10)
+    with pytest.raises(ValueError, match="trop grande"):
+        sources.fetch_mnt(aoi, tmp_path / "big.tif", resolution=10.0)

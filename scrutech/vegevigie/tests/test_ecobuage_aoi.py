@@ -104,3 +104,25 @@ def test_veg_rasters_add_criteria(tmp_path, monkeypatch) -> None:
         aoi, dem, tmp_path / "out", resolution=50.0, veg_trend_tif=trend
     )
     assert "embroussaillement" in info["criteria"]
+
+
+def test_without_dem_the_ign_dem_is_downloaded(tmp_path, monkeypatch) -> None:
+    import core.sources as sources
+
+    empty = gpd.GeoDataFrame(geometry=[], crs=L93)
+    monkeypatch.setattr(sources, "fetch_roads", lambda aoi, **k: empty)
+    monkeypatch.setattr(sources, "fetch_buildings", lambda aoi, **k: empty)
+    asked: dict = {}
+
+    def fake_fetch_mnt(aoi, out_path, **kwargs):
+        asked.update(kwargs)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        _write_dem(out_path, crs=L93)
+        return out_path, {}
+
+    monkeypatch.setattr(sources, "fetch_mnt", fake_fetch_mnt)
+    aoi = gpd.GeoDataFrame(geometry=[AOI], crs=L93)
+    apt, _, info = build_aptitude_from_aoi(aoi, None, tmp_path / "out", resolution=50.0)
+    assert apt.exists()
+    assert info["mnt_path"].endswith("mnt_ign.tif")
+    assert asked == {"resolution": 5.0, "margin_m": 200.0}

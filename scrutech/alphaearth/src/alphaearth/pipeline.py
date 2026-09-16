@@ -39,11 +39,14 @@ def detect_change_for_aoi(
     import numpy as np
 
     from alphaearth.change import flag_by_percentile
-    from alphaearth.client import authenticate_gee, fetch_change_samples
+    from alphaearth.client import authenticate_gee, explain_gee_error, fetch_change_samples
 
     report = progress or (lambda _pct, _msg: None)
     report(15, "Authenticating to Google Earth Engine…")
-    authenticate_gee(credentials_json=credentials_json)
+    try:
+        authenticate_gee(credentials_json=credentials_json)
+    except Exception as exc:  # noqa: BLE001 — bad key/project: tell the user what to do
+        raise RuntimeError(explain_gee_error(str(exc))) from exc
 
     report(35, f"Sampling AlphaEarth change {year1}→{year2} (server-side cosine)…")
     gdf = fetch_change_samples(aoi_geojson, year1, year2, max_pixels=max_pixels)

@@ -91,3 +91,23 @@ def drought_dataset(monthly: xr.DataArray, time_dim: str = "time") -> xr.Dataset
     anomaly = ndvi_anomaly(monthly, climatology, time_dim=time_dim)
     condition = vci(monthly, climatology, time_dim=time_dim)
     return xr.Dataset({"ndvi_anomaly": anomaly, "vci": condition})
+
+
+def drought_summary(
+    anomaly: xr.DataArray, stress_z: float = -1.0, time_dim: str = "time"
+) -> xr.Dataset:
+    """The two maps that answer "where does vegetation deviate from its normal?".
+
+    - ``recent_anomaly``: mean z-score over the most recent year of the series (negative =
+      browner/drier than this pixel's usual state for the season);
+    - ``stress_frequency``: share (%) of observed months with z <= ``stress_z``.
+
+    Not the mean anomaly over the whole window: that is ~0 everywhere by construction, since
+    the climatology is computed on the same window.
+    """
+    years = anomaly[time_dim].dt.year
+    last_year = anomaly.isel({time_dim: (years == years.max()).values})
+    recent = last_year.mean(time_dim).rename("recent_anomaly")
+    stressed = (anomaly <= stress_z).where(anomaly.notnull())
+    frequency = (stressed.mean(time_dim) * 100.0).rename("stress_frequency")
+    return xr.Dataset({"recent_anomaly": recent, "stress_frequency": frequency})

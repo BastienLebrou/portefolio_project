@@ -23,6 +23,8 @@ from shapely.geometry import shape
 from alphaearth._columns import EMB_COLS
 
 DATASET = "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL"
+# Earth Engine refuses getInfo() on a collection above 5 000 elements.
+GETINFO_MAX = 5000
 
 
 @dataclass
@@ -122,8 +124,45 @@ def fetch_change_samples(
 
     geom = ee.Geometry(aoi_geojson)
     dist = _cosine_distance_image(_annual_image(geom, year1), _annual_image(geom, year2))
-    sample = dist.sample(region=geom, scale=10, numPixels=max_pixels, geometries=True)
-    return _dist_features_to_gdf(sample.getInfo()["features"])
+    n = min(max_pixels, GETINFO_MAX)
+    sample = dist.sample(region=geom, scale=10, numPixels=n, seed=42, geometries=True)
+    try:
+        features = sample.limit(GETINFO_MAX).getInfo()["features"]
+    except ee.EEException as exc:
+        raise RuntimeError(explain_gee_error(str(exc))) from exc
+    return _dist_features_to_gdf(features)
+
+
+def explain_gee_error(message: str) -> str:
+    """Turn an Earth Engine error into what the user must do, in French (pure, testable)."""
+    low = message.lower()
+    if "serviceusage" in low:
+        advice = (
+            "La clé Google Earth Engine est reconnue, mais son compte de service n'a pas le "
+            "droit d'utiliser le projet Google Cloud. Dans console.cloud.google.com, menu "
+            "IAM et administration ▸ IAM (projet de la clé), ajoutez au compte de service le "
+            "rôle « Service Usage Consumer », puis relancez après quelques minutes."
+        )
+    elif "not registered" in low or ("register" in low and "earth engine" in low):
+        advice = (
+            "Le projet Google Cloud de la clé n'est pas enregistré pour Earth Engine : "
+            "enregistrez-le sur code.earthengine.google.com/register, puis relancez."
+        )
+    elif "quota" in low or "too many requests" in low or "rate limit" in low:
+        advice = "Quota Earth Engine atteint : réessayez plus tard ou réduisez la zone."
+    elif "invalid_grant" in low or "invalid jwt" in low:
+        advice = (
+            "La clé Google Earth Engine est refusée (révoquée ou invalide) : créez une "
+            "nouvelle clé JSON pour le compte de service."
+        )
+    elif "parameter 'image" in low:
+        advice = (
+            "Pas d'image AlphaEarth pour l'une des deux années : choisissez des années "
+            "entre 2017 et l'an dernier."
+        )
+    else:
+        advice = "Earth Engine a refusé la requête."
+    return f"{advice}\n\nDétail : {message}"
 
 
 def _dist_features_to_gdf(features: list[dict]) -> gpd.GeoDataFrame:
