@@ -14,6 +14,7 @@ from qgis.core import (
     QgsBlockingNetworkRequest,
     QgsFeatureSink,
     QgsProcessing,
+    QgsProcessingFeatureSource,
     QgsProcessingParameterDefinition,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
@@ -55,6 +56,14 @@ SOURCE_VECTOR_LINE = _from_qgis(
 )
 WKB_MULTILINESTRING = _from_qgis("WkbType", "MultiLineString", QgsWkbTypes, "MultiLineString")
 WKB_MULTIPOLYGON = _from_qgis("WkbType", "MultiPolygon", QgsWkbTypes, "MultiPolygon")
+GEOMETRY_POLYGON = _from_qgis("GeometryType", "Polygon", QgsWkbTypes, "PolygonGeometry")
+# Read invalid geometries anyway (the algorithm repairs them itself).
+SKIP_GEOMETRY_CHECKS = _from_qgis(
+    "ProcessingFeatureSourceFlag",
+    "SkipGeometryValidityChecks",
+    QgsProcessingFeatureSource,
+    "FlagSkipGeometryValidityChecks",
+)
 
 # Parameter flag: shown under "Advanced parameters" in the dialog.
 PARAM_ADVANCED = _from_qgis(

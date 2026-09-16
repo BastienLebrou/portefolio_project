@@ -82,12 +82,14 @@ def forest_bati_interface(
 
     forest_u = forest_m.union_all()
     bati_u = bati_m.union_all()
+    edge = forest_u.boundary  # the real forest edge, before the emprise cuts the forest
     if aoi_geom is not None:  # honour the emprise exactly, not just at the feature level
         forest_u = forest_u.intersection(aoi_geom)
         bati_u = bati_u.intersection(aoi_geom)
+        edge = edge.intersection(aoi_geom)
 
     reach = bati_u.buffer(contact_m)
-    line = forest_u.boundary.intersection(reach)
+    line = edge.intersection(reach)
     zone = forest_u.intersection(reach)
 
     metrics = {

@@ -64,17 +64,24 @@ def parse_qml(qml: str) -> Legend:
         )
         for i in items
     ]
-    colours = {s.get("name"): s.find(".//Option[@name='color']") for s in root.iter("symbol")}
+    colours = {s.get("name"): _symbol_colour(s) for s in root.iter("symbol")}
     for cat in root.iter("category"):
-        option = colours.get(cat.get("symbol"))
-        r, g, b, a = (
-            int(c)
-            for c in (option.get("value", "") if option is not None else "0,0,0,255").split(",")
-        )
-        entries.append(
-            (float(cat.get("value", "nan")), f"#{r:02x}{g:02x}{b:02x}", cat.get("label", ""), a)
-        )
+        colour, alpha = colours.get(cat.get("symbol"), ("#000000", 255))
+        entries.append((float(cat.get("value", "nan")), colour, cat.get("label", ""), alpha))
+    if not entries and colours:  # single symbol: one colour for the whole layer
+        colour, alpha = next(iter(colours.values()))
+        entries.append((0.0, colour, "", alpha))
     return Legend(kind, entries)
+
+
+def _symbol_colour(symbol: ET.Element) -> tuple[str, int]:
+    """Hex colour and alpha of a QML symbol (fill ``color`` or line ``line_color``)."""
+    option = symbol.find(".//Option[@name='color']")
+    if option is None:
+        option = symbol.find(".//Option[@name='line_color']")
+    rgba = option.get("value", "0,0,0,255") if option is not None else "0,0,0,255"
+    r, g, b, a = (int(c) for c in rgba.split(","))
+    return f"#{r:02x}{g:02x}{b:02x}", a
 
 
 def class_index(values: np.ndarray, legend: Legend) -> np.ndarray:
@@ -247,6 +254,7 @@ def _paff(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None:
     import geopandas as gpd
 
     line = gpd.read_file(data.interface_line)
+    line_colour = _colour(legend_for(data.interface_line), "#b30000")
     km = float(line.to_crs(2154).length.sum()) / 1000
     figures = f"frontière : {_num(km, 1)} km"
     sentences = [f"La frontière entre la forêt et les habitations mesure {_num(km, 1)} km."]
@@ -255,19 +263,20 @@ def _paff(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None:
         ha = float(zone.to_crs(2154).area.sum()) / 10_000
         figures += f" · à débroussailler : {_num(ha, 1)} ha"
         sentences.append(f"La bande à débroussailler autour des maisons couvre {_num(ha, 1)} ha.")
-        band_legend = Legend("EXACT", [(1, "#fc8d59", "bande de débroussaillement", 255)])
-        style = {"fillColor": "#fc8d59", "color": "#fc8d59", "weight": 0, "fillOpacity": 0.6}
+        band_colour = _colour(legend_for(data.interface_zone), "#fc8d59")
+        band_legend = Legend("EXACT", [(1, band_colour, "bande de débroussaillement", 255)])
+        style = {"fillColor": band_colour, "color": band_colour, "weight": 0, "fillOpacity": 0.6}
         band = folium.GeoJson(
             zone[["geometry"]].to_crs(4326), name="PAFF : bande", style_function=lambda _f: style
         )
         parts.layers.append((band, "PAFF : bande de débroussaillement", band_legend))
-    line_style = {"color": "#b30000", "weight": 3}
+    line_style = {"color": line_colour, "weight": 3}
     border = folium.GeoJson(
         line[["geometry"]].to_crs(4326),
         name="PAFF : frontière",
         style_function=lambda _f: line_style,
     )
-    line_legend = Legend("EXACT", [(0, "#b30000", "frontière habitat-forêt", 255)])
+    line_legend = Legend("EXACT", [(0, line_colour, "frontière habitat-forêt", 255)])
     parts.layers.append((border, "PAFF : frontière habitat-forêt", line_legend))
     parts.figures.append(("Interface habitat-forêt", figures))
     parts.sentences.append(("Risque incendie (PAFF)", sentences))
@@ -362,6 +371,10 @@ def _alphaearth(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None
     )
     lg = Legend("EXACT", [(1, colour, "changement marqué", 255)])
     parts.layers.append((layer, f"AlphaEarth : changements {year1}-{year2}", lg))
+
+
+def _colour(legend: Legend | None, default: str) -> str:
+    return legend.entries[0][1] if legend and legend.entries else default
 
 
 def _read(path: Path) -> tuple[np.ndarray, float | None]:

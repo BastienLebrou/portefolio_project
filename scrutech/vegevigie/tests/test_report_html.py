@@ -49,6 +49,13 @@ def test_discrete_classes_hold_values_up_to_their_bound() -> None:
     assert rgba[1, 1, 3] == 0  # nodata stays transparent
 
 
+def test_single_symbol_styles_give_their_colour() -> None:
+    styles = _plugin_styles()
+    assert parse_qml(styles.paff_line_qml()).entries[0][1] == "#b30000"
+    assert parse_qml(styles.paff_zone_qml()).entries[0][1] == "#fc8d59"
+    assert [e[2] for e in parse_qml(styles.biotrame_qml()).entries][0] == "prioritaire"
+
+
 def test_report_summarises_every_tool_with_qgis_legends(tmp_path: Path) -> None:
     styles = _plugin_styles()
     out = tmp_path / "store"
@@ -74,8 +81,8 @@ def test_report_summarises_every_tool_with_qgis_legends(tmp_path: Path) -> None:
     page = html.read_text(encoding="utf-8")
     assert tools == ["VegeVigie", "PAFF", "Écobuage"]
     assert "net verdissement sur 20\u00a0% de la zone" in page
-    assert "1,0 km" in page  # PAFF border length
-    assert "prioritaire : 0,5 ha" in page  # label : value, no agreement to get wrong
+    assert "1,0\u00a0km" in page  # PAFF border length
+    assert "prioritaire\u00a0: 0,5\u00a0ha" in page  # label : value, no agreement to get wrong
     assert "léger dépérissement" in page  # the full QGIS legend is shown
     assert "srcdoc=" in page and "leaflet" in page.lower()
 

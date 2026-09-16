@@ -7,6 +7,7 @@ the style once the layer exists in the project.
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 from qgis.core import QgsProcessingContext, QgsProcessingLayerPostProcessorInterface
@@ -43,3 +44,15 @@ def queue_layer(
         _KEEP.append(post)
         details.setPostProcessor(post)
     context.addLayerToLoadOnCompletion(str(path), details)
+
+
+def style_output(context: QgsProcessingContext, dest_id: str, qml: str) -> None:
+    """Style an output Processing loads itself (sink or raster destination, maybe in memory)."""
+    if not context.willLoadLayerOnCompletion(dest_id):
+        return
+    # ponytail: one small .qml per styled output left in the temp folder, the OS cleans it.
+    with tempfile.NamedTemporaryFile("w", suffix=".qml", delete=False, encoding="utf-8") as f:
+        f.write(qml)
+    post = _ApplyStyle(f.name)
+    _KEEP.append(post)
+    context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(post)

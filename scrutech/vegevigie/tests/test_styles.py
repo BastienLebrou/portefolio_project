@@ -28,6 +28,8 @@ def test_all_qml_are_wellformed_xml() -> None:
         "biotrame_qml",
         "trend_class_qml",
         "stress_frequency_qml",
+        "paff_line_qml",
+        "paff_zone_qml",
     ):
         xml = getattr(m, name)()
         body = xml.split(">\n", 1)[1]  # drop the DOCTYPE line for the parser

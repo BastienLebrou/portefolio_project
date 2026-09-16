@@ -43,6 +43,9 @@ def test_aoi_clips_the_frontier() -> None:
         aoi=gpd.GeoDataFrame(geometry=[box(0, 0, 200, 50)], crs=L93),  # lower half only
     )
     assert 0 < half.metrics["interface_length_m"] < full.metrics["interface_length_m"]
+    # Only real forest edges (x=100 over 50 m, y=0 over ~10 m near the building): the cut the
+    # emprise makes at y=50 is not a frontier, even where it passes near the building.
+    assert abs(half.metrics["interface_length_m"] - 59.9) < 0.5
 
 
 def test_reprojects_inputs_to_metric_crs() -> None:

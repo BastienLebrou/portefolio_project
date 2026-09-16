@@ -201,8 +201,43 @@ def biotrame_qml() -> str:
     )
 
 
+def _single_symbol_qml(symbol: str) -> str:
+    return (
+        "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"
+        '<qgis version="3.34" styleCategories="Symbology">\n'
+        '  <renderer-v2 type="singleSymbol" forceraster="0" symbollevels="0" enableorderby="0">\n'
+        "    <symbols>\n"
+        f"{symbol}\n"
+        "    </symbols>\n"
+        "  </renderer-v2>\n"
+        "</qgis>\n"
+    )
+
+
+def paff_line_qml() -> str:
+    """Forest/built-up frontier: a thick dark red line, the edge the fire would cross."""
+    return _single_symbol_qml(
+        '      <symbol name="0" type="line" alpha="1">\n'
+        '        <layer class="SimpleLine">\n'
+        '          <Option type="Map">\n'
+        '            <Option name="line_color" type="QString" value="179,0,0,255"/>\n'
+        '            <Option name="line_width" type="QString" value="0.8"/>\n'
+        '            <Option name="line_width_unit" type="QString" value="MM"/>\n'
+        "          </Option>\n"
+        "        </layer>\n"
+        "      </symbol>"
+    )
+
+
+def paff_zone_qml() -> str:
+    """Band to clear around the houses: orange, semi-transparent over the basemap."""
+    return _single_symbol_qml(_fill_symbol("0", "252,141,89,255"))
+
+
 # Output-name prefix -> style, shared by cached-layer loading and the HTML report.
 _STYLE_BY_PREFIX = [
+    ("interface_line", paff_line_qml),
+    ("interface_zone", paff_zone_qml),
     ("trend_sen_slope_", trend_qml),
     ("trend_class_", trend_class_qml),
     ("drought_anomaly_", drought_qml),

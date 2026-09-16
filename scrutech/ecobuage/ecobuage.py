@@ -48,12 +48,34 @@ def aptitude(
     return score
 
 
+NODATA_CLASS = 255
+
+
 def classify(score: np.ndarray, prioritaire: float = 66.0, etudier: float = 33.0) -> np.ndarray:
-    """0 = à exclure, 1 = à étudier, 2 = prioritaire (seuils sur l'aptitude 0-100)."""
-    cls = np.zeros(score.shape, dtype="int8")
+    """0 = à exclure, 1 = à étudier, 2 = prioritaire (seuils sur l'aptitude 0-100).
+
+    Là où le score est inconnu (NaN : un critère sans donnée), la classe vaut ``NODATA_CLASS``
+    plutôt que « à exclure » : absence de donnée n'est pas inaptitude.
+    """
+    cls = np.zeros(score.shape, dtype="uint8")
     cls[score >= etudier] = 1
     cls[score >= prioritaire] = 2
+    cls[np.isnan(score)] = NODATA_CLASS
     return cls
+
+
+def check_unit(a: np.ndarray, name: str) -> None:
+    """Refuse un critère hors de 0..1, typiquement un nodata non déclaré (-9999)."""
+    valid = a[np.isfinite(a)]
+    if valid.size == 0:
+        raise ValueError(f"« {name} » ne couvre pas la zone d'étude.")
+    lo, hi = float(valid.min()), float(valid.max())
+    if lo < 0.0 or hi > 1.0:
+        raise ValueError(
+            f"« {name} » doit valoir entre 0 et 1, or ses valeurs vont de {lo:g} à {hi:g}. "
+            "Si certaines signifient « pas de donnée », déclarez-les en nodata dans les "
+            "propriétés du raster (onglet Transparence)."
+        )
 
 
 def write_geotiff(array: np.ndarray, profile: dict, path: str) -> str:

@@ -155,12 +155,13 @@ class InterfaceFromAoiAlgorithm(QgsProcessingAlgorithm):
         return Path(value)
 
     def _queue_layers(self, payload: dict, context: QgsProcessingContext) -> None:
+        from ._layers import queue_layer
+        from ._styles import paff_line_qml, paff_zone_qml
+
         pairs = [
-            (payload.get("line_path"), "PAFF : frontière habitat-forêt"),
-            (payload.get("zone_path"), "PAFF : bande de débroussaillement"),
+            (payload.get("zone_path"), "PAFF : bande de débroussaillement", paff_zone_qml()),
+            (payload.get("line_path"), "PAFF : frontière habitat-forêt", paff_line_qml()),
         ]
-        for path, label in pairs:
-            if not path:
-                continue
-            details = QgsProcessingContext.LayerDetails(label, context.project(), label)
-            context.addLayerToLoadOnCompletion(str(path), details)
+        for path, label, qml in pairs:
+            if path:
+                queue_layer(context, path, label, qml)
