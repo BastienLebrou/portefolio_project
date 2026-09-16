@@ -1,12 +1,10 @@
-"""Biotrame algorithm: hexagonal ecological-priority mesh from an extent alone.
+"""Biotrame: hexagonal ecological-priority mesh from an extent alone.
 
 Draw an extent, hit Run. ScruTech builds an H3 hexagon mesh over the emprise, fetches the
 biodiversity reservoirs (Natura 2000 / ZNIEFF) for it, and scores each hexagon's need for
 ecological action by crossing enjeu × connectivité (× dégradation if a VegeVigie trend
-raster is supplied). **No input layers** — just a study area.
-
-Needs the VegeVigie stack + internet (Géoplateforme WFS), so it runs in the external
-interpreter (auto-detected).
+raster is supplied). **No input layers**: just a study area. Needs the external Python +
+internet (Géoplateforme WFS).
 """
 
 from __future__ import annotations
@@ -31,6 +29,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
 
 
 class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
@@ -49,22 +48,37 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         return "biotrame_priority"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Priorisation écologique (biotrame)")
+        return self.tr("Priorisation écologique (Biotrame)")
 
     def group(self) -> str:
-        return self.tr("3 · Croiser & prioriser")
+        return self.tr("3 · Croiser et prioriser")
 
     def groupId(self) -> str:  # noqa: N802
         return "prioriser"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Build an H3 hexagon mesh over the extent and score each cell's need for "
-            "ecological action, crossing enjeu (reservoir overlap — Natura 2000 / ZNIEFF), "
-            "connectivité (proximity to reservoirs) and — if a VegeVigie trend raster is "
-            "given — dégradation (browning). No input layers: just an area. Output is a "
-            "hexagon layer with a 0-100 score and a 3-class ranking (candidates for "
-            "restoration / compensation). Needs internet + the VegeVigie interpreter."
+            "<p>Découpe la zone en <b>hexagones</b> et note chacun de 0 à 100 selon le "
+            "<b>besoin d'agir pour la nature</b> : présence de réservoirs de biodiversité "
+            "(Natura 2000, ZNIEFF), connectivité entre eux et, si vous la fournissez, "
+            "dégradation de la végétation. Utile pour cibler une restauration ou une "
+            "compensation écologique.</p>"
+            "<p><b>Avant de lancer</b><br>Avoir lancé « 0 · Démarrer ici ▸ Vérifier et "
+            "installer ScruTech ». Une connexion internet : les réservoirs sont téléchargés "
+            "automatiquement.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude.<br>"
+            "2. Taille des hexagones : 8 (environ 0,7 km²) convient à une commune, 7 à un "
+            "territoire plus large.<br>"
+            "3. Facultatif : la tendance produite par ① VegeVigie (axe dégradation) et un MNT "
+            ".tif (repère les zones humides probables).<br>"
+            "4. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Une couche d'hexagones stylée : score de 0 à 100 et classe "
+            "de priorité.</p>"
+            "<p><b>Bon à savoir</b><br>Sans corridors régionaux, la connectivité est estimée "
+            "par la proximité aux réservoirs. Pour utiliser les vrais corridors de la Trame "
+            "verte et bleue de votre région, renseignez son service WFS dans les paramètres "
+            "avancés.</p>"
         )
 
     def createInstance(self) -> BiotramePriorityAlgorithm:  # noqa: N802
@@ -80,12 +94,12 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Zone d'étude (emprise)"))
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
-                self.tr("H3 resolution (7 ≈ 5 km², 8 ≈ 0.7 km², 9 ≈ 0.1 km²)"),
+                self.tr("Taille des hexagones (7 ≈ 5 km², 8 ≈ 0,7 km², 9 ≈ 0,1 km²)"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=8,
                 minValue=5,
@@ -95,42 +109,41 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.VEG_TREND,
-                self.tr("VegeVigie trend raster (optional — dégradation axis)"),
+                self.tr("Tendance VegeVigie (facultatif, axe dégradation)"),
                 optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterFile(
                 self.MNT,
-                self.tr("DEM / MNT (.tif) pour zones humides (optionnel; vide = SCRUTECH_MNT env)"),
+                self.tr("MNT .tif (facultatif, pour les zones humides)"),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
             )
         )
         self.addParameter(
-            QgsProcessingParameterString(
-                self.TVB_WFS,
-                self.tr("TVB WFS URL — regional SRCE (optional; empty = SCRUTECH_TVB_WFS env)"),
-                optional=True,
+            _compat.advanced(
+                QgsProcessingParameterString(
+                    self.TVB_WFS,
+                    self.tr("Adresse du WFS des corridors TVB régionaux (facultatif)"),
+                    optional=True,
+                )
             )
         )
         self.addParameter(
-            QgsProcessingParameterString(
-                self.TVB_TYPENAME,
-                self.tr("TVB corridor typename (optional; empty = SCRUTECH_TVB_TYPENAME env)"),
-                optional=True,
+            _compat.advanced(
+                QgsProcessingParameterString(
+                    self.TVB_TYPENAME,
+                    self.tr("Nom de la couche des corridors dans ce WFS (facultatif)"),
+                    optional=True,
+                )
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            QgsProcessingParameterFolderDestination(
+                self.OUTPUT_FOLDER, self.tr("Dossier de résultats")
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFolderDestination(self.OUTPUT_FOLDER, self.tr("Output folder"))
         )
 
     def processAlgorithm(  # noqa: N802
@@ -142,20 +155,15 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
+            raise QgsProcessingException(
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
+            )
         bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
         resolution = self.parameterAsInt(parameters, self.RESOLUTION, context)
         out_folder = self._resolve_output_folder(parameters, context)
-
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
-            raise QgsProcessingException(
-                self.tr(
-                    "No VegeVigie interpreter found. Point 'Python executable' at the "
-                    "project venv (needs geopandas + h3)."
-                )
-            )
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
 
         from ._external import run_spec
 
@@ -184,10 +192,9 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(str(exc)) from exc
 
         feedback.pushInfo(
-            f"Biotrame — {payload.get('n_prioritaire', 0)} prioritaires / "
-            f"{payload.get('n_hexagons', 0)} hexagones | "
-            f"réservoirs: {payload.get('n_reservoirs', 0)} | "
-            f"connectivité: {payload.get('connectivity_source')} | axes: {payload.get('axes')}"
+            f"Biotrame : {payload.get('n_prioritaire', 0)} hexagones prioritaires sur "
+            f"{payload.get('n_hexagons', 0)} | réservoirs : {payload.get('n_reservoirs', 0)} | "
+            f"connectivité : {payload.get('connectivity_source')} | axes : {payload.get('axes')}"
         )
         self._write_styles(payload, feedback)
         self._queue_layers(payload, context)
@@ -203,7 +210,7 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             try:
                 Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
             except OSError as exc:
-                feedback.pushInfo(f"Could not write style for {path}: {exc}")
+                feedback.pushInfo(f"Style non écrit pour {path} : {exc}")
 
     # --- helpers -------------------------------------------------------------
     def _raster_source(self, parameters, name, context) -> str | None:
@@ -216,19 +223,9 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech_biotrame"
         return Path(value)
 
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        return python_exe
-
     def _queue_layers(self, payload: dict, context) -> None:
         path = payload.get("geojson_path")
         if path:
-            label = "Biotrame — priorisation écologique"
+            label = "Biotrame : priorisation écologique"
             details = QgsProcessingContext.LayerDetails(label, context.project(), label)
             context.addLayerToLoadOnCompletion(str(path), details)

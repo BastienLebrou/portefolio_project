@@ -1,25 +1,15 @@
-"""One-click algorithm: analyze vegetation trend & drought over an extent.
+"""① VegeVigie over an extent: vegetation trend & drought, in one run.
 
-Draw or pick an extent, set the year window, hit Run — ScruTech searches
-Sentinel-2, builds the datacube, and produces greening/browning + drought layers,
-loading them straight into the project. Everything heavy runs through the shared
-:mod:`vegevigie.pipeline` engine.
-
-Because QGIS's bundled Python usually lacks the datacube stack (and installing
-rasterio/GDAL into it can clash with QGIS's own GDAL), the algorithm can run the
-engine in an **external interpreter** — point the *Python executable* parameter at
-a venv that has ``vegevigie`` installed (e.g. the project's ``uv`` venv). If that
-field is left empty it runs in-process, which needs the stack inside QGIS Python.
+Draw or pick an extent, set the year window, hit Run: the engine (``vegevigie.qgis_runner``,
+default task) searches Sentinel-2, builds the datacube and produces greening/browning and
+drought layers, loaded straight into the project. It always runs in the external Python:
+QGIS's own Python lacks the datacube stack, and installing GDAL-based packages into it
+clashes with QGIS's GDAL.
 """
 
 from __future__ import annotations
 
-import contextlib
-import json
-import os
-import subprocess
 from pathlib import Path
-from types import SimpleNamespace
 
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -29,7 +19,6 @@ from qgis.core import (
     QgsProcessingFeedback,
     QgsProcessingParameterExtent,
     QgsProcessingParameterFeatureSource,
-    QgsProcessingParameterFile,
     QgsProcessingParameterFolderDestination,
     QgsProcessingParameterNumber,
     QgsProcessingUtils,
@@ -37,19 +26,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
-
-# QGIS sets these to point at its own runtime; they must NOT leak into an external
-# Python interpreter or they break its rasterio/pyproj/GDAL.
-_ENV_STRIP = (
-    "PYTHONHOME",
-    "PYTHONPATH",
-    "PYTHONSTARTUP",
-    "GDAL_DATA",
-    "GDAL_DRIVER_PATH",
-    "PROJ_LIB",
-    "PROJ_DATA",
-    "GEOTIFF_CSV",
-)
+from ._venv import python_param, require_python
 
 
 class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
@@ -69,23 +46,35 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         return "analyze_extent"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("① Végétation — tendance & sécheresse (VegeVigie)")
+        return self.tr("① Végétation : tendance et sécheresse (VegeVigie)")
 
     def group(self) -> str:
-        return self.tr("2 · Indicateurs par emprise")
+        return self.tr("2 · Analyser une emprise")
 
     def groupId(self) -> str:  # noqa: N802
         return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Search Sentinel-2 over the extent, build monthly NDVI composites, and "
-            "compute per-pixel greening/browning trend (Mann-Kendall + Sen's slope) and "
-            "NDVI-anomaly drought stress. Optionally aggregate to a zones layer. "
-            "Outputs are written to the chosen folder and loaded into the project.\n\n"
-            "Needs internet access to Microsoft Planetary Computer. Set 'Python "
-            "executable' to a venv that has the VegeVigie stack (recommended); leave it "
-            "empty to run inside QGIS's Python (requires the stack installed there)."
+            "<p>Mesure, pixel par pixel, si la végétation <b>verdit ou dépérit</b> au fil des "
+            "années et où elle <b>souffre de la sécheresse</b>, à partir des images satellite "
+            "Sentinel-2.</p>"
+            "<p><b>Avant de lancer</b><br>Avoir lancé une fois « 0 · Démarrer ici ▸ Vérifier "
+            "et installer ScruTech ». Une connexion internet : les images sont lues en ligne.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude : bouton ▾ pour prendre l'emprise de la carte ou d'une couche, ou "
+            "pour la dessiner. Commencez petit (une commune).<br>"
+            "2. Années de début et de fin : une tendance est plus fiable sur plusieurs années.<br>"
+            "3. Facultatif : une couche de zones (par exemple les communes, voir le groupe 1) "
+            "pour obtenir un classement par zone.<br>"
+            "4. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Des couches stylées dans le projet : tendance (verdit ou "
+            "dépérit), année de rupture, anomalie de sécheresse et, si des zones sont données, "
+            "un tableau par zone.</p>"
+            "<p><b>Bon à savoir</b><br>Plus la zone et la période sont grandes, plus le calcul "
+            "est long (de quelques minutes à plus d'une heure). 60 m de résolution est un bon "
+            "compromis ; 10 m est réservé aux petites zones. Les endroits trop nuageux restent "
+            "vides : rien n'est inventé.</p>"
         )
 
     def createInstance(self) -> AnalyzeExtentAlgorithm:  # noqa: N802
@@ -102,12 +91,12 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
     # --- parameters ----------------------------------------------------------
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Zone d'étude (emprise)"))
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.START_YEAR,
-                self.tr("Start year"),
+                self.tr("Année de début"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=2020,
                 minValue=2015,
@@ -117,7 +106,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.END_YEAR,
-                self.tr("End year"),
+                self.tr("Année de fin"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=2020,
                 minValue=2015,
@@ -127,7 +116,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
-                self.tr("Resolution (m)"),
+                self.tr("Résolution (m) : 60 conseillé, 10 pour une petite zone"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=60,
                 minValue=10,
@@ -137,7 +126,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.MAX_CLOUD,
-                self.tr("Max scene cloud cover (%)"),
+                self.tr("Nuages maximum par image (%)"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=60,
                 minValue=0,
@@ -147,20 +136,15 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.ZONES,
-                self.tr("Zones for aggregation (optional, e.g. communes)"),
+                self.tr("Zones pour un classement (facultatif, ex. communes)"),
                 optional=True,
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (recommended)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            QgsProcessingParameterFolderDestination(
+                self.OUTPUT_FOLDER, self.tr("Dossier de résultats")
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFolderDestination(self.OUTPUT_FOLDER, self.tr("Output folder"))
         )
 
     # --- run -----------------------------------------------------------------
@@ -173,173 +157,55 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
+            raise QgsProcessingException(
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
+            )
         bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
 
         start = self.parameterAsInt(parameters, self.START_YEAR, context)
         end = self.parameterAsInt(parameters, self.END_YEAR, context)
-        resolution = self.parameterAsInt(parameters, self.RESOLUTION, context)
-        max_cloud = self.parameterAsInt(parameters, self.MAX_CLOUD, context)
+        if start > end:
+            raise QgsProcessingException(
+                self.tr("L'année de début doit être antérieure ou égale à l'année de fin.")
+            )
         out_folder = self._resolve_output_folder(parameters, context)
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
         zones_path = self._zones_to_path(parameters, context, out_folder, feedback)
 
-        if python_exe:
-            result = self._run_external(
-                python_exe,
-                bbox,
-                start,
-                end,
-                resolution,
-                max_cloud,
-                out_folder,
-                zones_path,
-                feedback,
-            )
-        else:
-            result = self._run_in_process(
-                bbox,
-                start,
-                end,
-                resolution,
-                max_cloud,
-                out_folder,
-                zones_path,
-                feedback,
-            )
+        from ._external import run_spec
 
-        if result.scene_count == 0:
-            feedback.reportError(self.tr("No Sentinel-2 scenes found for this AOI/window."))
-        self._write_styles(result, feedback)
-        self._queue_layers(result, context)
-        return {
-            "TREND": _s(result.trend_tif),
-            "DROUGHT": _s(result.drought_tif),
-            "ZONAL": _s(result.zonal_parquet),
-            "SCENES": result.scene_count,
-        }
-
-    # --- execution modes -----------------------------------------------------
-    def _run_in_process(
-        self, bbox, start, end, resolution, max_cloud, out_folder, zones_path, feedback
-    ) -> SimpleNamespace:
-        from ..dependencies import install_hint, missing_dependencies
-
-        missing = missing_dependencies()
-        if missing:
-            raise QgsProcessingException(install_hint(missing))
-
-        from vegevigie.pipeline import build_settings, run_pipeline
-
-        settings = build_settings(
-            bbox,
-            start,
-            end,
-            resolution=resolution,
-            max_cloud_cover=max_cloud,
-            data_dir=out_folder,
-            base=self._load_base_settings(),
-        )
-        zones_gdf = None
-        if zones_path is not None:
-            import geopandas as gpd
-
-            zones_gdf = gpd.read_file(zones_path)
-
-        def progress(pct: int, msg: str) -> None:
-            if feedback.isCanceled():
-                raise QgsProcessingException(self.tr("Canceled."))
-            feedback.setProgress(pct)
-            feedback.pushInfo(msg)
-
-        try:
-            result = run_pipeline(settings, zones=zones_gdf, progress=progress)
-        except QgsProcessingException:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            raise QgsProcessingException(self._explain(exc)) from exc
-        return SimpleNamespace(
-            trend_tif=result.trend_tif,
-            break_tif=result.break_tif,
-            drought_tif=result.drought_tif,
-            zonal_parquet=result.zonal_parquet,
-            scene_count=result.scene_count,
-        )
-
-    def _run_external(
-        self,
-        python_exe,
-        bbox,
-        start,
-        end,
-        resolution,
-        max_cloud,
-        out_folder,
-        zones_path,
-        feedback,
-    ) -> SimpleNamespace:
-        out_folder.mkdir(parents=True, exist_ok=True)
         spec = {
             "bbox": list(bbox),
             "start": start,
             "end": end,
-            "resolution": resolution,
-            "max_cloud": max_cloud,
+            "resolution": self.parameterAsInt(parameters, self.RESOLUTION, context),
+            "max_cloud": self.parameterAsInt(parameters, self.MAX_CLOUD, context),
             "out_folder": str(out_folder),
             "zones_path": str(zones_path) if zones_path else None,
         }
-        spec_path = out_folder / "scrutech_spec.json"
-        spec_path.write_text(json.dumps(spec))
+        try:
+            payload = run_spec(python_exe, "vegevigie.qgis_runner", spec, out_folder, feedback)
+        except RuntimeError as exc:
+            raise QgsProcessingException(_explain(str(exc))) from exc
 
-        cmd = [python_exe, "-m", "vegevigie.qgis_runner", str(spec_path)]
-        feedback.pushInfo("Running engine in external interpreter:\n  " + " ".join(cmd))
-
-        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            env=env,
-            creationflags=creationflags,
-        )
-        payload: dict = {}
-        assert proc.stdout is not None
-        for raw in proc.stdout:
-            line = raw.rstrip("\n")
-            if feedback.isCanceled():
-                proc.terminate()
-                raise QgsProcessingException(self.tr("Canceled."))
-            if line.startswith("PROGRESS "):
-                _, _, rest = line.partition(" ")
-                pct, _, msg = rest.partition(" ")
-                with contextlib.suppress(ValueError):
-                    feedback.setProgress(int(pct))
-                feedback.pushInfo(msg)
-            elif line.startswith("RESULT "):
-                payload = json.loads(line[len("RESULT ") :])
-            elif line:
-                feedback.pushInfo(line)
-        proc.wait()
-
-        if payload.get("error"):
-            raise QgsProcessingException(self._explain_text(payload["error"]))
-        if proc.returncode != 0 and not payload:
-            raise QgsProcessingException(
-                self.tr("External interpreter failed (exit {}). Check the log above.").format(
-                    proc.returncode
+        scenes = int(payload.get("scene_count", 0))
+        if scenes == 0:
+            feedback.reportError(
+                self.tr(
+                    "Aucune image Sentinel-2 trouvée pour cette zone et ces années. Élargissez "
+                    "la période ou augmentez le seuil de nuages."
                 )
             )
-        return SimpleNamespace(
-            trend_tif=_p(payload.get("trend_tif")),
-            break_tif=_p(payload.get("break_tif")),
-            drought_tif=_p(payload.get("drought_tif")),
-            zonal_parquet=_p(payload.get("zonal_parquet")),
-            scene_count=int(payload.get("scene_count", 0)),
-        )
+        self._write_styles(payload, feedback)
+        self._queue_layers(payload, context)
+        return {
+            "TREND": payload.get("trend_tif"),
+            "DROUGHT": payload.get("drought_tif"),
+            "ZONAL": payload.get("zonal_parquet"),
+            "SCENES": scenes,
+        }
 
     # --- helpers -------------------------------------------------------------
     def _resolve_output_folder(self, parameters, context) -> Path:
@@ -348,39 +214,18 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech"
         return Path(value)
 
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        """Auto-find the VegeVigie interpreter (or create it) — no path to paste."""
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]  # scrutech/vegevigie (dev layout) for provisioning
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        else:
-            feedback.pushInfo(
-                "No VegeVigie interpreter found — falling back to in-process "
-                "(needs the datacube stack inside QGIS's Python)."
-            )
-        return python_exe
-
-    def _write_styles(self, result, feedback) -> None:
+    def _write_styles(self, payload: dict, feedback) -> None:
         """Drop a sibling .qml next to each raster so QGIS applies the ScruTech style."""
         from ._styles import drought_qml, trend_qml
 
-        for tif, qml in ((result.trend_tif, trend_qml()), (result.drought_tif, drought_qml())):
-            if tif is None:
+        for key, qml in (("trend_tif", trend_qml()), ("drought_tif", drought_qml())):
+            tif = payload.get(key)
+            if not tif:
                 continue
             try:
                 Path(tif).with_suffix(".qml").write_text(qml, encoding="utf-8")
             except OSError as exc:
-                feedback.pushInfo(f"Could not write style for {tif}: {exc}")
-
-    def _load_base_settings(self):
-        from vegevigie.config import load_settings
-
-        bundled = Path(__file__).resolve().parents[1] / "config" / "default.yaml"
-        return load_settings(bundled) if bundled.exists() else load_settings()
+                feedback.pushInfo(f"Style non écrit pour {tif} : {exc}")
 
     def _zones_to_path(self, parameters, context, out_folder, feedback) -> Path | None:
         layer = self.parameterAsVectorLayer(parameters, self.ZONES, context)
@@ -391,40 +236,30 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         out_folder.mkdir(parents=True, exist_ok=True)
         tmp = out_folder / "scrutech_zones.gpkg"
         QgsVectorFileWriter.writeAsVectorFormat(layer, str(tmp), "utf-8", layer.crs(), "GPKG")
-        feedback.pushInfo(f"Prepared zones layer ({layer.featureCount()} features).")
+        feedback.pushInfo(f"Couche de zones préparée ({layer.featureCount()} entités).")
         return tmp
 
-    def _queue_layers(self, result, context: QgsProcessingContext) -> None:
+    def _queue_layers(self, payload: dict, context: QgsProcessingContext) -> None:
         pairs = [
-            (result.trend_tif, "ScruTech trend (Sen's slope)"),
-            (getattr(result, "break_tif", None), "ScruTech année de rupture (Pettitt)"),
-            (result.drought_tif, "ScruTech drought (NDVI anomaly)"),
-            (result.zonal_parquet, "ScruTech commune stats"),
+            ("trend_tif", "VegeVigie : tendance (pente de Sen)"),
+            ("break_tif", "VegeVigie : année de rupture (Pettitt)"),
+            ("drought_tif", "VegeVigie : sécheresse (anomalie de NDVI)"),
+            ("zonal_parquet", "VegeVigie : statistiques par zone"),
         ]
-        for path, label in pairs:
-            if path is None:
+        for key, label in pairs:
+            path = payload.get(key)
+            if not path:
                 continue
             details = QgsProcessingContext.LayerDetails(label, context.project(), label)
             context.addLayerToLoadOnCompletion(str(path), details)
 
-    @staticmethod
-    def _explain(exc: Exception) -> str:
-        return AnalyzeExtentAlgorithm._explain_text(str(exc))
 
-    @staticmethod
-    def _explain_text(text: str) -> str:
-        if any(m in text for m in ("403", "Forbidden", "Proxy", "Max retries")):
-            return (
-                "Could not reach Microsoft Planetary Computer "
-                "(planetarycomputer.microsoft.com). Check internet access / proxy / "
-                "firewall and retry.\n\nOriginal error: " + text
-            )
-        return "Pipeline failed: " + text
-
-
-def _s(path) -> str | None:
-    return str(path) if path else None
-
-
-def _p(value) -> Path | None:
-    return Path(value) if value else None
+def _explain(text: str) -> str:
+    """Turn a network failure on the imagery source into an actionable message."""
+    if any(m in text for m in ("403", "Forbidden", "Proxy", "Max retries")):
+        return (
+            "Impossible de joindre Microsoft Planetary Computer (planetarycomputer.microsoft.com), "
+            "qui fournit les images. Vérifiez la connexion internet, le proxy ou le pare-feu, "
+            "puis relancez.\n\nErreur d'origine : " + text
+        )
+    return "L'analyse a échoué : " + text

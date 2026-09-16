@@ -18,23 +18,26 @@ from .algorithms.load_communes import LoadCommunesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
 from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
 from .algorithms.report_launch import ReportLaunchAlgorithm
+from .algorithms.setup_check import SetupCheckAlgorithm
 
 
 class ScruTechProvider(QgsProcessingProvider):
     """Groups the ScruTech algorithms under one Processing Toolbox entry."""
 
     def loadAlgorithms(self) -> None:  # noqa: N802 — QGIS API name
-        # Ordered as the workflow reads in the toolbox (groups are numbered 1→6).
+        # Ordered as the workflow reads in the toolbox (groups are numbered 0→6).
+        # 0 · Démarrer ici
+        self.addAlgorithm(SetupCheckAlgorithm())
         # 1 · Préparer l'emprise
         self.addAlgorithm(LoadCommunesAlgorithm())
-        # 2 · Indicateurs par emprise (les piliers AOI-only, dans l'ordre ①→④)
+        # 2 · Analyser une emprise (dans l'ordre ①→④)
         self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(AlphaEarthChangeAlgorithm())
         self.addAlgorithm(InterfaceFromAoiAlgorithm())
         self.addAlgorithm(EcobuageAptitudeFromAoiAlgorithm())
-        # 3 · Croiser & prioriser
+        # 3 · Croiser et prioriser
         self.addAlgorithm(BiotramePriorityAlgorithm())
-        # 4 · Restituer
+        # 4 · Consulter les résultats
         self.addAlgorithm(ReportLaunchAlgorithm())
         self.addAlgorithm(LoadCachedAlgorithm())
         # ponytail: SDBPi and mini data centers are hidden (off-topic for the plugin). Their
@@ -42,7 +45,7 @@ class ScruTechProvider(QgsProcessingProvider):
         # 5 · Outils avancés (couches en entrée)
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
-        # 6 · GeoAI (modèles ouverts, expérimental)
+        # 6 · GeoAI (expérimental)
         self.addAlgorithm(GeoaiSegmentAlgorithm())
 
     def id(self) -> str:
@@ -52,10 +55,7 @@ class ScruTechProvider(QgsProcessingProvider):
         return "ScruTech"
 
     def longName(self) -> str:  # noqa: N802 — QGIS API name
-        return (
-            "ScruTech — geodata hub: VegeVigie, AlphaEarth, PAFF fire interface, "
-            "écobuage, Biotrame, GeoAI"
-        )
+        return "ScruTech : VegeVigie, AlphaEarth, PAFF, écobuage, Biotrame, GeoAI"
 
     def icon(self) -> QIcon:
         icon_path = Path(__file__).resolve().parent / "icon.svg"

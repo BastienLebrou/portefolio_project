@@ -81,18 +81,16 @@ publiquement :
 Objectif : un nouveau testeur (autre machine, zéro contexte) ne doit jamais se retrouver
 face à une stacktrace brute au premier essai.
 
-- [ ] Nouvelle entrée plugin — **"ScruTech ▸ Vérifier l'installation"** — qui exécute un
-      self-check complet et rapporte un pass/fail lisible pour :
-  - version QGIS (`qgisMinimumVersion`/`qgisMaximumVersion` respectés) ;
-  - interpréteur Python détecté (interne QGIS ou externe pointé) ;
-  - dépendances datacube (**réutiliser `dependencies.py` existant** — ne pas dupliquer
-    `missing_dependencies()`/`install_hint()`, ils font déjà exactement ça) ;
-  - espace disque disponible (cache modèles + data) ;
-  - accès réseau aux sources utilisées (Planetary Computer aujourd'hui, sources de
-    modèles GeoAI demain).
-- [ ] Doit pouvoir tourner **avant** tout autre bouton du plugin — zéro configuration
-      cachée prérequise, message d'erreur actionnable (le chemin `pip install` exact, pas
-      juste "ImportError").
+- [x] **« 0 · Démarrer ici ▸ Vérifier et installer ScruTech »** (2026-09-16) : vérifie le
+      Python externe et ses modules, internet (Planetary Computer, Géoplateforme, geo.api),
+      la clé GEE et le MNT, avec un journal [OK] / [À FAIRE] / [FACULTATIF]. Sur demande
+      (case à cocher), construit le Python externe avec uv dans `~/.scrutech/venv` à partir
+      des sources et du `uv.lock` embarqués dans le ZIP. `dependencies.py` et le mode
+      « dans le Python de QGIS » sont supprimés.
+- [x] Tourne avant tout autre outil ; un message dans QGIS le propose à la première ouverture
+      tant qu'aucun Python externe n'est trouvé.
+- [ ] Espace disque disponible : non vérifié (uv signale lui-même un disque plein).
+- [ ] GeoAI (extra `geoai`, torch) : pas encore installable depuis cet outil.
 
 ---
 

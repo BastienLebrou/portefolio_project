@@ -11,8 +11,11 @@ Le plugin se construit en ZIP : `python scrutech/vegevigie/qgis_plugin/package.p
 moteurs), ou se déploie en dossier vif : `python scrutech/vegevigie/qgis_plugin/deploy_plugin.py`.
 Pour diffuser largement : publier le ZIP + un mini `plugins.xml` (dépôt de plugins QGIS).
 
-L'utilisateur tiers a besoin d'un interpréteur Python avec la stack (le *venv* du projet) ; le
-plugin l'auto-détecte (`venv_path.txt`), sinon il le pointe dans le champ « Python executable ».
+L'utilisateur tiers installe le ZIP (Extensions ▸ Installer depuis un ZIP), puis lance
+**« 0 · Démarrer ici ▸ Vérifier et installer ScruTech »** en cochant « Installer ». L'outil construit
+le Python des moteurs avec `uv` dans `~/.scrutech/venv` (environ 1 Go, une seule fois), à partir des
+sources et du `uv.lock` embarqués dans le ZIP. Chaque outil décrit ses prérequis dans son panneau
+d'aide, dans QGIS.
 
 ## 2. Les données lourdes : COG + GeoParquet sur R2
 

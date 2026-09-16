@@ -11,8 +11,10 @@ from __future__ import annotations
 from typing import Any
 
 from qgis.core import (
+    QgsBlockingNetworkRequest,
     QgsFeatureSink,
     QgsProcessing,
+    QgsProcessingParameterDefinition,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
     QgsWkbTypes,
@@ -53,3 +55,17 @@ SOURCE_VECTOR_LINE = _from_qgis(
 )
 WKB_MULTILINESTRING = _from_qgis("WkbType", "MultiLineString", QgsWkbTypes, "MultiLineString")
 WKB_MULTIPOLYGON = _from_qgis("WkbType", "MultiPolygon", QgsWkbTypes, "MultiPolygon")
+
+# Parameter flag: shown under "Advanced parameters" in the dialog.
+PARAM_ADVANCED = _from_qgis(
+    "ProcessingParameterFlag", "Advanced", QgsProcessingParameterDefinition, "FlagAdvanced"
+)
+# Blocking network request outcomes (a server error still means "reachable").
+NETWORK_NO_ERROR = _scoped_or(QgsBlockingNetworkRequest, "ErrorCode", "NoError")
+NETWORK_SERVER_ERROR = _scoped_or(QgsBlockingNetworkRequest, "ErrorCode", "ServerExceptionError")
+
+
+def advanced(param: Any) -> Any:
+    """Move ``param`` to the dialog's "Advanced parameters" section and return it."""
+    param.setFlags(param.flags() | PARAM_ADVANCED)
+    return param

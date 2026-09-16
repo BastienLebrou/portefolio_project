@@ -1,9 +1,8 @@
 """Launch the ScruTech visual report (Streamlit) for an area of interest.
 
-Point it at a folder where ScruTech algorithms wrote their outputs; this starts the
-Streamlit report in the project venv (detached) and opens it in the browser. QGIS can't
-host a live Streamlit server in a dock, so the report opens in the default browser — the
-robust option that always works.
+Starts the Streamlit report in the external Python (detached) and opens it in the browser;
+it reads the outputs cached for the area in the central store. QGIS can't host a live
+Streamlit server in a dock, so the browser is the robust option that always works.
 """
 
 from __future__ import annotations
@@ -22,12 +21,18 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingParameterExtent,
-    QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
+
+# Located inside the external Python, so it works for the dev venv and ~/.scrutech/venv alike.
+_FIND_APP = (
+    "import importlib.util as u; s = u.find_spec('vegevigie.report.app'); "
+    "print(s.origin if s else '')"
+)
 
 
 class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
@@ -41,20 +46,28 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         return "report_launch"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("① Rapport visuel (Streamlit)")
+        return self.tr("Rapport visuel dans le navigateur")
 
     def group(self) -> str:
-        return self.tr("4 · Restituer")
+        return self.tr("4 · Consulter les résultats")
 
     def groupId(self) -> str:  # noqa: N802
         return "restituer"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Open an interactive visual report of a ScruTech analysis: the map + metrics of "
-            "every pillar output found in the folder (biotrame, écobuage, VegeVigie, PAF, "
-            "AlphaEarth). Starts a Streamlit app in the project venv and opens it in the "
-            "browser. Outputs are selected from the central store for the chosen area."
+            "<p>Ouvre dans votre navigateur un <b>rapport de synthèse</b> de la zone : carte et "
+            "chiffres clés de chaque analyse déjà faite dessus (VegeVigie, AlphaEarth, PAFF, "
+            "écobuage, Biotrame).</p>"
+            "<p><b>Avant de lancer</b><br>Avoir analysé la zone avec au moins un outil des "
+            "groupes 2 ou 3.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude : <b>la même emprise</b> que celle des analyses.<br>"
+            "2. Exécuter : le rapport s'ouvre dans le navigateur au bout de quelques "
+            "secondes.</p>"
+            "<p><b>Bon à savoir</b><br>Le rapport tourne uniquement sur votre ordinateur "
+            "(adresse locale, inaccessible depuis le réseau). Son bouton « Rafraîchir les "
+            "sorties » ajoute les analyses lancées entre-temps.</p>"
         )
 
     def createInstance(self) -> ReportLaunchAlgorithm:  # noqa: N802
@@ -70,26 +83,23 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
-        )
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.PORT,
-                self.tr("Local port"),
-                type=_compat.NUMBER_INTEGER,
-                defaultValue=8501,
-                minValue=1024,
-                maxValue=65535,
+            QgsProcessingParameterExtent(
+                self.EXTENT, self.tr("Zone d'étude (la même emprise que les analyses)")
             )
         )
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            _compat.advanced(
+                QgsProcessingParameterNumber(
+                    self.PORT,
+                    self.tr("Port local"),
+                    type=_compat.NUMBER_INTEGER,
+                    defaultValue=8501,
+                    minValue=1024,
+                    maxValue=65535,
+                )
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
 
     def processAlgorithm(  # noqa: N802
         self,
@@ -100,33 +110,53 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
+            raise QgsProcessingException(
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
+            )
         bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
         aoi_id = "bbox-" + "_".join(f"{value:.4f}" for value in bbox)
         port = self.parameterAsInt(parameters, self.PORT, context)
 
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
+        app = self._report_app(python_exe)
+        if app is None:
             raise QgsProcessingException(
                 self.tr(
-                    "No VegeVigie interpreter found (needs streamlit). Point 'Python "
-                    "executable' at the project venv."
+                    "Le rapport est introuvable dans le Python de ScruTech. Relancez « Vérifier "
+                    "et installer ScruTech » en cochant « Installer ou mettre à jour »."
                 )
             )
-        app = Path(python_exe).parents[2] / "src" / "vegevigie" / "report" / "app.py"
-        if not app.exists():
-            raise QgsProcessingException(self.tr("Report app not found at {}").format(app))
 
         port = self._free_port(port)
         url = f"http://localhost:{port}"
         self._launch(python_exe, app, aoi_id, port, feedback)
         time.sleep(3)  # give Streamlit a moment to boot before opening the browser
         webbrowser.open(url)
-        feedback.pushInfo(f"ScruTech report: {url} (AOI: {aoi_id})")
+        feedback.pushInfo(f"Rapport ScruTech : {url} (zone : {aoi_id})")
         return {"URL": url}
 
     # --- helpers -------------------------------------------------------------
+    @staticmethod
+    def _report_app(python_exe: str) -> Path | None:
+        from ._external import _ENV_STRIP
+
+        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
+        try:
+            out = subprocess.run(
+                [python_exe, "-c", _FIND_APP],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=env,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        origin = out.stdout.strip()
+        return Path(origin) if origin and Path(origin).is_file() else None
+
     def _launch(self, python_exe: str, app: Path, aoi_id: str, port: int, feedback) -> None:
         from ._external import _ENV_STRIP
 
@@ -158,7 +188,7 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
         env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP and not _is_secret(k)}
         env["SCRUTECH_AOI_ID"] = aoi_id
-        feedback.pushInfo("Launching: " + " ".join(cmd))
+        feedback.pushInfo("Lancement : " + " ".join(cmd))
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
             subprocess, "DETACHED_PROCESS", 0
         )
@@ -171,13 +201,3 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
                 if s.connect_ex(("127.0.0.1", port)) != 0:
                     return port
         return start
-
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        return python_exe

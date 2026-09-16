@@ -62,13 +62,21 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Weighted multi-criteria suitability for controlled burning. Inputs are "
-            "ALIGNED criterion rasters (same grid): combustible vegetation, "
-            "embroussaillement, accessibility and fire history in [0, 1]; slope in "
-            "percent; and an optional exclusion mask (>0 = à exclure). Produces a 0-100 "
-            "aptitude raster and a 3-class raster (0 exclure / 1 à étudier / 2 "
-            "prioritaire). Weights default to 25/25/20/15/15. GDAL + numpy only — no "
-            "external stack, no internet."
+            "<p>Même notation que « ④ Aptitude à l'écobuage » mais à partir de <b>vos "
+            "propres rasters de critères</b>, déjà préparés. Fonctionne sans internet et "
+            "sans le Python de ScruTech.</p>"
+            "<p><b>Avant de lancer</b><br>Tous les rasters doivent être <b>alignés</b> (même "
+            "grille, même taille de pixel) : au besoin, utilisez l'outil de traitement "
+            "« Aligner les rasters ». Valeurs attendues : combustible, embroussaillement, "
+            "accessibilité et historique des feux entre 0 et 1 ; pente en %.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Choisissez les 5 rasters de critères et, si besoin, un raster d'exclusions "
+            "(toute valeur supérieure à 0 est exclue).<br>"
+            "2. Ajustez les poids si nécessaire (25/25/20/15/15 par défaut).<br>"
+            "3. Exécuter.</p>"
+            "<p><b>Résultat</b><br>L'aptitude (0 à 100) et les classes (0 à exclure, "
+            "1 à étudier, 2 prioritaire). Le journal donne le nombre de pixels par "
+            "classe.</p>"
         )
 
     def createInstance(self) -> EcobuageAptitudeAlgorithm:  # noqa: N802
@@ -148,9 +156,9 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
             if arr.shape != ref:
                 raise QgsProcessingException(
                     self.tr(
-                        f"Raster '{name}' {arr.shape} is not aligned with the combustible "
-                        f"raster {ref}. Align all criterion rasters to the same grid first "
-                        "(e.g. GDAL ▸ Warp / Align rasters)."
+                        f"Le raster « {name} » {arr.shape} n'est pas aligné sur le raster "
+                        f"combustible {ref}. Alignez d'abord tous les rasters sur la même "
+                        "grille (outil « Aligner les rasters »)."
                     )
                 )
 
@@ -161,7 +169,7 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
             if excl.shape == ref:
                 exclusions = excl > 0
             else:
-                feedback.reportError(self.tr("Exclusion raster not aligned — ignored."))
+                feedback.reportError(self.tr("Raster d'exclusions non aligné : ignoré."))
 
         slope_score = ecobuage.band(slope, _SLOPE_LO, _SLOPE_HI, _SLOPE_RAMP)
         criteria = [
@@ -186,7 +194,7 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
         n_etud = int((classes == 1).sum())
         n_excl = int((classes == 0).sum())
         feedback.pushInfo(
-            f"Pixels — prioritaire: {n_prio} | à étudier: {n_etud} | à exclure: {n_excl}"
+            f"Pixels : prioritaire {n_prio} | à étudier {n_etud} | à exclure {n_excl}"
         )
         return {self.APTITUDE: apt_path, self.CLASSES: cls_path}
 
@@ -196,11 +204,11 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
 
         layer = self.parameterAsRasterLayer(parameters, name, context)
         if layer is None:
-            raise QgsProcessingException(self.tr(f"Input raster '{name}' is invalid."))
+            raise QgsProcessingException(self.tr(f"Raster « {name} » invalide."))
         ds = gdal.Open(layer.source())
         if ds is None:
             raise QgsProcessingException(
-                self.tr(f"GDAL could not open '{name}' ({layer.source()}).")
+                self.tr(f"GDAL n'a pas pu ouvrir « {name} » ({layer.source()}).")
             )
         arr = ds.GetRasterBand(1).ReadAsArray().astype("float64")
         return arr, ds.GetGeoTransform(), ds.GetProjection()

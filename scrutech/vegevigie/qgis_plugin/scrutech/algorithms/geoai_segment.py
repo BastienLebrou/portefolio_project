@@ -1,13 +1,13 @@
-"""GeoAI algorithm: zero-shot object segmentation of a raster with Meta's SAM.
+"""GeoAI: zero-shot object segmentation of a raster with Meta's SAM (experimental).
 
-Experimental. Pick any raster layer (Sentinel-2 composite, aerial ortho, a VegeVigie
-output…), hit Run — ScruTech segments it into georeferenced objects with the Segment
-Anything Model, no training needed. Needs the optional 'geoai' extra (segment-geospatial +
-torch) in the external interpreter — heavy, so this never runs in-process in QGIS's Python.
+Pick any raster layer (Sentinel-2 composite, aerial ortho, a VegeVigie output…), hit Run:
+ScruTech segments it into georeferenced objects with the Segment Anything Model, no
+training needed. Needs the optional 'geoai' extra (segment-geospatial + torch) in the
+external interpreter: heavy, so this never runs in QGIS's own Python.
 
 On first run it downloads the SAM checkpoint (~375 MB, Apache-2.0, Meta AI) from the
 official facebookresearch source into ``~/.scrutech/models`` and pins its checksum for
-reuse — see ``vegevigie.geoai_segment`` for the full security rationale (TOFU, why not a
+reuse; see ``vegevigie.geoai_segment`` for the security rationale (TOFU, why not a
 fabricated "official" hash). Every subsequent run is fully offline.
 """
 
@@ -20,7 +20,6 @@ from qgis.core import (
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
-    QgsProcessingParameterFile,
     QgsProcessingParameterFolderDestination,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterLayer,
@@ -29,6 +28,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
 
 
 class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
@@ -44,25 +44,34 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
         return "geoai_segment"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Segment anything (SAM, experimental)")
+        return self.tr("Segmenter une image en objets (SAM)")
 
     def group(self) -> str:
-        return self.tr("6 · GeoAI (modèles ouverts)")
+        return self.tr("6 · GeoAI (expérimental)")
 
     def groupId(self) -> str:  # noqa: N802
         return "geoai"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Zero-shot segmentation of any raster into georeferenced objects, using Meta's "
-            "Segment Anything Model (SAM) — no training, no labels needed. EXPERIMENTAL.\n\n"
-            "First run downloads the SAM ViT-B checkpoint (~375 MB, Apache-2.0 license) from "
-            "the official dl.fbaipublicfiles.com source into ~/.scrutech/models and pins its "
-            "checksum there for reuse — every run after that is fully offline, no API key, "
-            "no cloud quota.\n\n"
-            "Needs the optional 'geoai' extra (segment-geospatial + torch) installed in the "
-            "'Python executable' venv — run 'uv sync --extra geoai' in scrutech/vegevigie "
-            "first. Runs in an external interpreter only; never in QGIS's own Python."
+            "<p><b>Expérimental.</b> Découpe automatiquement une image (orthophoto, image "
+            "satellite, résultat VegeVigie…) en <b>objets</b> : parcelles, bâtiments, "
+            "bosquets… avec le modèle ouvert Segment Anything (SAM) de Meta, sans "
+            "entraînement.</p>"
+            "<p><b>Avant de lancer</b><br>Ce module n'est <b>pas installé par défaut</b> : il "
+            "demande torch, qui pèse plusieurs Go, et « Vérifier et installer ScruTech » ne "
+            "l'installe pas encore. Il est réservé aux utilisateurs avancés (extra « geoai » "
+            "du moteur).</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Image à segmenter : une couche raster du projet (commencez par une petite "
+            "image).<br>"
+            "2. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Une couche de polygones (un par objet) et le masque "
+            "raster.</p>"
+            "<p><b>Bon à savoir</b><br>Le premier lancement télécharge le modèle (environ "
+            "375 Mo, licence Apache-2.0, source officielle de Meta) dans ~/.scrutech/models et "
+            "contrôle son empreinte à chaque usage ; ensuite tout fonctionne hors ligne, sans "
+            "clé ni quota.</p>"
         )
 
     def createInstance(self) -> GeoaiSegmentAlgorithm:  # noqa: N802
@@ -78,38 +87,37 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterRasterLayer(self.INPUT, self.tr("Raster to segment"))
+            QgsProcessingParameterRasterLayer(self.INPUT, self.tr("Image à segmenter"))
         )
         self.addParameter(
-            QgsProcessingParameterNumber(
-                self.POINTS_PER_SIDE,
-                self.tr("Prompt grid density (points per side)"),
-                type=_compat.NUMBER_INTEGER,
-                defaultValue=32,
-                minValue=8,
-                maxValue=64,
+            _compat.advanced(
+                QgsProcessingParameterNumber(
+                    self.POINTS_PER_SIDE,
+                    self.tr("Densité de la grille de points (par côté)"),
+                    type=_compat.NUMBER_INTEGER,
+                    defaultValue=32,
+                    minValue=8,
+                    maxValue=64,
+                )
             )
         )
         self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MIN_AREA,
-                self.tr("Minimum object size (pixels)"),
-                type=_compat.NUMBER_INTEGER,
-                defaultValue=100,
-                minValue=0,
-                maxValue=100000,
+            _compat.advanced(
+                QgsProcessingParameterNumber(
+                    self.MIN_AREA,
+                    self.tr("Taille minimale d'un objet (pixels)"),
+                    type=_compat.NUMBER_INTEGER,
+                    defaultValue=100,
+                    minValue=0,
+                    maxValue=100000,
+                )
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the 'geoai' extra (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            QgsProcessingParameterFolderDestination(
+                self.OUTPUT_FOLDER, self.tr("Dossier de résultats")
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFolderDestination(self.OUTPUT_FOLDER, self.tr("Output folder"))
         )
 
     def processAlgorithm(  # noqa: N802
@@ -120,20 +128,13 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
     ) -> dict:
         raster = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if raster is None:
-            raise QgsProcessingException(self.tr("No input raster."))
+            raise QgsProcessingException(self.tr("Choisissez une image à segmenter."))
         points_per_side = self.parameterAsInt(parameters, self.POINTS_PER_SIDE, context)
         min_area = self.parameterAsInt(parameters, self.MIN_AREA, context)
         out_folder = self._resolve_output_folder(parameters, context)
-
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
-            raise QgsProcessingException(
-                self.tr(
-                    "No Python interpreter found. Point 'Python executable' at a venv with "
-                    "the 'geoai' extra installed (uv sync --extra geoai)."
-                )
-            )
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
 
         from ._external import run_spec
 
@@ -149,7 +150,7 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
         except RuntimeError as exc:
             raise QgsProcessingException(str(exc)) from exc
 
-        feedback.pushInfo(f"GeoAI — segmented {payload.get('n_objects', 0)} object(s).")
+        feedback.pushInfo(f"GeoAI : {payload.get('n_objects', 0)} objet(s) segmenté(s).")
         self._queue_layers(payload, context)
         return {"MASK": payload.get("mask_path"), "VECTOR": payload.get("vector_path")}
 
@@ -160,20 +161,10 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech_geoai"
         return Path(value)
 
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"GeoAI interpreter: {python_exe}")
-        return python_exe
-
     def _queue_layers(self, payload: dict, context) -> None:
         pairs = [
-            (payload.get("vector_path"), "GeoAI — segments (SAM)"),
-            (payload.get("mask_path"), "GeoAI — mask raster (SAM)"),
+            (payload.get("vector_path"), "GeoAI : objets segmentés (SAM)"),
+            (payload.get("mask_path"), "GeoAI : masque (SAM)"),
         ]
         for path, label in pairs:
             if not path:

@@ -1,13 +1,13 @@
-"""Load a previously computed ScruTech analysis for an AOI — no recompute.
+"""Load a previously computed ScruTech analysis for an AOI, with no recompute.
 
 ScruTech caches every AOI run's outputs in the central store keyed by the area's id. This
 algorithm resolves the extent to that id and loads the cached layers straight into the
-project — instant, offline, the "QGIS reads, the backend computed earlier" promise. Draw the
-same extent you analysed before and Run.
+project: instant, offline. Draw the same extent you analysed before and Run.
 """
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 from qgis.core import (
@@ -17,11 +17,10 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingParameterExtent,
-    QgsProcessingParameterFile,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
-from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
 
 
 class LoadCachedAlgorithm(QgsProcessingAlgorithm):
@@ -34,20 +33,25 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
         return "load_cached"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("② Recharger une analyse (cache)")
+        return self.tr("Recharger une analyse déjà calculée")
 
     def group(self) -> str:
-        return self.tr("4 · Restituer")
+        return self.tr("4 · Consulter les résultats")
 
     def groupId(self) -> str:  # noqa: N802
         return "restituer"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Load the products ScruTech already computed for this extent from the central "
-            "store — no recomputation, no internet. Draw the same extent you analysed and "
-            "Run; every cached layer (biotrame, écobuage, VegeVigie, PAF, AlphaEarth) loads "
-            "with its style. Needs the VegeVigie interpreter (to resolve the AOI id)."
+            "<p>Recharge dans le projet les couches <b>déjà calculées</b> pour une zone, sans "
+            "refaire le calcul ni utiliser internet.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude : <b>la même emprise</b> que lors de l'analyse.<br>"
+            "2. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Toutes les couches trouvées pour cette zone (VegeVigie, "
+            "AlphaEarth, PAFF, écobuage, Biotrame), avec leur style.</p>"
+            "<p><b>Bon à savoir</b><br>Rien ne se charge ? L'emprise diffère sans doute de celle "
+            "de l'analyse : reprenez exactement la même, par exemple depuis la même couche.</p>"
         )
 
     def createInstance(self) -> LoadCachedAlgorithm:  # noqa: N802
@@ -63,16 +67,11 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
-        )
-        self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            QgsProcessingParameterExtent(
+                self.EXTENT, self.tr("Zone d'étude (la même emprise que l'analyse)")
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
 
     def processAlgorithm(  # noqa: N802
         self,
@@ -83,22 +82,18 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
-        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
             raise QgsProcessingException(
-                self.tr("No VegeVigie interpreter found. Point 'Python executable' at the venv.")
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
             )
+        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
 
         from ._external import run_spec
 
         spec = {"task": "load_cached", "bbox": list(bbox)}
-        # The listing is quick; reuse the same output-folder plumbing for the spec file.
-        import tempfile
-
+        # The listing is quick; reuse the same spec-file plumbing in a temp folder.
         out_folder = Path(tempfile.gettempdir()) / "scrutech_load"
         try:
             payload = run_spec(python_exe, "vegevigie.qgis_runner", spec, out_folder, feedback)
@@ -109,13 +104,15 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
         if not paths:
             feedback.reportError(
                 self.tr(
-                    "Nothing cached for this extent (aoi={}). Run an analysis first, or check "
-                    "the extent matches a previous run."
+                    "Aucune analyse enregistrée pour cette zone (identifiant {}). Lancez d'abord "
+                    "une analyse, ou reprenez exactement la même emprise."
                 ).format(payload.get("aoi_id"))
             )
             return {"LOADED": 0}
 
-        feedback.pushInfo(f"Loading {len(paths)} cached layer(s) for aoi={payload.get('aoi_id')}.")
+        feedback.pushInfo(
+            f"Chargement de {len(paths)} couche(s) pour la zone {payload.get('aoi_id')}."
+        )
         self._queue_layers(paths, context)
         return {"LOADED": len(paths), "AOI": payload.get("aoi_id")}
 
@@ -124,16 +121,6 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
         for path in paths:
             # store layout: {root}/{pilier}/aoi={id}/output/{file} → pilier at parents[2].
             pilier = Path(path).parents[2].name
-            label = f"ScruTech (cache) — {pilier} · {Path(path).stem}"
+            label = f"ScruTech (cache) : {pilier} · {Path(path).stem}"
             details = QgsProcessingContext.LayerDetails(label, context.project(), label)
             context.addLayerToLoadOnCompletion(str(path), details)
-
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        return python_exe

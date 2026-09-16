@@ -1,14 +1,14 @@
-"""AlphaEarth change detection over an extent (AOI + two years).
+"""② AlphaEarth change detection over an extent (AOI + two years).
 
 Draw an extent, pick two years, hit Run. ScruTech queries Google Earth Engine for the
 AlphaEarth annual embeddings and returns the pixels whose 64-D signature changed most
-between the two years (server-side cosine distance — a real surface change, not an
+between the two years (server-side cosine distance: a real surface change, not an
 atmospheric artefact). **No input data**: only a study area and two years.
 
-Needs the VegeVigie interpreter (has ``earthengine-api``) and a GEE service-account
-credential stored in QGIS ▸ Authentication under an ID (default ``gee_service``), config
-key ``json_credentials``. The credential is read here and passed to the external
-interpreter via an environment variable — never written to disk.
+Needs the external Python (has ``earthengine-api``) and a GEE service-account key: a .json
+file, the ``SCRUTECH_GEE_CREDENTIALS`` environment variable, or a QGIS authentication entry
+(config key ``json_credentials``). The key is passed to the engine through an environment
+variable, never written to disk.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
 
 
 class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
@@ -52,21 +53,36 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         return "alphaearth_change"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("② Changement satellite (AlphaEarth)")
+        return self.tr("② Changements entre deux années (AlphaEarth)")
 
     def group(self) -> str:
-        return self.tr("2 · Indicateurs par emprise")
+        return self.tr("2 · Analyser une emprise")
 
     def groupId(self) -> str:  # noqa: N802
         return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Detect where the AlphaEarth satellite embedding changed between two years over "
-            "the extent — a real surface change, computed as a server-side cosine distance on "
-            "Google Earth Engine. No input layers: just an area and two years.\n\n"
-            "Requires the VegeVigie interpreter (earthengine-api) and a GEE service-account "
-            "credential in QGIS ▸ Authentication (config key 'json_credentials')."
+            "<p>Repère les endroits où <b>le terrain a changé</b> entre deux années "
+            "(construction, coupe, culture, incendie…), à partir des « empreintes » satellite "
+            "AlphaEarth de Google. Aucune couche à fournir : une zone et deux années "
+            "suffisent.</p>"
+            "<p><b>Avant de lancer</b><br>"
+            "1. Avoir lancé « 0 · Démarrer ici ▸ Vérifier et installer ScruTech ».<br>"
+            "2. Une <b>clé Google Earth Engine</b> : le fichier .json d'un compte de service. "
+            "« Vérifier et installer ScruTech » explique comment l'obtenir et peut la "
+            "contrôler.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude (commencez petit).<br>"
+            "2. Deux années différentes (données disponibles depuis 2017).<br>"
+            "3. Clé Google Earth Engine : choisissez le fichier .json.<br>"
+            "4. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Deux couches : tous les pixels analysés avec leur score de "
+            "changement, et les candidats au-dessus du seuil (par défaut les 5 % qui ont le "
+            "plus changé).</p>"
+            "<p><b>Bon à savoir</b><br>Le calcul se fait chez Google et consomme votre quota "
+            "Earth Engine ; le nombre de pixels analysés est plafonné pour le protéger. "
+            "ScruTech n'écrit jamais la clé sur le disque.</p>"
         )
 
     def createInstance(self) -> AlphaEarthChangeAlgorithm:  # noqa: N802
@@ -82,12 +98,12 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Zone d'étude (emprise)"))
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.YEAR1,
-                self.tr("Year 1"),
+                self.tr("Première année"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=2018,
                 minValue=2017,
@@ -97,7 +113,7 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.YEAR2,
-                self.tr("Year 2"),
+                self.tr("Seconde année"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=2023,
                 minValue=2017,
@@ -105,9 +121,18 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterFile(
+                self.KEY_FILE,
+                self.tr("Clé Google Earth Engine (fichier .json du compte de service)"),
+                behavior=_compat.FILE_BEHAVIOR_FILE,
+                optional=True,
+                extension="json",
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterNumber(
                 self.PERCENTILE,
-                self.tr("Change percentile threshold"),
+                self.tr("Seuil de changement (percentile : 95 = les 5 % qui changent le plus)"),
                 type=_compat.NUMBER_DOUBLE,
                 defaultValue=95.0,
                 minValue=50.0,
@@ -115,42 +140,32 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterNumber(
-                self.MAX_PIXELS,
-                self.tr("Max pixels to sample (GEE quota guard-rail)"),
-                type=_compat.NUMBER_INTEGER,
-                defaultValue=100_000,
-                minValue=1000,
-                maxValue=1_000_000,
+            _compat.advanced(
+                QgsProcessingParameterNumber(
+                    self.MAX_PIXELS,
+                    self.tr("Pixels analysés au maximum (protège votre quota Earth Engine)"),
+                    type=_compat.NUMBER_INTEGER,
+                    defaultValue=100_000,
+                    minValue=1000,
+                    maxValue=1_000_000,
+                )
             )
         )
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.KEY_FILE,
-                self.tr("GEE service-account key (.json) — empty = SCRUTECH_GEE_CREDENTIALS env"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
-                extension="json",
+            _compat.advanced(
+                QgsProcessingParameterString(
+                    self.AUTH_ID,
+                    self.tr("Identifiant d'authentification QGIS contenant la clé (facultatif)"),
+                    defaultValue="gee_service",
+                    optional=True,
+                )
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
         self.addParameter(
-            QgsProcessingParameterString(
-                self.AUTH_ID,
-                self.tr("GEE auth config ID (fallback — QGIS Authentication)"),
-                defaultValue="gee_service",
-                optional=True,
+            QgsProcessingParameterFolderDestination(
+                self.OUTPUT_FOLDER, self.tr("Dossier de résultats")
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
-            )
-        )
-        self.addParameter(
-            QgsProcessingParameterFolderDestination(self.OUTPUT_FOLDER, self.tr("Output folder"))
         )
 
     def processAlgorithm(  # noqa: N802
@@ -162,12 +177,14 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
+            raise QgsProcessingException(
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
+            )
         bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
         year1 = self.parameterAsInt(parameters, self.YEAR1, context)
         year2 = self.parameterAsInt(parameters, self.YEAR2, context)
         if year1 == year2:
-            raise QgsProcessingException(self.tr("Pick two different years."))
+            raise QgsProcessingException(self.tr("Choisissez deux années différentes."))
         percentile = self.parameterAsDouble(parameters, self.PERCENTILE, context)
         max_pixels = self.parameterAsInt(parameters, self.MAX_PIXELS, context)
         auth_id = self.parameterAsString(parameters, self.AUTH_ID, context).strip()
@@ -175,15 +192,9 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         out_folder = self._resolve_output_folder(parameters, context)
 
         credentials = self._read_credentials(key_file, auth_id)
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
-            raise QgsProcessingException(
-                self.tr(
-                    "No VegeVigie interpreter found (needs earthengine-api). Point 'Python "
-                    "executable' at the project venv."
-                )
-            )
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
 
         from ._external import run_spec
 
@@ -209,8 +220,9 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(str(exc)) from exc
 
         feedback.pushInfo(
-            f"Change {year1}→{year2}: {payload.get('n_changed', 0)}/{payload.get('n_pixels', 0)} "
-            f"pixels above p{percentile:.0f} (threshold {payload.get('threshold')})."
+            f"Changements {year1}→{year2} : {payload.get('n_changed', 0)} pixels sur "
+            f"{payload.get('n_pixels', 0)} au-dessus du percentile {percentile:.0f} "
+            f"(seuil {payload.get('threshold')})."
         )
         self._queue_layers(payload, context, year1, year2)
         return {"CHANGED": payload.get("changed_path"), "ALL": payload.get("geojson_path")}
@@ -221,11 +233,15 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         import json
         import os
 
+        from ._setup import check_gee_key
+
         raw = None
         if key_file:
             path = Path(key_file)
             if not path.exists():
-                raise QgsProcessingException(self.tr("GEE key file not found: {}").format(key_file))
+                raise QgsProcessingException(
+                    self.tr("Fichier de clé introuvable : {}").format(key_file)
+                )
             raw = path.read_text(encoding="utf-8")
         elif os.environ.get("SCRUTECH_GEE_CREDENTIALS"):
             raw = os.environ["SCRUTECH_GEE_CREDENTIALS"]
@@ -235,16 +251,17 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         if not raw:
             raise QgsProcessingException(
                 self.tr(
-                    "No GEE credential. Set the key file (.json) parameter, or the "
-                    "SCRUTECH_GEE_CREDENTIALS env var, or store the service-account JSON under "
-                    "the 'json_credentials' key of QGIS auth entry '{}'."
-                ).format(auth_id or "gee_service")
+                    "Aucune clé Google Earth Engine. Indiquez le fichier .json de votre compte "
+                    "de service dans « Clé Google Earth Engine ». Pour savoir comment l'obtenir, "
+                    "lancez « 0 · Démarrer ici ▸ Vérifier et installer ScruTech »."
+                )
             )
-        try:  # compact to a single line so it crosses the subprocess env safely
-            return json.dumps(json.loads(raw))
-        except json.JSONDecodeError as exc:
-            msg = self.tr("GEE credential is not valid JSON: {}").format(exc)
-            raise QgsProcessingException(msg) from exc
+        problems = check_gee_key(raw)
+        if problems:
+            raise QgsProcessingException(
+                self.tr("Clé Google Earth Engine invalide : {}.").format(" ; ".join(problems))
+            )
+        return json.dumps(json.loads(raw))  # one line, so it crosses the subprocess env safely
 
     def _auth_config(self, auth_id: str) -> QgsAuthMethodConfig | None:
         """Load a complete auth config on QGIS 4, with QGIS 3 compatibility."""
@@ -262,20 +279,10 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech_alphaearth"
         return Path(value)
 
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        return python_exe
-
     def _queue_layers(self, payload: dict, context, year1: int, year2: int) -> None:
         pairs = [
-            (payload.get("geojson_path"), f"AlphaEarth change {year1}→{year2} (tous pixels)"),
-            (payload.get("changed_path"), f"AlphaEarth change {year1}→{year2} (candidats)"),
+            (payload.get("geojson_path"), f"AlphaEarth : changements {year1}→{year2} (tous)"),
+            (payload.get("changed_path"), f"AlphaEarth : changements {year1}→{year2} (candidats)"),
         ]
         for path, label in pairs:
             if not path:

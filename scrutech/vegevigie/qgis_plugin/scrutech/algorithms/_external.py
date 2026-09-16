@@ -1,8 +1,8 @@
 """Run a heavy ScruTech engine in an external Python interpreter.
 
-The pillars that need GeoPandas / requests / DuckDB (SDBPi, mini data centers) can't
-run in QGIS's bundled Python. Rather than pollute it, ScruTech shells out to a venv
-that has the stack — the same pattern as the VegeVigie ``analyze_extent`` algorithm.
+The engines need GeoPandas / rasterio / DuckDB, which QGIS's bundled Python lacks (and
+installing them there clashes with QGIS's own GDAL). ScruTech shells out instead to the
+separate Python built by « Vérifier et installer ScruTech ».
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def run_engine(python_exe: str, script: Path, args: list[str], feedback) -> int:
     Returns the process exit code (-1 if the user cancelled).
     """
     cmd = [python_exe, str(script), *args]
-    feedback.pushInfo("Running engine in external interpreter:\n  " + " ".join(cmd))
+    feedback.pushInfo("Calcul lancé dans le Python de ScruTech :\n  " + " ".join(cmd))
     env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     proc = subprocess.Popen(
@@ -67,9 +67,9 @@ def run_spec(
 ) -> dict:
     """Write ``spec`` to JSON, run ``python -m module spec.json``, parse PROGRESS/RESULT.
 
-    Shared by the AOI-only algorithms (PAF, AlphaEarth…). Streams ``PROGRESS <pct> <msg>``
-    to the feedback and returns the ``RESULT <json>`` payload. ``extra_env`` injects secrets
-    (e.g. GEE credentials) into the child env only — never written to the spec on disk.
+    Shared by every area-of-interest tool. Streams ``PROGRESS <pct> <msg>`` to the feedback
+    and returns the ``RESULT <json>`` payload. ``extra_env`` injects secrets (e.g. GEE
+    credentials) into the child env only — never written to the spec on disk.
     Raises RuntimeError with a readable message on engine error or non-zero exit.
     """
     out_folder.mkdir(parents=True, exist_ok=True)
@@ -77,7 +77,7 @@ def run_spec(
     spec_path.write_text(json.dumps(spec))
 
     cmd = [python_exe, "-m", module, str(spec_path)]
-    feedback.pushInfo("Running engine in external interpreter:\n  " + " ".join(cmd))
+    feedback.pushInfo("Calcul lancé dans le Python de ScruTech :\n  " + " ".join(cmd))
     env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
     if extra_env:
         env.update(extra_env)
@@ -97,7 +97,7 @@ def run_spec(
         line = raw.rstrip("\n")
         if feedback.isCanceled():
             proc.terminate()
-            raise RuntimeError("Canceled.")
+            raise RuntimeError("Annulé.")
         if line.startswith("PROGRESS "):
             _, _, rest = line.partition(" ")
             pct, _, msg = rest.partition(" ")
@@ -113,5 +113,7 @@ def run_spec(
     if payload.get("error"):
         raise RuntimeError(payload["error"])
     if proc.returncode != 0 and not payload:
-        raise RuntimeError(f"External interpreter failed (exit {proc.returncode}). See log above.")
+        raise RuntimeError(
+            f"Le calcul a échoué (code {proc.returncode}). Le journal ci-dessus indique pourquoi."
+        )
     return payload

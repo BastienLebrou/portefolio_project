@@ -1,19 +1,26 @@
-"""Find (or create) the external Python that runs the VegeVigie stack — no path to paste.
+"""Find the external Python that runs the ScruTech engines: no path to paste.
 
-Resolution order: explicit param > remembered (QgsSettings) > ``venv_path.txt`` dropped
-next to the plugin by ``deploy_plugin.py`` > a ``.venv`` beside the engine > create one
-with ``uv``. The result is remembered, so it's asked at most once.
+Resolution order: explicit parameter > remembered (QgsSettings) > ``venv_path.txt`` dropped
+next to the plugin by ``deploy_plugin.py`` > the dev repo's ``scrutech/vegevigie/.venv`` >
+``~/.scrutech/venv`` built by « Vérifier et installer ScruTech ». Nothing is created here:
+installing downloads about 1 GB, so only the setup tool does it, when the user asks.
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
-import sys
 from pathlib import Path
+
+from ._setup import ENV_SIZE, USER_VENV
 
 _SETTINGS_KEY = "scrutech/vegevigie_python"
 HINT_FILE = "venv_path.txt"  # written by deploy_plugin.py next to the plugin
+PYTHON_LABEL = "Python de ScruTech (laisser vide : détection automatique)"
+MISSING_ENV = (
+    "Le Python de ScruTech n'est pas installé. Ouvrez « 0 · Démarrer ici ▸ Vérifier et "
+    "installer ScruTech », cochez « Installer ou mettre à jour » puis Exécuter (une seule "
+    f"fois, {ENV_SIZE}). Relancez ensuite cet outil."
+)
 
 
 def _python_in(venv: Path) -> Path:
@@ -30,7 +37,7 @@ def _settings_get() -> str:
 
 
 def remember(python_exe: str) -> None:
-    """Persist the interpreter so the next run doesn't ask again."""
+    """Persist the interpreter so the next run finds it at once."""
     try:
         from qgis.core import QgsSettings
 
@@ -48,9 +55,8 @@ def _candidates(plugin_root: Path) -> list[str]:
     hint = plugin_root / HINT_FILE
     if hint.exists():
         out.append(hint.read_text(encoding="utf-8").strip())
-    # a venv bundled with the plugin, or the dev repo's scrutech/vegevigie/.venv
-    out.append(str(_python_in(plugin_root / ".venv")))
-    out.append(str(_python_in(plugin_root.parents[1] / ".venv")))
+    out.append(str(_python_in(plugin_root.parents[1] / ".venv")))  # dev: scrutech/vegevigie
+    out.append(str(_python_in(USER_VENV)))
     return out
 
 
@@ -58,47 +64,31 @@ def find_python(plugin_root: Path, explicit: str = "") -> str:
     """Return the first interpreter that exists (explicit wins), or '' if none."""
     ordered = ([explicit] if explicit else []) + _candidates(plugin_root)
     for cand in ordered:
-        if cand and Path(cand).exists():
+        if cand and Path(cand).is_file():
             return cand
     return ""
 
 
-def provision(project_dir: Path, feedback: object = None) -> str:
-    """Create ``project_dir/.venv`` with uv (one-time) and return its python, or ''."""
+def python_param(name: str):
+    """The optional « Python de ScruTech » parameter every engine tool shares (advanced)."""
+    from qgis.core import QgsProcessingParameterFile
 
-    def log(msg: str) -> None:
-        if feedback is not None:
-            feedback.pushInfo(msg)  # type: ignore[attr-defined]
+    from . import _qgis_compat as compat
 
-    if not (project_dir / "pyproject.toml").exists():
-        log(f"No pyproject at {project_dir} — can't auto-create a venv here.")
-        return ""
-    log("First run: creating the VegeVigie venv with uv (downloads the stack, ~minutes)…")
-    for uv_cmd in ([sys.executable, "-m", "uv"], ["uv"]):
-        try:
-            proc = subprocess.run(
-                [*uv_cmd, "sync", "--project", str(project_dir)],
-                capture_output=True,
-                text=True,
-                timeout=1800,
-            )
-        except FileNotFoundError:
-            continue
-        if proc.returncode == 0:
-            py = _python_in(project_dir / ".venv")
-            if py.exists():
-                return str(py)
-        log((proc.stderr or proc.stdout or "").strip()[-500:])
-        return ""
-    log("uv not found — run 'pip install uv' once, or set the Python executable manually.")
-    return ""
+    return compat.advanced(
+        QgsProcessingParameterFile(
+            name, PYTHON_LABEL, behavior=compat.FILE_BEHAVIOR_FILE, optional=True
+        )
+    )
 
 
-def resolve(plugin_root: Path, explicit: str, project_dir: Path, feedback: object = None) -> str:
-    """Full resolution (find, else provision) + remember the result."""
-    found = find_python(plugin_root, explicit)
-    if not found:
-        found = provision(project_dir, feedback)
-    if found:
-        remember(found)
-    return found
+def require_python(explicit: str, feedback) -> str:
+    """The interpreter to run an engine in, else a QgsProcessingException saying what to do."""
+    from qgis.core import QgsProcessingException
+
+    python_exe = find_python(Path(__file__).resolve().parents[1], explicit)
+    if not python_exe:
+        raise QgsProcessingException(MISSING_ENV)
+    remember(python_exe)
+    feedback.pushInfo(f"Python de ScruTech : {python_exe}")
+    return python_exe

@@ -1,26 +1,35 @@
-"""Helper algorithm: load French commune boundaries as a zones layer.
+"""« Communes d'un département »: a ready-made zones layer, straight from geo.api.gouv.fr.
 
-Gives the user a ready-made polygon layer to feed into the "Analyze extent"
-algorithm's optional *Zones* input (for per-commune ranking).
+Native QGIS network + OGR only, so it works before the external Python is installed.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from qgis.core import (
+    QgsBlockingNetworkRequest,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
+    QgsProcessingParameterFeatureSink,
     QgsProcessingParameterString,
-    QgsProcessingParameterVectorDestination,
+    QgsProcessingUtils,
+    QgsVectorLayer,
 )
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QUrl
+from qgis.PyQt.QtNetwork import QNetworkRequest
+
+from . import _qgis_compat as _compat
+
+# ponytail: geo.api.gouv.fr only; core.aoi's france-geojson mirror is not wired in here.
+_URL = (
+    "https://geo.api.gouv.fr/communes?codeDepartement={}"
+    "&fields=code,nom&format=geojson&geometry=contour"
+)
 
 
 class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
-    """Download a département's commune polygons to a GeoPackage."""
+    """Download a département's commune polygons."""
 
     DEPARTEMENT = "DEPARTEMENT"
     OUTPUT = "OUTPUT"
@@ -29,7 +38,7 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
         return "load_communes"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Communes de l'emprise")
+        return self.tr("Communes d'un département")
 
     def group(self) -> str:
         return self.tr("1 · Préparer l'emprise")
@@ -39,8 +48,13 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Download the commune polygons of a French département (default 07, Ardèche) "
-            "to use as the Zones input of 'Analyze extent'. Needs internet access."
+            "<p>Télécharge les <b>limites des communes</b> d'un département. La couche obtenue "
+            "sert à choisir une zone d'étude (bouton ▾ ▸ emprise d'une couche) ou à obtenir "
+            "un classement par commune dans ① VegeVigie.</p>"
+            "<p><b>Étapes</b><br>1. Code du département : 07, 69, 2A…<br>2. Exécuter.</p>"
+            "<p><b>Bon à savoir</b><br>Fonctionne tout de suite, même avant d'avoir installé "
+            "le Python de ScruTech. Source : geo.api.gouv.fr (données officielles, internet "
+            "requis).</p>"
         )
 
     def createInstance(self) -> LoadCommunesAlgorithm:  # noqa: N802
@@ -57,10 +71,14 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
             QgsProcessingParameterString(
-                self.DEPARTEMENT, self.tr("Département code"), defaultValue="07"
+                self.DEPARTEMENT, self.tr("Code du département (ex. 07, 69, 2A)"), defaultValue="07"
             )
         )
-        self.addParameter(QgsProcessingParameterVectorDestination(self.OUTPUT, self.tr("Communes")))
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT, self.tr("Communes"), _compat.SOURCE_VECTOR_POLYGON
+            )
+        )
 
     def processAlgorithm(  # noqa: N802
         self,
@@ -68,24 +86,41 @@ class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
         context: QgsProcessingContext,
         feedback: QgsProcessingFeedback,
     ) -> dict:
-        from ..dependencies import install_hint, missing_dependencies
+        dept = self.parameterAsString(parameters, self.DEPARTEMENT, context).strip().upper()
+        if dept.isdigit():
+            dept = dept.zfill(2)
 
-        missing = missing_dependencies()
-        if missing:
-            raise QgsProcessingException(install_hint(missing))
+        request = QgsBlockingNetworkRequest()
+        error = request.get(QNetworkRequest(QUrl(_URL.format(dept))), False, feedback)
+        if error != _compat.NETWORK_NO_ERROR:
+            raise QgsProcessingException(
+                self.tr(
+                    "Impossible de télécharger les communes du département {} : {}. Vérifiez la "
+                    "connexion internet (et le proxy dans Préférences ▸ Options ▸ Réseau)."
+                ).format(dept, request.errorMessage())
+            )
+        path = QgsProcessingUtils.generateTempFilename("communes.geojson")
+        with open(path, "wb") as fh:
+            fh.write(bytes(request.reply().content()))
 
-        from vegevigie.aoi import fetch_communes
-
-        dept = self.parameterAsString(parameters, self.DEPARTEMENT, context).strip()
-        out_path = Path(self.parameterAsOutputLayer(parameters, self.OUTPUT, context))
-
-        feedback.pushInfo(f"Fetching commune boundaries for département {dept}…")
-        try:
-            communes = fetch_communes(dept)
-        except Exception as exc:  # noqa: BLE001
-            raise QgsProcessingException(f"Could not fetch communes for {dept}: {exc}") from exc
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        communes.to_file(out_path, driver="GPKG")
-        feedback.pushInfo(f"Wrote {len(communes)} communes to {out_path}")
-        return {self.OUTPUT: str(out_path)}
+        layer = QgsVectorLayer(path, "communes", "ogr")
+        if not layer.isValid() or layer.featureCount() == 0:
+            raise QgsProcessingException(
+                self.tr(
+                    "Aucune commune trouvée pour le département « {} ». Vérifiez le code "
+                    "(ex. 07, 69, 2A)."
+                ).format(dept)
+            )
+        sink, dest_id = self.parameterAsSink(
+            parameters, self.OUTPUT, context, layer.fields(), layer.wkbType(), layer.crs()
+        )
+        if sink is None:
+            raise QgsProcessingException(self.tr("Impossible de créer la couche de sortie."))
+        for feature in layer.getFeatures():
+            sink.addFeature(feature, _compat.SINK_FAST_INSERT)
+        feedback.pushInfo(
+            self.tr("{} communes téléchargées pour le département {}.").format(
+                layer.featureCount(), dept
+            )
+        )
+        return {self.OUTPUT: dest_id}

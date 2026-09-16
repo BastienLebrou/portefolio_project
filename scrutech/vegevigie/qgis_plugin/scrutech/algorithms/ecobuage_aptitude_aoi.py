@@ -1,11 +1,9 @@
-"""AOI-only écobuage algorithm: aptitude from a study area + a DEM alone.
+"""④ Écobuage from an extent + a DEM: aptitude with no criterion rasters to prepare.
 
 Draw an extent, point at a DEM (.tif), hit Run. ScruTech derives slope (from the DEM),
 accessibility (BD TOPO roads) and exclusions (BD TOPO buildings) for the emprise and scores
-controlled-burn aptitude — **no criterion rasters to prepare**. Optionally feed VegeVigie
-trend/drought rasters to add the vegetation criteria (combustible / embroussaillement).
-
-Needs the VegeVigie stack + internet (BD TOPO), so it runs in the external interpreter.
+controlled-burn aptitude. Optionally feed VegeVigie trend/drought rasters to add the
+vegetation criteria (combustible / embroussaillement). Needs the external Python + internet.
 """
 
 from __future__ import annotations
@@ -29,6 +27,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._venv import python_param, require_python
 
 
 class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
@@ -49,19 +48,33 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         return self.tr("④ Aptitude à l'écobuage")
 
     def group(self) -> str:
-        return self.tr("2 · Indicateurs par emprise")
+        return self.tr("2 · Analyser une emprise")
 
     def groupId(self) -> str:  # noqa: N802
         return "indicateurs"
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Controlled-burn aptitude from a study area ALONE: slope (from the DEM), "
-            "accessibility (BD TOPO roads) and exclusions (BD TOPO buildings) are derived for "
-            "the extent — no criterion rasters to prepare. Optionally add VegeVigie trend / "
-            "drought rasters for the vegetation criteria. Outputs a 0-100 aptitude raster and "
-            "a 3-class raster. Needs internet + the VegeVigie interpreter.\n\n"
-            "Set the DEM path, or leave it empty to use the SCRUTECH_MNT environment variable."
+            "<p>Note chaque endroit de 0 à 100 selon son <b>aptitude au brûlage dirigé</b> "
+            "(écobuage) et le range en 3 classes : prioritaire, à étudier, à exclure. La pente "
+            "vient du MNT ; les routes (accès) et les bâtiments (exclusions) sont téléchargés "
+            "automatiquement.</p>"
+            "<p><b>Avant de lancer</b><br>"
+            "1. Avoir lancé « 0 · Démarrer ici ▸ Vérifier et installer ScruTech ».<br>"
+            "2. Un <b>MNT</b> (modèle numérique de terrain) en .tif qui couvre la zone, par "
+            "exemple le RGE ALTI de l'IGN ou le Copernicus DEM.<br>"
+            "3. Une connexion internet.</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zone d'étude.<br>"
+            "2. MNT : choisissez le fichier .tif.<br>"
+            "3. Facultatif, pour une meilleure note : les couches de tendance et de sécheresse "
+            "produites par ① VegeVigie sur la même zone.<br>"
+            "4. Exécuter.</p>"
+            "<p><b>Résultat</b><br>Deux rasters stylés : l'aptitude (0 à 100) et les classes "
+            "(0 à exclure, 1 à étudier, 2 prioritaire).</p>"
+            "<p><b>Bon à savoir</b><br>Sans les couches VegeVigie, la note repose seulement sur "
+            "la pente, l'accès et les exclusions. Le résultat oriente une visite de terrain ; il "
+            "ne remplace pas l'autorisation préfectorale.</p>"
         )
 
     def createInstance(self) -> EcobuageAptitudeFromAoiAlgorithm:  # noqa: N802
@@ -77,20 +90,20 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Zone d'étude (emprise)"))
         )
         self.addParameter(
             QgsProcessingParameterFile(
                 self.MNT,
-                self.tr("DEM / MNT (.tif) — empty = SCRUTECH_MNT env var"),
+                self.tr("MNT, modèle numérique de terrain (.tif)"),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+                optional=True,  # may come from the SCRUTECH_MNT environment variable
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
-                self.tr("Analysis resolution (m)"),
+                self.tr("Résolution d'analyse (m)"),
                 type=_compat.NUMBER_INTEGER,
                 defaultValue=25,
                 minValue=5,
@@ -100,27 +113,22 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.VEG_TREND,
-                self.tr("VegeVigie trend raster (optional — embroussaillement)"),
+                self.tr("Tendance VegeVigie (facultatif, pour l'embroussaillement)"),
                 optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.VEG_DROUGHT,
-                self.tr("VegeVigie drought raster (optional — combustible)"),
+                self.tr("Sécheresse VegeVigie (facultatif, pour le combustible)"),
                 optional=True,
             )
         )
+        self.addParameter(python_param(self.PYTHON_EXE))
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.PYTHON_EXE,
-                self.tr("Python executable with the VegeVigie stack (auto-detected if empty)"),
-                behavior=_compat.FILE_BEHAVIOR_FILE,
-                optional=True,
+            QgsProcessingParameterFolderDestination(
+                self.OUTPUT_FOLDER, self.tr("Dossier de résultats")
             )
-        )
-        self.addParameter(
-            QgsProcessingParameterFolderDestination(self.OUTPUT_FOLDER, self.tr("Output folder"))
         )
 
     def processAlgorithm(  # noqa: N802
@@ -132,21 +140,16 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
-            raise QgsProcessingException(self.tr("The extent is empty."))
+            raise QgsProcessingException(
+                self.tr("La zone d'étude est vide : choisissez une emprise.")
+            )
         bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
         resolution = self.parameterAsInt(parameters, self.RESOLUTION, context)
         mnt_path = self._resolve_mnt(parameters, context)
         out_folder = self._resolve_output_folder(parameters, context)
-
-        explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
-        python_exe = self._resolve_python(explicit, feedback)
-        if not python_exe:
-            raise QgsProcessingException(
-                self.tr(
-                    "No VegeVigie interpreter found. Point 'Python executable' at the "
-                    "project venv (needs rasterio + geopandas)."
-                )
-            )
+        python_exe = require_python(
+            self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
+        )
 
         from ._external import run_spec
 
@@ -165,9 +168,9 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(str(exc)) from exc
 
         feedback.pushInfo(
-            f"Écobuage — prioritaire: {payload.get('n_prioritaire', 0)} | "
-            f"à étudier: {payload.get('n_a_etudier', 0)} | "
-            f"à exclure: {payload.get('n_a_exclure', 0)} | criteria: {payload.get('criteria')}"
+            f"Écobuage : prioritaire {payload.get('n_prioritaire', 0)} | "
+            f"à étudier {payload.get('n_a_etudier', 0)} | "
+            f"à exclure {payload.get('n_a_exclure', 0)} | critères : {payload.get('criteria')}"
         )
         self._write_styles(payload, feedback)
         self._queue_layers(payload, context)
@@ -186,18 +189,20 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             try:
                 Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
             except OSError as exc:
-                feedback.pushInfo(f"Could not write style for {path}: {exc}")
+                feedback.pushInfo(f"Style non écrit pour {path} : {exc}")
 
     # --- helpers -------------------------------------------------------------
     def _resolve_mnt(self, parameters, context) -> str:
         mnt = self.parameterAsString(parameters, self.MNT, context).strip()
         if not mnt:
             mnt = os.environ.get("SCRUTECH_MNT", "").strip()
-        if not mnt or not Path(mnt).exists():
+        remote = mnt.startswith(("http://", "https://", "/vsi"))  # COG read in place
+        if not mnt or not (remote or Path(mnt).exists()):
             raise QgsProcessingException(
                 self.tr(
-                    "No DEM found. Set the DEM (.tif) parameter or the SCRUTECH_MNT "
-                    "environment variable to an existing file."
+                    "Aucun MNT trouvé. Indiquez un fichier .tif dans « MNT, modèle numérique de "
+                    "terrain » : par exemple le RGE ALTI de l'IGN ou le Copernicus DEM, "
+                    "téléchargé pour votre zone."
                 )
             )
         return mnt
@@ -212,20 +217,13 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech_ecobuage"
         return Path(value)
 
-    def _resolve_python(self, explicit: str, feedback) -> str:
-        from ._venv import resolve
-
-        plugin_root = Path(__file__).resolve().parents[1]
-        project_dir = plugin_root.parents[1]
-        python_exe = resolve(plugin_root, explicit, project_dir, feedback)
-        if python_exe:
-            feedback.pushInfo(f"VegeVigie interpreter: {python_exe}")
-        return python_exe
-
     def _queue_layers(self, payload: dict, context) -> None:
         pairs = [
-            (payload.get("aptitude_path"), "Écobuage — aptitude (0-100)"),
-            (payload.get("classes_path"), "Écobuage — classes (0/1/2)"),
+            (payload.get("aptitude_path"), "Écobuage : aptitude (0-100)"),
+            (
+                payload.get("classes_path"),
+                "Écobuage : classes (0 exclure, 1 étudier, 2 prioritaire)",
+            ),
         ]
         for path, label in pairs:
             if not path:

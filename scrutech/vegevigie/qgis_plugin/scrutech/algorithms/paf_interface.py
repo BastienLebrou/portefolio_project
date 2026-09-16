@@ -62,13 +62,19 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "Compute the Wildland-Urban Interface between a forest layer and a built-up "
-            "layer: the frontier line (forest edge within the contact distance of a "
-            "building) and the contact band (forest within that distance — the "
-            "débroussaillement / defence zone). Distance and area maths run in the chosen "
-            "metric CRS (Lambert-93 by default). Frontier length and band area are "
-            "reported in the log. Native QGIS geometry only — no extra dependencies, no "
-            "internet."
+            "<p>Même calcul que « ③ Interface habitat-forêt » mais à partir de <b>vos "
+            "propres couches</b> forêt et bâti. Fonctionne sans internet et sans le Python "
+            "de ScruTech (géométrie native de QGIS).</p>"
+            "<p><b>Étapes</b><br>"
+            "1. Zones de forêt : une couche de polygones.<br>"
+            "2. Zones bâties : une couche de polygones.<br>"
+            "3. Distance de contact : 50 m = obligation légale de débroussaillement.<br>"
+            "4. Système de coordonnées métrique : Lambert-93 (EPSG:2154) en métropole ; "
+            "les couches sont reprojetées automatiquement.<br>"
+            "5. Exécuter.</p>"
+            "<p><b>Résultat</b><br>La frontière habitat-forêt (ligne) et la bande de "
+            "débroussaillement (surface, avec sa superficie en ha). Le journal donne la "
+            "longueur et la surface.</p>"
         )
 
     def createInstance(self) -> InterfaceHabitatForetAlgorithm:  # noqa: N802
@@ -86,18 +92,18 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.FOREST, self.tr("Forest zones"), [_compat.SOURCE_VECTOR_POLYGON]
+                self.FOREST, self.tr("Zones de forêt"), [_compat.SOURCE_VECTOR_POLYGON]
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSource(
-                self.BATI, self.tr("Built-up zones"), [_compat.SOURCE_VECTOR_POLYGON]
+                self.BATI, self.tr("Zones bâties"), [_compat.SOURCE_VECTOR_POLYGON]
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.CONTACT_M,
-                self.tr("Contact distance (m) — OLD débroussaillement = 50"),
+                self.tr("Distance de contact (m) : 50 = débroussaillement obligatoire"),
                 type=_compat.NUMBER_DOUBLE,
                 defaultValue=50.0,
                 minValue=0.0,
@@ -106,21 +112,21 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterCrs(
                 self.METRIC_CRS,
-                self.tr("Metric CRS for distance/area maths"),
+                self.tr("Système de coordonnées métrique (calcul des distances)"),
                 defaultValue="EPSG:2154",
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.LINE_OUTPUT,
-                self.tr("Interface line (frontier)"),
+                self.tr("Frontière habitat-forêt"),
                 _compat.SOURCE_VECTOR_LINE,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.ZONE_OUTPUT,
-                self.tr("Interface zone (contact band)"),
+                self.tr("Bande de débroussaillement"),
                 _compat.SOURCE_VECTOR_POLYGON,
             )
         )
@@ -136,20 +142,24 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
         if not metric_crs.isValid() or metric_crs.isGeographic():
             raise QgsProcessingException(
                 self.tr(
-                    "Metric CRS must be a projected (metre-based) CRS, e.g. EPSG:2154 — "
-                    "distances in degrees are meaningless."
+                    "Le système de coordonnées doit être métrique (en mètres), par exemple "
+                    "EPSG:2154 : des distances en degrés n'ont pas de sens."
                 )
             )
 
         forest_src = self.parameterAsSource(parameters, self.FOREST, context)
         bati_src = self.parameterAsSource(parameters, self.BATI, context)
         if forest_src is None or bati_src is None:
-            raise QgsProcessingException(self.tr("Forest and built-up layers are required."))
+            raise QgsProcessingException(
+                self.tr("Les couches de forêt et de bâti sont obligatoires.")
+            )
 
         forest_u = self._dissolve_to_crs(forest_src, metric_crs)
         bati_u = self._dissolve_to_crs(bati_src, metric_crs)
         if forest_u.isEmpty() or bati_u.isEmpty():
-            raise QgsProcessingException(self.tr("Forest or built-up layer has no geometry."))
+            raise QgsProcessingException(
+                self.tr("La couche de forêt ou de bâti ne contient aucune géométrie.")
+            )
 
         reach = bati_u.buffer(contact_m, _BUFFER_SEGMENTS)
         zone = forest_u.intersection(reach)
@@ -160,12 +170,14 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
 
         length_m = line.length()
         area_ha = zone.area() / 10_000.0
-        feedback.pushInfo(f"Frontier: {length_m / 1000:.2f} km | contact band: {area_ha:.1f} ha")
+        feedback.pushInfo(
+            f"Frontière : {length_m / 1000:.2f} km | bande de contact : {area_ha:.1f} ha"
+        )
         if length_m == 0:
             feedback.reportError(
                 self.tr(
-                    "No interface found: forest and built-up never come within the "
-                    "contact distance. Check the layers and the distance."
+                    "Aucune interface : la forêt et le bâti ne sont jamais à moins de la "
+                    "distance de contact. Vérifiez les couches et la distance."
                 )
             )
 
@@ -216,7 +228,7 @@ class InterfaceHabitatForetAlgorithm(QgsProcessingAlgorithm):
     ) -> str:
         sink, dest_id = self.parameterAsSink(parameters, name, context, fields, wkb_type, crs)
         if sink is None:
-            raise QgsProcessingException(self.tr(f"Could not create output '{name}'."))
+            raise QgsProcessingException(self.tr(f"Impossible de créer la sortie « {name} »."))
         if not geometry.isEmpty():
             feat = QgsFeature(fields)
             feat.setGeometry(geometry)
