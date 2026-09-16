@@ -18,6 +18,8 @@ from pathlib import Path
 from ._external import _ENV_STRIP
 
 USER_VENV = Path.home() / ".scrutech" / "venv"
+# Where AlphaEarth and the setup check look for the Google Earth Engine key by default.
+DEFAULT_GEE_KEY = Path.home() / ".scrutech" / "gee_key.json"
 # Measured on the reference install (uv sync --no-dev, without the optional GeoAI extra).
 ENV_SIZE = "environ 1 Go"
 
@@ -135,3 +137,40 @@ def check_gee_key(text: str) -> list[str]:
     fields = ("client_email", "private_key", "project_id")
     problems += [f"champ « {name} » manquant" for name in fields if not key.get(name)]
     return problems
+
+
+# Run inside the external Python: authenticates and makes one tiny computation, so a missing
+# Google Cloud permission shows up here rather than in the middle of an analysis.
+_GEE_SCRIPT = """
+import json, os, ee
+creds = json.loads(os.environ["SCRUTECH_GEE_CREDENTIALS"])
+ee.Initialize(
+    credentials=ee.ServiceAccountCredentials(creds["client_email"], key_data=json.dumps(creds)),
+    project=creds.get("project_id"),
+)
+ee.Number(1).getInfo()
+print("GEE_OK")
+"""
+
+
+def check_gee_access(python_exe: str, key_text: str) -> str:
+    """'' if Earth Engine accepts the key for a real request, else the error message."""
+    env = _clean_env()
+    env["SCRUTECH_GEE_CREDENTIALS"] = json.dumps(json.loads(key_text))
+    try:
+        out = subprocess.run(
+            [python_exe, "-c", _GEE_SCRIPT],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+            env=env,
+            creationflags=_NO_WINDOW,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return str(exc)
+    if "GEE_OK" in out.stdout:
+        return ""
+    lines = (out.stderr or out.stdout).strip().splitlines()
+    return lines[-1] if lines else f"code {out.returncode}"

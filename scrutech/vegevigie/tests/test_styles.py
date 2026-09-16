@@ -26,6 +26,8 @@ def test_all_qml_are_wellformed_xml() -> None:
         "ecobuage_aptitude_qml",
         "ecobuage_classes_qml",
         "biotrame_qml",
+        "trend_class_qml",
+        "stress_frequency_qml",
     ):
         xml = getattr(m, name)()
         body = xml.split(">\n", 1)[1]  # drop the DOCTYPE line for the parser
@@ -37,3 +39,16 @@ def test_biotrame_qml_categorizes_on_classe() -> None:
     xml = m.biotrame_qml()
     assert 'attr="classe"' in xml
     assert xml.count("<category ") == 3  # 3 classes
+
+
+def test_vegevigie_styles_are_readable_classes() -> None:
+    m = _load()
+    # Discrete classes with a plain-French legend, not a continuous grey ramp.
+    for xml in (m.trend_qml(), m.drought_qml(), m.stress_frequency_qml()):
+        assert 'colorRampType="DISCRETE"' in xml and 'value="inf"' in xml
+    assert "en dessous de la normale" in m.drought_qml()
+    # One colour per year, light for early breaks and dark for recent ones.
+    years = m.break_year_qml(2020, 2025)
+    ET.fromstring(years.split(">\n", 1)[1])
+    assert years.count("<paletteEntry ") == 6 and "rupture en 2025" in years
+    assert m._blend("#000000", "#ffffff", 0.5) == "#808080"

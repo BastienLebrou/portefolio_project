@@ -1,33 +1,51 @@
-"""ScruTech QML styles for the VegeVigie rasters — automatic, readable output.
+"""ScruTech QML styles: every colour says one plain-French thing.
 
-Environmental cartography semiology: a **diverging brown→green** ramp for the greening/
-browning trend (the established convention — greenbrown / RdYlGn), and a diverging
-drought ramp (dry brown/red → wet green). Never a rainbow ramp (false boundaries,
-unreadable for colour-blind users).
+Environmental cartography semiology: diverging brown→green for greening/browning, diverging
+red→green for the deviation from normal, sequential ramps for frequencies and years, never a
+rainbow (false boundaries, unreadable for colour-blind users). Classes are DISCRETE so the
+legend reads as sentences ("net dépérissement", "en dessous de la normale"…) rather than raw
+numbers. Pure strings, no QGIS import (unit-tested offline).
 
-Refs: greenbrown brgr.colors (brown-to-green NDVI trend palette); ColorBrewer RdYlGn.
+Refs: greenbrown brgr.colors (NDVI trend palette); ColorBrewer BrBG / RdYlGn / OrRd.
 """
 
 from __future__ import annotations
 
-# (value, hex, label)
-_TREND_STOPS = [
-    (-0.02, "#8c510a", "brunissement"),
-    (-0.005, "#d8b365", ""),
-    (0.0, "#f5f5f5", "stable"),
-    (0.005, "#7fbf7b", ""),
-    (0.02, "#1a9850", "verdissement"),
+# DISCRETE classes: (upper bound, colour, legend); a class holds the values up to its bound.
+# Sen slope of the deseasonalized monthly NDVI, in NDVI units per month.
+_TREND_CLASSES = [
+    (-0.003, "#8c510a", "net dépérissement"),
+    (-0.001, "#d8b365", "léger dépérissement"),
+    (0.001, "#f5f5f5", "stable"),
+    (0.003, "#7fbf7b", "léger verdissement"),
+    ("inf", "#1b7837", "net verdissement"),
 ]
-_DROUGHT_STOPS = [
-    (-2.0, "#d73027", "sécheresse forte"),
-    (-1.0, "#fc8d59", ""),
-    (0.0, "#ffffbf", "normale"),
-    (1.0, "#91cf60", ""),
-    (2.0, "#1a9850", "humide"),
+# NDVI anomaly of the last year, mean of its monthly z-scores (a yearly mean is much
+# narrower than a monthly z: ±1 would paint almost everything 'normal').
+_DROUGHT_CLASSES = [
+    (-0.75, "#b2182b", "très en dessous de la normale"),
+    (-0.25, "#ef8a62", "en dessous de la normale"),
+    (0.25, "#f7f7f7", "proche de la normale"),
+    (0.75, "#a6dba0", "au-dessus de la normale"),
+    ("inf", "#1b7837", "très au-dessus de la normale"),
+]
+# Share of observed months under stress (anomaly <= -1), in %; ~16 % is statistically
+# expected, so the classes are centred there.
+_STRESS_CLASSES = [
+    (15.0, "#fef0d9", "rare (moins de 15 % des mois)"),
+    (20.0, "#fdcc8a", "habituel (15 à 20 %)"),
+    (25.0, "#fc8d59", "fréquent (20 à 25 %)"),
+    ("inf", "#d7301f", "très fréquent (plus de 25 %)"),
 ]
 
 
-def _qml(band: int, cmin: float, cmax: float, stops: list[tuple[float, str, str]]) -> str:
+def _qml(
+    band: int,
+    cmin: float,
+    cmax: float,
+    stops: list[tuple[float | str, str, str]],
+    ramp: str = "INTERPOLATED",
+) -> str:
     items = "\n".join(
         f'          <item value="{v}" label="{lbl}" color="{c}" alpha="255"/>'
         for v, c, lbl in stops
@@ -39,7 +57,7 @@ def _qml(band: int, cmin: float, cmax: float, stops: list[tuple[float, str, str]
         f'    <rasterrenderer type="singlebandpseudocolor" band="{band}" opacity="1"'
         f' classificationMin="{cmin}" classificationMax="{cmax}">\n'
         "      <rastershader>\n"
-        '        <colorrampshader colorRampType="INTERPOLATED" clip="0">\n'
+        f'        <colorrampshader colorRampType="{ramp}" clip="0">\n'
         f"{items}\n"
         "        </colorrampshader>\n"
         "      </rastershader>\n"
@@ -50,13 +68,47 @@ def _qml(band: int, cmin: float, cmax: float, stops: list[tuple[float, str, str]
 
 
 def trend_qml() -> str:
-    """Sen's slope (NDVI/month): brown = browning, green = greening (centred on 0)."""
-    return _qml(1, -0.02, 0.02, _TREND_STOPS)
+    """Speed of change (Sen slope, NDVI/month): brown = dépérissement, green = verdissement."""
+    return _qml(1, -0.005, 0.005, _TREND_CLASSES, "DISCRETE")
+
+
+def trend_class_qml() -> str:
+    """Significant trends only (Mann-Kendall): 'no significant trend' is left transparent."""
+    return _paletted_qml(
+        [
+            (-1, "#8c510a", "dépérissement significatif"),
+            (0, "#f5f5f5", "pas de tendance significative", 0),
+            (1, "#1b7837", "verdissement significatif"),
+        ]
+    )
+
+
+def break_year_qml(start: int, end: int) -> str:
+    """Year of the break (Pettitt), one colour per year: light = early, dark = recent."""
+    years = list(range(start, end + 1))
+    last = max(1, len(years) - 1)
+    return _paletted_qml(
+        [
+            (y, _blend("#fee391", "#8c2d04", i / last), f"rupture en {y}")
+            for i, y in enumerate(years)
+        ]
+    )
 
 
 def drought_qml() -> str:
-    """NDVI anomaly (z-score): red/brown = drought, green = wet (centred on 0)."""
-    return _qml(1, -2.0, 2.0, _DROUGHT_STOPS)
+    """Deviation from normal of the last year (z-score): red = drier, green = greener."""
+    return _qml(1, -1.5, 1.5, _DROUGHT_CLASSES, "DISCRETE")
+
+
+def stress_frequency_qml() -> str:
+    """How often the vegetation was stressed (% of months): pale = rare, red = chronic."""
+    return _qml(1, 0.0, 50.0, _STRESS_CLASSES, "DISCRETE")
+
+
+def _blend(a: str, b: str, t: float) -> str:
+    """Hex colour at ``t`` (0-1) on the straight line from ``a`` to ``b``."""
+    ca, cb = (tuple(int(c[i : i + 2], 16) for i in (1, 3, 5)) for c in (a, b))
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(ca, cb, strict=True))
 
 
 # Aptitude 0-100 ramp (écobuage): grey (unsuitable) → green (suitable to burn).
@@ -73,11 +125,12 @@ def ecobuage_aptitude_qml() -> str:
     return _qml(1, 0.0, 100.0, _APTITUDE_STOPS)
 
 
-def _paletted_qml(entries: list[tuple[int, str, str]]) -> str:
-    """A paletted (categorical) raster QML for small integer class rasters."""
+def _paletted_qml(entries: list[tuple]) -> str:
+    """A paletted (categorical) raster QML: (value, colour, label[, alpha])."""
     items = "\n".join(
-        f'        <paletteEntry value="{v}" color="{c}" label="{lbl}" alpha="255"/>'
-        for v, c, lbl in entries
+        f'        <paletteEntry value="{e[0]}" color="{e[1]}" label="{e[2]}"'
+        f' alpha="{e[3] if len(e) > 3 else 255}"/>'
+        for e in entries
     )
     return (
         "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"

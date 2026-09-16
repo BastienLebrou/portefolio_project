@@ -29,6 +29,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._layers import queue_layer
 from ._venv import python_param, require_python
 
 
@@ -196,21 +197,16 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
             f"{payload.get('n_hexagons', 0)} | réservoirs : {payload.get('n_reservoirs', 0)} | "
             f"connectivité : {payload.get('connectivity_source')} | axes : {payload.get('axes')}"
         )
-        self._write_styles(payload, feedback)
-        self._queue_layers(payload, context)
+        if payload.get("geojson_path"):
+            from ._styles import biotrame_qml
+
+            queue_layer(
+                context,
+                payload["geojson_path"],
+                "Biotrame : priorisation écologique",
+                biotrame_qml(),
+            )
         return {"MESH": payload.get("geojson_path"), "PARQUET": payload.get("parquet_path")}
-
-    def _write_styles(self, payload: dict, feedback) -> None:
-        from ._styles import biotrame_qml
-
-        qml = biotrame_qml()
-        for path in (payload.get("geojson_path"), payload.get("parquet_path")):
-            if not path:
-                continue
-            try:
-                Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
-            except OSError as exc:
-                feedback.pushInfo(f"Style non écrit pour {path} : {exc}")
 
     # --- helpers -------------------------------------------------------------
     def _raster_source(self, parameters, name, context) -> str | None:
@@ -222,10 +218,3 @@ class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
         if not value or value == "TEMPORARY_OUTPUT":
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech_biotrame"
         return Path(value)
-
-    def _queue_layers(self, payload: dict, context) -> None:
-        path = payload.get("geojson_path")
-        if path:
-            label = "Biotrame : priorisation écologique"
-            details = QgsProcessingContext.LayerDetails(label, context.project(), label)
-            context.addLayerToLoadOnCompletion(str(path), details)

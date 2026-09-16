@@ -231,16 +231,24 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
         path = self.parameterAsString(parameters, self.GEE_KEY, context).strip()
         if path:
             source = "fichier indiqué"
+            key_text = ""
             try:
-                problems = _setup.check_gee_key(Path(path).read_text(encoding="utf-8"))
+                key_text = Path(path).read_text(encoding="utf-8")
+                problems = _setup.check_gee_key(key_text)
             except OSError as exc:
                 problems = [f"fichier illisible ({exc})"]
         elif os.environ.get("SCRUTECH_GEE_CREDENTIALS"):
             source = "variable SCRUTECH_GEE_CREDENTIALS"
-            problems = _setup.check_gee_key(os.environ["SCRUTECH_GEE_CREDENTIALS"])
+            key_text = os.environ["SCRUTECH_GEE_CREDENTIALS"]
+            problems = _setup.check_gee_key(key_text)
+        elif _setup.DEFAULT_GEE_KEY.is_file():
+            source = str(_setup.DEFAULT_GEE_KEY)
+            key_text = _setup.DEFAULT_GEE_KEY.read_text(encoding="utf-8")
+            problems = _setup.check_gee_key(key_text)
         else:
             feedback.pushInfo(
-                "[FACULTATIF] Clé Google Earth Engine : nécessaire seulement pour AlphaEarth.\n"
+                "[FACULTATIF] Clé Google Earth Engine : nécessaire seulement pour AlphaEarth. "
+                f"Rangez-la dans {_setup.DEFAULT_GEE_KEY} pour qu'elle soit trouvée toute seule.\n"
                 + _GEE_STEPS
             )
             return
@@ -252,19 +260,39 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
                 + _GEE_STEPS,
                 False,
             )
-        else:
+            return
+        python_exe = _venv.find_python(Path(__file__).resolve().parents[1])
+        error = _setup.check_gee_access(python_exe, key_text) if python_exe else ""
+        if not python_exe:
             feedback.pushInfo(
-                f"[OK] Clé Google Earth Engine ({source}) : format valide. Earth Engine ne sera "
-                "contacté qu'au lancement d'AlphaEarth."
+                f"[OK] Clé Google Earth Engine ({source}) : format valide (accès testé une fois "
+                "le Python de ScruTech installé)."
+            )
+        elif not error:
+            feedback.pushInfo(f"[OK] Clé Google Earth Engine ({source}) : accès vérifié.")
+        elif "serviceusage" in error.lower():
+            feedback.reportError(
+                f"[À FAIRE] Clé Google Earth Engine ({source}) reconnue, mais Google refuse "
+                "l'accès : son compte de service n'a pas le droit d'utiliser le projet. Dans "
+                "console.cloud.google.com ▸ IAM et administration ▸ IAM (projet de la clé), "
+                "ajoutez au compte de service le rôle « Service Usage Consumer », puis relancez "
+                "cet outil après quelques minutes.",
+                False,
+            )
+        else:
+            feedback.reportError(
+                f"[À FAIRE] Clé Google Earth Engine ({source}) : Earth Engine refuse l'accès "
+                f"({error}).\n" + _GEE_STEPS,
+                False,
             )
 
     def _check_mnt(self, feedback) -> None:
         mnt = os.environ.get("SCRUTECH_MNT", "").strip()
         if not mnt:
             feedback.pushInfo(
-                "[FACULTATIF] MNT (modèle numérique de terrain) : obligatoire pour l'écobuage, "
-                "utile pour les zones humides de Biotrame. Téléchargez un MNT en .tif qui couvre "
-                "votre zone (RGE ALTI de l'IGN, ou Copernicus DEM) et indiquez-le dans l'outil."
+                "[OK] MNT : rien à préparer. L'écobuage télécharge le MNT IGN de la zone tout "
+                "seul (LiDAR HD, complété par le RGE ALTI), et « 1 · Préparer l'emprise ▸ MNT "
+                "de la zone » le fournit aussi pour Biotrame."
             )
         elif mnt.startswith(("http://", "https://", "/vsi")) or Path(mnt).is_file():
             feedback.pushInfo(f"[OK] MNT déclaré par la variable SCRUTECH_MNT : {mnt}")

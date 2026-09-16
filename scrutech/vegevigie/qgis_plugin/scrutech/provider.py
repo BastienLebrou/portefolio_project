@@ -15,6 +15,7 @@ from .algorithms.ecobuage_aptitude_aoi import EcobuageAptitudeFromAoiAlgorithm
 from .algorithms.geoai_segment import GeoaiSegmentAlgorithm
 from .algorithms.load_cached import LoadCachedAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
+from .algorithms.mnt_aoi import MntFromAoiAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
 from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
 from .algorithms.report_launch import ReportLaunchAlgorithm
@@ -30,6 +31,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(SetupCheckAlgorithm())
         # 1 · Préparer l'emprise
         self.addAlgorithm(LoadCommunesAlgorithm())
+        self.addAlgorithm(MntFromAoiAlgorithm())
         # 2 · Analyser une emprise (dans l'ordre ①→④)
         self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(AlphaEarthChangeAlgorithm())

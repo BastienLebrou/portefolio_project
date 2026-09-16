@@ -26,6 +26,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._layers import queue_layer
 from ._venv import python_param, require_python
 
 
@@ -64,13 +65,23 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
             "<p><b>Étapes</b><br>"
             "1. Zone d'étude : bouton ▾ pour prendre l'emprise de la carte ou d'une couche, ou "
             "pour la dessiner. Commencez petit (une commune).<br>"
-            "2. Années de début et de fin : une tendance est plus fiable sur plusieurs années.<br>"
+            "2. Années de début et de fin : au moins 2 années (la sécheresse se mesure par "
+            "rapport à la normale de la période), 5 ou plus pour une tendance fiable.<br>"
             "3. Facultatif : une couche de zones (par exemple les communes, voir le groupe 1) "
             "pour obtenir un classement par zone.<br>"
             "4. Exécuter.</p>"
-            "<p><b>Résultat</b><br>Des couches stylées dans le projet : tendance (verdit ou "
-            "dépérit), année de rupture, anomalie de sécheresse et, si des zones sont données, "
-            "un tableau par zone.</p>"
+            "<p><b>Résultat</b><br>Des couches colorées, avec une légende en clair :<br>"
+            "• <b>vitesse d'évolution</b> : du marron (net dépérissement) au vert (net "
+            "verdissement) ;<br>"
+            "• <b>tendance significative</b> : seuls les pixels où la tendance est "
+            "statistiquement sûre sont colorés ;<br>"
+            "• <b>année de rupture</b> : l'année où la végétation a changé brusquement "
+            "(coupe, incendie, sécheresse), du clair (ancien) au foncé (récent) ;<br>"
+            "• <b>écart à la normale</b> de la dernière année : rouge = plus sec que "
+            "d'habitude, vert = plus vert que d'habitude ;<br>"
+            "• <b>fréquence de stress</b> : part des mois où la végétation était nettement "
+            "sous sa normale ;<br>"
+            "• si des zones sont données, un tableau par zone.</p>"
             "<p><b>Bon à savoir</b><br>Plus la zone et la période sont grandes, plus le calcul "
             "est long (de quelques minutes à plus d'une heure). 60 m de résolution est un bon "
             "compromis ; 10 m est réservé aux petites zones. Les endroits trop nuageux restent "
@@ -108,7 +119,7 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
                 self.END_YEAR,
                 self.tr("Année de fin"),
                 type=_compat.NUMBER_INTEGER,
-                defaultValue=2020,
+                defaultValue=2025,
                 minValue=2015,
                 maxValue=2100,
             )
@@ -198,11 +209,18 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
                     "la période ou augmentez le seuil de nuages."
                 )
             )
-        self._write_styles(payload, feedback)
-        self._queue_layers(payload, context)
+        if start == end:
+            feedback.pushWarning(
+                self.tr(
+                    "Une seule année : pas de sécheresse ni d'année de rupture (il faut au "
+                    "moins 2 années pour définir la normale)."
+                )
+            )
+        self._queue_layers(payload, context, start, end)
         return {
             "TREND": payload.get("trend_tif"),
             "DROUGHT": payload.get("drought_tif"),
+            "STRESS": payload.get("stress_tif"),
             "ZONAL": payload.get("zonal_parquet"),
             "SCENES": scenes,
         }
@@ -213,19 +231,6 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         if not value or value == "TEMPORARY_OUTPUT":
             return Path(QgsProcessingUtils.tempFolder()) / "scrutech"
         return Path(value)
-
-    def _write_styles(self, payload: dict, feedback) -> None:
-        """Drop a sibling .qml next to each raster so QGIS applies the ScruTech style."""
-        from ._styles import drought_qml, trend_qml
-
-        for key, qml in (("trend_tif", trend_qml()), ("drought_tif", drought_qml())):
-            tif = payload.get(key)
-            if not tif:
-                continue
-            try:
-                Path(tif).with_suffix(".qml").write_text(qml, encoding="utf-8")
-            except OSError as exc:
-                feedback.pushInfo(f"Style non écrit pour {tif} : {exc}")
 
     def _zones_to_path(self, parameters, context, out_folder, feedback) -> Path | None:
         layer = self.parameterAsVectorLayer(parameters, self.ZONES, context)
@@ -239,19 +244,29 @@ class AnalyzeExtentAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(f"Couche de zones préparée ({layer.featureCount()} entités).")
         return tmp
 
-    def _queue_layers(self, payload: dict, context: QgsProcessingContext) -> None:
-        pairs = [
-            ("trend_tif", "VegeVigie : tendance (pente de Sen)"),
-            ("break_tif", "VegeVigie : année de rupture (Pettitt)"),
-            ("drought_tif", "VegeVigie : sécheresse (anomalie de NDVI)"),
-            ("zonal_parquet", "VegeVigie : statistiques par zone"),
+    def _queue_layers(self, payload: dict, context, start: int, end: int) -> None:
+        """Load every output with its style (the legend reads as plain French)."""
+        from . import _styles as s
+
+        layers = [  # loaded bottom to top: the most readable maps end up on top
+            ("zonal_parquet", "VegeVigie : statistiques par zone", None),
+            (
+                "stress_tif",
+                f"VegeVigie : fréquence de stress {start}-{end}",
+                s.stress_frequency_qml(),
+            ),
+            (
+                "break_tif",
+                f"VegeVigie : année de rupture {start}-{end}",
+                s.break_year_qml(start, end),
+            ),
+            ("trend_tif", f"VegeVigie : vitesse d'évolution {start}-{end}", s.trend_qml()),
+            ("trend_class_tif", "VegeVigie : tendance significative", s.trend_class_qml()),
+            ("drought_tif", f"VegeVigie : écart à la normale en {end}", s.drought_qml()),
         ]
-        for key, label in pairs:
-            path = payload.get(key)
-            if not path:
-                continue
-            details = QgsProcessingContext.LayerDetails(label, context.project(), label)
-            context.addLayerToLoadOnCompletion(str(path), details)
+        for key, label, qml in layers:
+            if payload.get(key):
+                queue_layer(context, payload[key], label, qml)
 
 
 def _explain(text: str) -> str:

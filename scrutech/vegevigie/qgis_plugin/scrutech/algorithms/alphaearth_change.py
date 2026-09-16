@@ -69,13 +69,15 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             "suffisent.</p>"
             "<p><b>Avant de lancer</b><br>"
             "1. Avoir lancé « 0 · Démarrer ici ▸ Vérifier et installer ScruTech ».<br>"
-            "2. Une <b>clé Google Earth Engine</b> : le fichier .json d'un compte de service. "
-            "« Vérifier et installer ScruTech » explique comment l'obtenir et peut la "
-            "contrôler.</p>"
+            "2. Une <b>clé Google Earth Engine</b> (fichier .json d'un compte de service). "
+            "Rangez-la dans <b>C:\\Users\\&lt;vous&gt;\\.scrutech\\gee_key.json</b> : elle "
+            "est alors trouvée toute seule. « Vérifier et installer ScruTech » explique "
+            "comment l'obtenir et teste l'accès.</p>"
             "<p><b>Étapes</b><br>"
             "1. Zone d'étude (commencez petit).<br>"
             "2. Deux années différentes (données disponibles depuis 2017).<br>"
-            "3. Clé Google Earth Engine : choisissez le fichier .json.<br>"
+            "3. Clé Google Earth Engine : laissez vide si elle est rangée à l'emplacement "
+            "ci-dessus, sinon choisissez le fichier .json.<br>"
             "4. Exécuter.</p>"
             "<p><b>Résultat</b><br>Deux couches : tous les pixels analysés avec leur score de "
             "changement, et les candidats au-dessus du seuil (par défaut les 5 % qui ont le "
@@ -123,7 +125,7 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.KEY_FILE,
-                self.tr("Clé Google Earth Engine (fichier .json du compte de service)"),
+                self.tr("Clé Google Earth Engine (.json ; vide = ~/.scrutech/gee_key.json)"),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
                 extension="json",
@@ -143,11 +145,11 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             _compat.advanced(
                 QgsProcessingParameterNumber(
                     self.MAX_PIXELS,
-                    self.tr("Pixels analysés au maximum (protège votre quota Earth Engine)"),
+                    self.tr("Points analysés (5 000 au maximum, limite d'Earth Engine)"),
                     type=_compat.NUMBER_INTEGER,
-                    defaultValue=100_000,
-                    minValue=1000,
-                    maxValue=1_000_000,
+                    defaultValue=5000,
+                    minValue=500,
+                    maxValue=5000,
                 )
             )
         )
@@ -233,7 +235,7 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         import json
         import os
 
-        from ._setup import check_gee_key
+        from ._setup import DEFAULT_GEE_KEY, check_gee_key
 
         raw = None
         if key_file:
@@ -245,16 +247,18 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
             raw = path.read_text(encoding="utf-8")
         elif os.environ.get("SCRUTECH_GEE_CREDENTIALS"):
             raw = os.environ["SCRUTECH_GEE_CREDENTIALS"]
+        elif DEFAULT_GEE_KEY.is_file():
+            raw = DEFAULT_GEE_KEY.read_text(encoding="utf-8")
         else:
             config = self._auth_config(auth_id) if auth_id else None
             raw = config.configMap().get("json_credentials") if config else None
         if not raw:
             raise QgsProcessingException(
                 self.tr(
-                    "Aucune clé Google Earth Engine. Indiquez le fichier .json de votre compte "
-                    "de service dans « Clé Google Earth Engine ». Pour savoir comment l'obtenir, "
-                    "lancez « 0 · Démarrer ici ▸ Vérifier et installer ScruTech »."
-                )
+                    "Aucune clé Google Earth Engine. Rangez le fichier .json de votre compte de "
+                    "service dans {} (ou choisissez-le dans « Clé Google Earth Engine »). Pour "
+                    "l'obtenir, lancez « 0 · Démarrer ici ▸ Vérifier et installer ScruTech »."
+                ).format(DEFAULT_GEE_KEY)
             )
         problems = check_gee_key(raw)
         if problems:

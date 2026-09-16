@@ -27,6 +27,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
+from ._layers import queue_layer
 from ._venv import python_param, require_python
 
 
@@ -61,20 +62,21 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             "automatiquement.</p>"
             "<p><b>Avant de lancer</b><br>"
             "1. Avoir lancé « 0 · Démarrer ici ▸ Vérifier et installer ScruTech ».<br>"
-            "2. Un <b>MNT</b> (modèle numérique de terrain) en .tif qui couvre la zone, par "
-            "exemple le RGE ALTI de l'IGN ou le Copernicus DEM.<br>"
-            "3. Une connexion internet.</p>"
+            "2. Une connexion internet.</p>"
             "<p><b>Étapes</b><br>"
             "1. Zone d'étude.<br>"
-            "2. MNT : choisissez le fichier .tif.<br>"
+            "2. MNT (facultatif) : laissez vide et le MNT IGN de la zone (LiDAR HD, complété "
+            "par le RGE ALTI) est téléchargé automatiquement ; ou choisissez votre propre MNT "
+            ".tif en Lambert-93.<br>"
             "3. Facultatif, pour une meilleure note : les couches de tendance et de sécheresse "
             "produites par ① VegeVigie sur la même zone.<br>"
             "4. Exécuter.</p>"
             "<p><b>Résultat</b><br>Deux rasters stylés : l'aptitude (0 à 100) et les classes "
             "(0 à exclure, 1 à étudier, 2 prioritaire).</p>"
             "<p><b>Bon à savoir</b><br>Sans les couches VegeVigie, la note repose seulement sur "
-            "la pente, l'accès et les exclusions. Le résultat oriente une visite de terrain ; il "
-            "ne remplace pas l'autorisation préfectorale.</p>"
+            "la pente, l'accès et les exclusions. Le téléchargement automatique du MNT convient "
+            "aux petites zones (jusqu'à 25 × 25 km). Le résultat oriente une visite de "
+            "terrain ; il ne remplace pas l'autorisation préfectorale.</p>"
         )
 
     def createInstance(self) -> EcobuageAptitudeFromAoiAlgorithm:  # noqa: N802
@@ -95,7 +97,7 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFile(
                 self.MNT,
-                self.tr("MNT, modèle numérique de terrain (.tif)"),
+                self.tr("MNT .tif en Lambert-93 (facultatif : vide = MNT IGN téléchargé)"),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,  # may come from the SCRUTECH_MNT environment variable
             )
@@ -172,38 +174,24 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             f"à étudier {payload.get('n_a_etudier', 0)} | "
             f"à exclure {payload.get('n_a_exclure', 0)} | critères : {payload.get('criteria')}"
         )
-        self._write_styles(payload, feedback)
         self._queue_layers(payload, context)
         return {"APTITUDE": payload.get("aptitude_path"), "CLASSES": payload.get("classes_path")}
 
-    def _write_styles(self, payload: dict, feedback) -> None:
-        from ._styles import ecobuage_aptitude_qml, ecobuage_classes_qml
-
-        pairs = [
-            (payload.get("aptitude_path"), ecobuage_aptitude_qml()),
-            (payload.get("classes_path"), ecobuage_classes_qml()),
-        ]
-        for path, qml in pairs:
-            if not path:
-                continue
-            try:
-                Path(path).with_suffix(".qml").write_text(qml, encoding="utf-8")
-            except OSError as exc:
-                feedback.pushInfo(f"Style non écrit pour {path} : {exc}")
-
     # --- helpers -------------------------------------------------------------
-    def _resolve_mnt(self, parameters, context) -> str:
+    def _resolve_mnt(self, parameters, context) -> str | None:
+        """The DEM to use, or None: the engine then downloads the IGN DEM of the zone."""
         mnt = self.parameterAsString(parameters, self.MNT, context).strip()
         if not mnt:
             mnt = os.environ.get("SCRUTECH_MNT", "").strip()
+        if not mnt:
+            return None
         remote = mnt.startswith(("http://", "https://", "/vsi"))  # COG read in place
-        if not mnt or not (remote or Path(mnt).exists()):
+        if not (remote or Path(mnt).exists()):
             raise QgsProcessingException(
                 self.tr(
-                    "Aucun MNT trouvé. Indiquez un fichier .tif dans « MNT, modèle numérique de "
-                    "terrain » : par exemple le RGE ALTI de l'IGN ou le Copernicus DEM, "
-                    "téléchargé pour votre zone."
-                )
+                    "MNT introuvable : {}. Laissez le champ vide pour télécharger le "
+                    "MNT IGN de la zone."
+                ).format(mnt)
             )
         return mnt
 
@@ -218,15 +206,19 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
         return Path(value)
 
     def _queue_layers(self, payload: dict, context) -> None:
-        pairs = [
-            (payload.get("aptitude_path"), "Écobuage : aptitude (0-100)"),
-            (
-                payload.get("classes_path"),
-                "Écobuage : classes (0 exclure, 1 étudier, 2 prioritaire)",
-            ),
-        ]
-        for path, label in pairs:
-            if not path:
-                continue
-            details = QgsProcessingContext.LayerDetails(label, context.project(), label)
-            context.addLayerToLoadOnCompletion(str(path), details)
+        from ._styles import ecobuage_aptitude_qml, ecobuage_classes_qml
+
+        mnt = payload.get("mnt_path")
+        if mnt and Path(mnt).name == "mnt_ign.tif":  # downloaded for this run: show it
+            queue_layer(context, mnt, "Écobuage : MNT IGN de la zone")
+        if payload.get("aptitude_path"):
+            queue_layer(
+                context,
+                payload["aptitude_path"],
+                "Écobuage : aptitude (0-100)",
+                ecobuage_aptitude_qml(),
+            )
+        if payload.get("classes_path"):
+            queue_layer(
+                context, payload["classes_path"], "Écobuage : classes", ecobuage_classes_qml()
+            )
