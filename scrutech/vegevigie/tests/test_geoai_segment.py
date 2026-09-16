@@ -9,6 +9,10 @@ import pytest
 from vegevigie import geoai_segment as gs
 
 
+class _NotATensor:
+    """Module level so pickle can save it (a local class can't be pickled)."""
+
+
 def _fake_download(monkeypatch: pytest.MonkeyPatch, content: bytes) -> None:
     """Replace urlopen with a stub serving ``content`` — no network in tests."""
 
@@ -75,10 +79,6 @@ def test_reject_unsafe_checkpoint_accepts_a_plain_state_dict(tmp_path: Path) -> 
 
 def test_reject_unsafe_checkpoint_rejects_a_non_tensor_pickle(tmp_path: Path) -> None:
     torch = pytest.importorskip("torch")
-
-    class _NotATensor:
-        pass
-
     path = tmp_path / "bad.pth"
     torch.save(_NotATensor(), path)
 
