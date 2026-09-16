@@ -1,6 +1,6 @@
 [general]
 name=ScruTech
-qgisMinimumVersion=3.28
+qgisMinimumVersion=4.2
 ; Without a maximum, QGIS assumes 3.99 and refuses to load the plugin on 4.x.
 qgisMaximumVersion=4.99
 description=Geodata hub in QGIS: VegeVigie (trend/drought), AlphaEarth (annual change), PAFF fire interface, écobuage, Biotrame priorities, GeoAI segmentation.
