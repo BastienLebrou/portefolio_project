@@ -4,39 +4,7 @@
 
 Projet de géospatialisation et scoring des parcelles cadastrales éligibles à l'installation de mini data centers résidentiels (boîtiers type pompe à chaleur, 36 kVA triphasé, raccordement fibre, impact sonore 60dB).
 
-Ce dossier contient les **prompts et méthodologie** pour construire un outil complet d'identification de sites éligibles, selon une approche **geo-data engineer** systématique (coût d'abord, cloud-native, pipeline reproductible, validation stricte).
-
----
-
-## 📁 Prompts d'origine (archivés)
-
-### Prompt SIG : [`mini_dc.md`](../apprentissage/prompts/mini_dc.md)
-**Prompt expert SIG** pour identifier les parcelles éligibles.
-- 5 étapes de filtrage spatial (foncier, nuisances, connectivité, énergie, réglementaire)
-- Appliquable directement dans QGIS, ArcGIS, ou script Python/PostGIS
-- **Public :** Géomaticien, data scientist SIG
-
-### Prompt document Word : [`mini_dc_doc_word.md`](../apprentissage/prompts/mini_dc_doc_word.md)
-**Prompt pour Claude web** générant un document Word complet.
-- Explication complète de la méthodologie (9 sections)
-- Table des matières auto-générée, tableaux, mise en forme professionnelle
-- **Usage :** Copie-colle sur claude.ai pour générer un `.docx`
-
----
-
-## 🚀 Démarrage rapide
-
-### Option 1 : Utiliser le prompt SIG directement
-1. Ouvre [`mini_dc.md`](../apprentissage/prompts/mini_dc.md)
-2. Copie son contenu
-3. Colle dans QGIS (Python console), ou un script Python/SQL
-
-### Option 2 : Générer un document Word explicatif
-1. Ouvre [`mini_dc_doc_word.md`](../apprentissage/prompts/mini_dc_doc_word.md)
-2. Copie le contenu (du titre jusqu'à "INSTRUCTIONS POUR CLAUDE WEB")
-3. Colle sur https://claude.ai (conversation nouvelle)
-4. Ajoute : *"Génère-moi un document Word `.docx` avec cette structure, formaté professionnellement."*
-5. Télécharge le fichier `.docx` généré
+Ce dossier contient la **méthodologie** et l'outil (`outil/`, lancé par `outil/run.py`) pour construire un outil complet d'identification de sites éligibles, selon une approche **geo-data engineer** systématique (coût d'abord, cloud-native, pipeline reproductible, validation stricte).
 
 ---
 

@@ -9,7 +9,7 @@ Identifier et hiérarchiser les zones pertinentes pour l'écobuage sur un territ
 pastoral. Méthodologie reproductible : pile de rasters-critères alignés → scoring
 pondéré 0-100 → 3 classes → GeoTIFF ouvrable en SIG.
 
-Le prompt d'origine (archivé) : [`ecobuage.md`](../apprentissage/prompts/ecobuage.md). Le moteur de scoring : [`ecobuage.py`](ecobuage.py).
+Le moteur de scoring : [`ecobuage.py`](ecobuage.py).
 
 > Réutilise VégéVigie pour les indices satellite (NDVI, NBR, tendance, sécheresse) —
 > ce module ne fait que l'étape de scoring, il consomme des critères déjà normalisés.

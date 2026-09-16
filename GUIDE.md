@@ -102,7 +102,6 @@ le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/d
 | `SECURITY.md` | la politique de sécurité |
 | `scrutech/INSTALLATION.md` | comment un tiers utilise l'outil sans télécharger des Go de données |
 | `scrutech/vegevigie/qgis_plugin/TODO.md` | le suivi à jour de l'extension QGIS (ce qui est fait, ce qui reste) |
-| `scrutech/apprentissage/prompts/` | les prompts et cahiers des charges d'origine (archives : ils ne décrivent pas l'état actuel) |
 
 ---
 
@@ -111,4 +110,3 @@ le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/d
 - Les dossiers `*/tests/` : les tests automatiques (utiles à la machine, pas à la lecture).
 - Les dossiers `*/src/` : simple convention Python, le code y est rangé « proprement ».
 - `*/.venv/`, `__pycache__/` : environnement Python et cache, jamais à lire.
-- `scrutech/apprentissage/` : mes notes, brouillons et prompts d'origine.

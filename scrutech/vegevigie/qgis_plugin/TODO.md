@@ -1,9 +1,7 @@
 # TODO — Plugin QGIS ScruTech (mise en release)
 
 > Suivi d'exécution avant mise à disposition du plugin comme fonctionnalité utilisable.
-> Complète le cahier des charges archivé
-> (`scrutech/apprentissage/prompts/qgis_plugin_cahier_des_charges_2026-07.md`) : ce fichier est la checklist
-> vivante. Dernière mise à jour : 2026-09-01, suite au point avec Bastien.
+> C'est la checklist vivante. Dernière mise à jour : 2026-09-16.
 
 ## État des points soulevés (session du 2026-09-01)
 
@@ -12,8 +10,8 @@
    pour ce test.
 2. **Build de packaging** — voir § Packaging & sécurité.
 3. **Tests plugin (pytest-qgis / chargement QGIS headless)** — Bastien s'en charge
-   prochainement. Pas d'action pour l'instant, cf. le cahier des charges archivé (`qgis_plugin_cahier_des_charges_2026-07.md`) § Tests & packaging
-   pour le cahier des charges.
+   prochainement. Pas d'action pour l'instant, l'extension se charge déjà sans
+   interface dans QGIS 4.2.0 (vérifié le 2026-09-16).
 4. **Test bootstrap** — voir § Bootstrap.
 5. **Vraie TVB régionale (biotrame)** — déjà désactivée par défaut : le pilier reste sur le
    proxy proximité tant que `SCRUTECH_TVB_WFS` (ou le paramètre d'algo) n'est pas
@@ -21,8 +19,8 @@
    pour validation du endpoint AURA depuis un réseau non restreint.
 6. **Scaffold v2 de l'extension (spec QGIS 4.0, STAC/SAR)** : mis en pause, puis retiré de
    l'arbre le 2026-09-15. Son dernier état est conservé par le tag git
-   `archive/plugin-v2-paused` (`git checkout archive/plugin-v2-paused -- scrutech/plugin_v2_paused`),
-   son prompt dans `scrutech/apprentissage/prompts/qgis_extension_v2.md`. Sera repris plus tard
+   `archive/plugin-v2-paused` (`git checkout archive/plugin-v2-paused -- scrutech/plugin_v2_paused`).
+   Sera repris plus tard
    comme fonctionnalité à part, avec son propre branding, pas fusionné dans le hub v1
    (`vegevigie/qgis_plugin/`).
 7. **Points en suspens** (palette icônes, `experimental=True`, version `0.4.0`, soumission
