@@ -47,7 +47,7 @@ class GeoaiSegmentAlgorithm(QgsProcessingAlgorithm):
         return self.tr("Segment anything (SAM, experimental)")
 
     def group(self) -> str:
-        return self.tr("7 · GeoAI (modèles ouverts)")
+        return self.tr("6 · GeoAI (modèles ouverts)")
 
     def groupId(self) -> str:  # noqa: N802
         return "geoai"

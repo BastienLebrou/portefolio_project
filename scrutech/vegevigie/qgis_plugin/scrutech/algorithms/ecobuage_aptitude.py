@@ -55,7 +55,7 @@ class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
         return self.tr("Aptitude à l'écobuage (couches en entrée)")
 
     def group(self) -> str:
-        return self.tr("6 · Outils avancés (couches en entrée)")
+        return self.tr("5 · Outils avancés (couches en entrée)")
 
     def groupId(self) -> str:  # noqa: N802
         return "avance"

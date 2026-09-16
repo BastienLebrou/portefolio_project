@@ -52,6 +52,9 @@ qu'il utilise.
 
 *(Tous ces chemins sont sous `scrutech/`.)*
 
+SDBPi et Mini data centers ne sont **pas proposés dans l'extension QGIS** (masqués) : ils se
+lancent seulement en ligne de commande, avec leur script `run`.
+
 ---
 
 ## Le socle commun : `scrutech/core/src/core/`

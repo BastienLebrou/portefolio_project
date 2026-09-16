@@ -27,10 +27,9 @@ CONFIG_SRC = PROJECT / "config" / "default.yaml"
 EXTRA_MODULES = {"ecobuage": REPO_ROOT / "ecobuage" / "ecobuage.py"}
 # Multi-file sibling engines bundled as a folder — code only (data/cache excluded);
 # the plugin runs them in an external Python via subprocess.
-EXTRA_DIRS = {
-    "sdbpi": REPO_ROOT / "sdbpi",
-    "mini_dc": REPO_ROOT / "mini_dc" / "outil",
-}
+# ponytail: sdbpi and mini_dc are hidden from the plugin, so nothing is bundled here; add
+# {"sdbpi": REPO_ROOT / "sdbpi", "mini_dc": REPO_ROOT / "mini_dc" / "outil"} to ship them.
+EXTRA_DIRS: dict[str, Path] = {}
 _ENGINE_IGNORE = shutil.ignore_patterns(
     "__pycache__",
     "*.pyc",

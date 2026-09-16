@@ -15,11 +15,9 @@ from .algorithms.ecobuage_aptitude_aoi import EcobuageAptitudeFromAoiAlgorithm
 from .algorithms.geoai_segment import GeoaiSegmentAlgorithm
 from .algorithms.load_cached import LoadCachedAlgorithm
 from .algorithms.load_communes import LoadCommunesAlgorithm
-from .algorithms.mini_dc_sites import MiniDcSitesAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
 from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
 from .algorithms.report_launch import ReportLaunchAlgorithm
-from .algorithms.sdbpi_vacance import SdbpiVacanceAlgorithm
 
 
 class ScruTechProvider(QgsProcessingProvider):
@@ -39,13 +37,12 @@ class ScruTechProvider(QgsProcessingProvider):
         # 4 · Restituer
         self.addAlgorithm(ReportLaunchAlgorithm())
         self.addAlgorithm(LoadCachedAlgorithm())
-        # 5 · Bâti & territoire
-        self.addAlgorithm(SdbpiVacanceAlgorithm())
-        self.addAlgorithm(MiniDcSitesAlgorithm())
-        # 6 · Outils avancés (couches en entrée)
+        # ponytail: SDBPi and mini data centers are hidden (off-topic for the plugin). Their
+        # algorithm files stay in algorithms/; re-add them here and in package.py to ship again.
+        # 5 · Outils avancés (couches en entrée)
         self.addAlgorithm(InterfaceHabitatForetAlgorithm())
         self.addAlgorithm(EcobuageAptitudeAlgorithm())
-        # 7 · GeoAI (modèles ouverts, expérimental)
+        # 6 · GeoAI (modèles ouverts, expérimental)
         self.addAlgorithm(GeoaiSegmentAlgorithm())
 
     def id(self) -> str:
@@ -56,8 +53,8 @@ class ScruTechProvider(QgsProcessingProvider):
 
     def longName(self) -> str:  # noqa: N802 — QGIS API name
         return (
-            "ScruTech — geodata hub: VegeVigie, PAF fire interface, écobuage, "
-            "SDBPi vacant buildings, mini data centers"
+            "ScruTech — geodata hub: VegeVigie, AlphaEarth, PAFF fire interface, "
+            "écobuage, Biotrame, GeoAI"
         )
 
     def icon(self) -> QIcon:
