@@ -44,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_geoai_segment(spec)
     if task == "mnt_aoi":
         return _run_mnt_aoi(spec)
+    if task == "report":
+        return _run_report(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -80,6 +82,8 @@ def main(argv: list[str] | None = None) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
+    maps = (result.trend_tif, result.trend_class_tif, result.stress_tif, result.break_tif)
+    _cache(spec, "vegevigie", [*maps, result.drought_tif, result.zonal_parquet])
     print(
         "RESULT "
         + json.dumps(
@@ -117,7 +121,7 @@ def _run_paf_interface_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
-    _cache(spec, "paf")
+    _cache(spec, "paf", [line_path.with_suffix(".geojson"), zone_path.with_suffix(".geojson")])
     result = {"line_path": str(line_path), "zone_path": str(zone_path), **metrics}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -145,7 +149,7 @@ def _run_alphaearth_change(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
-    _cache(spec, "alphaearth")
+    _cache(spec, "alphaearth", [geojson])
     result = {"changed_path": str(changed), "geojson_path": str(geojson), **summary}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -172,7 +176,7 @@ def _run_ecobuage_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
-    _cache(spec, "ecobuage")
+    _cache(spec, "ecobuage", [apt_path, cls_path])
     result = {"aptitude_path": str(apt_path), "classes_path": str(cls_path), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -201,7 +205,7 @@ def _run_biotrame_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
 
-    _cache(spec, "biotrame")
+    _cache(spec, "biotrame", [geojson])
     result = {"parquet_path": str(parquet), "geojson_path": str(geojson), **info}
     print("RESULT " + json.dumps(result), flush=True)
     return 0
@@ -272,16 +276,35 @@ def _run_load_cached(spec: dict) -> int:
     return 0
 
 
-def _cache(spec: dict, pilier: str) -> None:
-    """Copy an AOI task's outputs into the ScruTech store, keyed by aoi_id (for instant reload)."""
+def _run_report(spec: dict) -> int:
+    """Write the HTML report of the AOI from its cached outputs, styled with the plugin's QML."""
+    from core.aoi import resolve_aoi
+
+    from vegevigie.report.html import build_report
+
+    try:
+        bbox = tuple(spec["bbox"])
+        path, tools = build_report(
+            resolve_aoi(bbox).aoi_id, bbox, spec.get("styles", {}), Path(spec["out_path"])
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+    print("RESULT " + json.dumps({"html_path": str(path), "tools": tools}), flush=True)
+    return 0
+
+
+def _cache(spec: dict, pilier: str, files: list[Path | None]) -> None:
+    """Copy a task's map products into the ScruTech store, keyed by aoi_id (for instant reload).
+
+    Only the listed files: the output folder may hold intermediates (e.g. the downloaded DEM).
+    """
     try:
         from core.aoi import resolve_aoi
-        from core.storage import _LOADABLE, cache_outputs
+        from core.storage import cache_outputs
 
-        folder = Path(spec["out_folder"])
-        files = [p for p in folder.glob("*") if p.suffix.lower() in _LOADABLE]
         aoi_id = resolve_aoi(tuple(spec["bbox"])).aoi_id
-        dests = cache_outputs(aoi_id, pilier, files)
+        dests = cache_outputs(aoi_id, pilier, [f for f in files if f is not None])
         print(f"PROGRESS 99 Cached {len(dests)} product(s) under aoi={aoi_id}.", flush=True)
     except Exception as exc:  # noqa: BLE001 — caching is a bonus, never fail the run
         print(f"PROGRESS 99 Cache skipped ({exc}).", flush=True)

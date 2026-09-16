@@ -199,3 +199,29 @@ def biotrame_qml() -> str:
         "  </renderer-v2>\n"
         "</qgis>\n"
     )
+
+
+# Output-name prefix -> style, shared by cached-layer loading and the HTML report.
+_STYLE_BY_PREFIX = [
+    ("trend_sen_slope_", trend_qml),
+    ("trend_class_", trend_class_qml),
+    ("drought_anomaly_", drought_qml),
+    ("drought_frequency_", stress_frequency_qml),
+    ("ecobuage_aptitude", ecobuage_aptitude_qml),
+    ("ecobuage_classes", ecobuage_classes_qml),
+    ("biotrame_priority", biotrame_qml),
+]
+
+
+def report_styles() -> dict[str, str]:
+    """QML per output-name prefix, sent to the HTML report so its legends match QGIS."""
+    return {prefix: make() for prefix, make in _STYLE_BY_PREFIX}
+
+
+def style_for(filename: str) -> str | None:
+    """QML of a ScruTech output from its file name, None if it has no ScruTech style."""
+    name = filename.replace("\\", "/").rsplit("/", 1)[-1]
+    if name.startswith("break_year_"):
+        start, end = name.split(".")[0].split("_")[-2:]
+        return break_year_qml(int(start), int(end))
+    return next((make() for prefix, make in _STYLE_BY_PREFIX if name.startswith(prefix)), None)

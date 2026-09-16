@@ -1,16 +1,13 @@
-"""Launch the ScruTech visual report (Streamlit) for an area of interest.
+"""Write the ScruTech visual report of an area (one HTML page) and open it in the browser.
 
-Starts the Streamlit report in the external Python (detached) and opens it in the browser;
-it reads the outputs cached for the area in the central store. QGIS can't host a live
-Streamlit server in a dock, so the browser is the robust option that always works.
+The external Python reads the outputs cached for the area and writes a self-contained page:
+key figures, a map, plain-French sentences. The plugin sends its own QML styles so the page
+legends match QGIS. No server to start, so nothing can hang on "CONNECTING".
 """
 
 from __future__ import annotations
 
-import os
-import socket
-import subprocess
-import time
+import tempfile
 import webbrowser
 from pathlib import Path
 
@@ -21,32 +18,26 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingParameterExtent,
-    QgsProcessingParameterNumber,
+    QgsProcessingParameterFileDestination,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
-from . import _qgis_compat as _compat
+from ._styles import report_styles
 from ._venv import python_param, require_python
-
-# Located inside the external Python, so it works for the dev venv and ~/.scrutech/venv alike.
-_FIND_APP = (
-    "import importlib.util as u; s = u.find_spec('vegevigie.report.app'); "
-    "print(s.origin if s else '')"
-)
 
 
 class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
-    """Open the live ScruTech visual report for an area of interest."""
+    """Write and open the HTML report of an area of interest."""
 
     EXTENT = "EXTENT"
-    PORT = "PORT"
+    OUTPUT = "OUTPUT"
     PYTHON_EXE = "PYTHON_EXE"
 
     def name(self) -> str:
         return "report_launch"
 
     def displayName(self) -> str:  # noqa: N802
-        return self.tr("Rapport visuel dans le navigateur")
+        return self.tr("Rapport visuel de la zone (page web)")
 
     def group(self) -> str:
         return self.tr("4 · Consulter les résultats")
@@ -56,18 +47,21 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "<p>Ouvre dans votre navigateur un <b>rapport de synthèse</b> de la zone : carte et "
-            "chiffres clés de chaque analyse déjà faite dessus (VegeVigie, AlphaEarth, PAFF, "
-            "écobuage, Biotrame).</p>"
-            "<p><b>Avant de lancer</b><br>Avoir analysé la zone avec au moins un outil des "
-            "groupes 2 ou 3.</p>"
+            "<p>Crée une <b>page web de synthèse</b> de la zone et l'ouvre dans votre "
+            "navigateur : les chiffres clés, une carte avec les couches à cocher et des phrases "
+            "qui expliquent les résultats de chaque analyse déjà faite (VegeVigie, PAFF, "
+            "écobuage, Biotrame, AlphaEarth).</p>"
+            "<p><b>Avant de lancer</b><br>Avoir analysé la zone avec au moins un outil du "
+            "groupe 2.</p>"
             "<p><b>Étapes</b><br>"
             "1. Zone d'étude : <b>la même emprise</b> que celle des analyses.<br>"
-            "2. Exécuter : le rapport s'ouvre dans le navigateur au bout de quelques "
-            "secondes.</p>"
-            "<p><b>Bon à savoir</b><br>Le rapport tourne uniquement sur votre ordinateur "
-            "(adresse locale, inaccessible depuis le réseau). Son bouton « Rafraîchir les "
-            "sorties » ajoute les analyses lancées entre-temps.</p>"
+            "2. Rapport : laissez vide pour un fichier temporaire, ou choisissez où "
+            "l'enregistrer.<br>"
+            "3. Exécuter : la page s'ouvre dans le navigateur.</p>"
+            "<p><b>Bon à savoir</b><br>La page est un simple fichier .html : il s'envoie par mail "
+            "et s'imprime en PDF depuis le navigateur. Les couleurs et les légendes sont celles "
+            "de QGIS. Seule la carte a besoin d'internet. Relancez l'outil après une nouvelle "
+            "analyse pour mettre la page à jour.</p>"
         )
 
     def createInstance(self) -> ReportLaunchAlgorithm:  # noqa: N802
@@ -88,15 +82,8 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            _compat.advanced(
-                QgsProcessingParameterNumber(
-                    self.PORT,
-                    self.tr("Port local"),
-                    type=_compat.NUMBER_INTEGER,
-                    defaultValue=8501,
-                    minValue=1024,
-                    maxValue=65535,
-                )
+            QgsProcessingParameterFileDestination(
+                self.OUTPUT, self.tr("Rapport"), fileFilter="Page web (*.html)"
             )
         )
         self.addParameter(python_param(self.PYTHON_EXE))
@@ -113,91 +100,22 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(
                 self.tr("La zone d'étude est vide : choisissez une emprise.")
             )
-        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-        aoi_id = "bbox-" + "_".join(f"{value:.4f}" for value in bbox)
-        port = self.parameterAsInt(parameters, self.PORT, context)
-
+        bbox = [rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum()]
+        out_path = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
         python_exe = require_python(
             self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(), feedback
         )
-        app = self._report_app(python_exe)
-        if app is None:
-            raise QgsProcessingException(
-                self.tr(
-                    "Le rapport est introuvable dans le Python de ScruTech. Relancez « Vérifier "
-                    "et installer ScruTech » en cochant « Installer ou mettre à jour »."
-                )
-            )
 
-        port = self._free_port(port)
-        url = f"http://localhost:{port}"
-        self._launch(python_exe, app, aoi_id, port, feedback)
-        time.sleep(3)  # give Streamlit a moment to boot before opening the browser
-        webbrowser.open(url)
-        feedback.pushInfo(f"Rapport ScruTech : {url} (zone : {aoi_id})")
-        return {"URL": url}
+        from ._external import run_spec
 
-    # --- helpers -------------------------------------------------------------
-    @staticmethod
-    def _report_app(python_exe: str) -> Path | None:
-        from ._external import _ENV_STRIP
-
-        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP}
+        spec = {"task": "report", "bbox": bbox, "out_path": out_path, "styles": report_styles()}
+        work = Path(tempfile.gettempdir()) / "scrutech_report"
         try:
-            out = subprocess.run(
-                [python_exe, "-c", _FIND_APP],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                env=env,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        origin = out.stdout.strip()
-        return Path(origin) if origin and Path(origin).is_file() else None
+            payload = run_spec(python_exe, "vegevigie.qgis_runner", spec, work, feedback)
+        except RuntimeError as exc:
+            raise QgsProcessingException(str(exc)) from exc
 
-    def _launch(self, python_exe: str, app: Path, aoi_id: str, port: int, feedback) -> None:
-        from ._external import _ENV_STRIP
-
-        cmd = [
-            python_exe,
-            "-m",
-            "streamlit",
-            "run",
-            str(app),
-            "--server.port",
-            str(port),
-            # Bind to loopback only: the report holds local analysis data and must not be
-            # reachable from the LAN/WAN (Streamlit otherwise listens on 0.0.0.0).
-            "--server.address",
-            "127.0.0.1",
-            "--server.headless",
-            "true",
-            "--browser.gatherUsageStats",
-            "false",
-        ]
-
-        # The report only needs the AOI id; never hand credentials to it (it renders
-        # local data and has no use for GEE/R2 secrets) — least privilege for the child.
-        def _is_secret(k: str) -> bool:
-            up = k.upper()
-            return up.startswith(("R2_", "AWS_")) or any(
-                s in up for s in ("SECRET", "CREDENTIAL", "TOKEN", "PASSWORD")
-            )
-
-        env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP and not _is_secret(k)}
-        env["SCRUTECH_AOI_ID"] = aoi_id
-        feedback.pushInfo("Lancement : " + " ".join(cmd))
-        flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
-            subprocess, "DETACHED_PROCESS", 0
-        )
-        subprocess.Popen(cmd, env=env, creationflags=flags)
-
-    def _free_port(self, start: int) -> int:
-        """Return ``start`` if free, else the next free port (so the URL is correct)."""
-        for port in range(start, start + 20):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                if s.connect_ex(("127.0.0.1", port)) != 0:
-                    return port
-        return start
+        html_path = Path(payload["html_path"])
+        feedback.pushInfo(f"Rapport ({', '.join(payload.get('tools', []))}) : {html_path}")
+        webbrowser.open(html_path.as_uri())
+        return {self.OUTPUT: str(html_path)}

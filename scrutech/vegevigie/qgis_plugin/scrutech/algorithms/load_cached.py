@@ -21,6 +21,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 
 from ._layers import queue_layer
+from ._styles import style_for
 from ._venv import python_param, require_python
 
 
@@ -123,4 +124,4 @@ class LoadCachedAlgorithm(QgsProcessingAlgorithm):
             # store layout: {root}/{pilier}/aoi={id}/output/{file} → pilier at parents[2].
             pilier = Path(path).parents[2].name
             label = f"ScruTech (cache) : {pilier} · {Path(path).stem}"
-            queue_layer(context, path, label)  # applies the cached sidecar .qml if any
+            queue_layer(context, path, label, style_for(str(path)))

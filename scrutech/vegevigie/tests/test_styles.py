@@ -52,3 +52,11 @@ def test_vegevigie_styles_are_readable_classes() -> None:
     ET.fromstring(years.split(">\n", 1)[1])
     assert years.count("<paletteEntry ") == 6 and "rupture en 2025" in years
     assert m._blend("#000000", "#ffffff", 0.5) == "#808080"
+
+
+def test_style_for_matches_output_names() -> None:
+    m = _load()
+    assert m.style_for(r"C:\cache\trend_sen_slope_2021_2024.tif") == m.trend_qml()
+    assert "rupture en 2023" in m.style_for("/cache/break_year_2021_2024.tif")
+    assert m.style_for("mnt_ign.tif") is None
+    assert set(m.report_styles()) >= {"trend_sen_slope_", "ecobuage_classes", "biotrame_priority"}

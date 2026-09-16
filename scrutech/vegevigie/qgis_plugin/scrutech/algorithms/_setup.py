@@ -41,7 +41,7 @@ def found(name):
     except ImportError:
         return False
 mods = ["vegevigie", "core", "biotrame", "alphaearth", "ecobuage", "odc.stac", "xarray",
-        "rasterio", "geopandas", "duckdb", "h3", "ee", "streamlit"]
+        "rasterio", "geopandas", "duckdb", "h3", "ee", "folium"]
 print(json.dumps({"python": sys.version.split()[0], "missing": [m for m in mods if not found(m)],
                   "geoai": found("samgeo")}))
 """
