@@ -170,6 +170,8 @@ def run_pipeline(
     trend = trend_dataset(
         monthly_for_trend, alpha=settings.trend.p_value, min_valid=settings.trend.min_valid_months
     ).compute()
+    # apply_ufunc drops rioxarray metadata; zonal aggregation needs the trend grid CRS.
+    trend = trend.rio.write_crs(crs)
     result.trend_tif = _write_band(
         trend["sen_slope"],
         crs,

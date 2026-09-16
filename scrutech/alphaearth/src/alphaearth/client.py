@@ -64,9 +64,16 @@ def authenticate_gee(auth_id: str = "gee_service", credentials_json: str | None 
 
     raw = credentials_json or os.environ.get("SCRUTECH_GEE_CREDENTIALS")
     if raw is None:
-        from qgis.core import QgsApplication
+        from qgis.core import QgsApplication, QgsAuthMethodConfig
 
-        config = QgsApplication.authManager().authMethodConfig(auth_id)
+        manager = QgsApplication.authManager()
+        legacy_loader = getattr(manager, "authMethodConfig", None)
+        if legacy_loader is not None:
+            config = legacy_loader(auth_id)
+        else:
+            config = QgsAuthMethodConfig()
+            if not manager.loadAuthenticationConfig(auth_id, config, True):
+                raise RuntimeError(f"QGIS authentication config not found: {auth_id}")
         raw = config.configMap()["json_credentials"]
     creds = json.loads(raw)
     ee.Initialize(

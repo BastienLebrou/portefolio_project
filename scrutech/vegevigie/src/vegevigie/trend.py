@@ -29,6 +29,7 @@ processed chunk by chunk.
 from __future__ import annotations
 
 import numpy as np
+import rioxarray  # noqa: F401 — registers the .rio accessor used below
 import xarray as xr
 from scipy.stats import norm
 
@@ -144,7 +145,7 @@ def trend_dataset(
         dask="parallelized",
         output_dtypes=[float, float, float, float],
     )
-    return xr.Dataset(
+    result = xr.Dataset(
         {
             "sen_slope": slope,
             "mk_pvalue": pval,
@@ -152,3 +153,7 @@ def trend_dataset(
             "trend_class": tclass,
         }
     )
+    crs = monthly.rio.crs
+    if crs is not None:
+        result = result.rio.write_crs(crs)
+    return result

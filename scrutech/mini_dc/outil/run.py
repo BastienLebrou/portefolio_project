@@ -14,6 +14,8 @@ import sys
 import json
 import time
 import argparse
+import pathlib
+from shapely.geometry import box
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")  # accents OK même en console cp1252
@@ -93,6 +95,21 @@ def _export(con) -> dict:
     return out
 
 
+def _export_aoi(bbox: tuple[float, float, float, float]) -> pathlib.Path:
+    """Clip the two published demo layers to the requested WGS84 AOI."""
+    out = C.OUTPUTS_DIR / ("aoi_bbox_" + "_".join(f"{value:.4f}" for value in bbox))
+    out.mkdir(parents=True, exist_ok=True)
+    aoi = box(*bbox)
+    for name in ("parcelles_eligibles.geojson", "heatmap_quartiers.geojson"):
+        source = C.OUTPUTS_DIR / name
+        if not source.exists():
+            continue
+        layer = gpd.read_file(source)
+        clipped = layer[layer.intersects(aoi)].copy()
+        clipped.to_file(out / name, driver="GeoJSON")
+    return out
+
+
 def _export_sig(con) -> dict:
     """Couches de CONTRÔLE pour QGIS, en GeoParquet (data/outputs/sig/).
 
@@ -130,6 +147,7 @@ def main() -> int:
     ap.add_argument("--no-generate", action="store_true",
                     help="ne pas régénérer les données synthétiques")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--bbox", help="AOI WGS84 'minx,miny,maxx,maxy'")
     args = ap.parse_args()
 
     t0 = time.perf_counter()
@@ -172,6 +190,12 @@ def main() -> int:
 
     # 5. Exports ----------------------------------------------------------
     exports = _export(con)
+    aoi_output = None
+    if args.bbox:
+        values = tuple(float(value) for value in args.bbox.split(","))
+        if len(values) != 4:
+            ap.error("--bbox attend 4 nombres 'minx,miny,maxx,maxy'.")
+        aoi_output = _export_aoi(values)
     exports_sig = _export_sig(con)
     duree_totale = time.perf_counter() - t0
 
@@ -206,6 +230,8 @@ def main() -> int:
                 "heatmap_quartiers.geojson", "performance.json"):
         print(f"    - {nom}")
     print(f"  + {len(exports_sig)} couches de contrôle SIG dans data/outputs/sig/ (GeoParquet)")
+    if aoi_output:
+        print(f"  Sorties AOI : {aoi_output}")
     print(f"\n  Pipeline : {duree_pipe:.2f}s | Total : {duree_totale:.2f}s | "
           f"Tests : {'TOUS OK' if tous_ok else 'ÉCHEC'}")
     con.close()

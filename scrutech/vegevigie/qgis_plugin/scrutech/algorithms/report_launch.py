@@ -1,4 +1,4 @@
-"""Launch the ScruTech visual report (Streamlit) on a results folder.
+"""Launch the ScruTech visual report (Streamlit) for an area of interest.
 
 Point it at a folder where ScruTech algorithms wrote their outputs; this starts the
 Streamlit report in the project venv (detached) and opens it in the browser. QGIS can't
@@ -16,10 +16,12 @@ import webbrowser
 from pathlib import Path
 
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
+    QgsProcessingParameterExtent,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
 )
@@ -29,9 +31,9 @@ from . import _qgis_compat as _compat
 
 
 class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
-    """Open the ScruTech visual report (Streamlit) for a results folder."""
+    """Open the live ScruTech visual report for an area of interest."""
 
-    RESULTS = "RESULTS"
+    EXTENT = "EXTENT"
     PORT = "PORT"
     PYTHON_EXE = "PYTHON_EXE"
 
@@ -52,7 +54,7 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             "Open an interactive visual report of a ScruTech analysis: the map + metrics of "
             "every pillar output found in the folder (biotrame, écobuage, VegeVigie, PAF, "
             "AlphaEarth). Starts a Streamlit app in the project venv and opens it in the "
-            "browser. Point 'Results folder' at the output folder of a previous algorithm."
+            "browser. Outputs are selected from the central store for the chosen area."
         )
 
     def createInstance(self) -> ReportLaunchAlgorithm:  # noqa: N802
@@ -68,11 +70,7 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterFile(
-                self.RESULTS,
-                self.tr("Results folder (output of a previous algorithm)"),
-                behavior=_compat.FILE_BEHAVIOR_FOLDER,
-            )
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
         )
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -99,9 +97,12 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
         context: QgsProcessingContext,
         feedback: QgsProcessingFeedback,
     ) -> dict:
-        results = self.parameterAsString(parameters, self.RESULTS, context).strip()
-        if not results or not Path(results).exists():
-            raise QgsProcessingException(self.tr("Results folder not found: {}").format(results))
+        wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
+        if rect.isEmpty():
+            raise QgsProcessingException(self.tr("The extent is empty."))
+        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
+        aoi_id = "bbox-" + "_".join(f"{value:.4f}" for value in bbox)
         port = self.parameterAsInt(parameters, self.PORT, context)
 
         explicit = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
@@ -119,14 +120,14 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
 
         port = self._free_port(port)
         url = f"http://localhost:{port}"
-        self._launch(python_exe, app, results, port, feedback)
+        self._launch(python_exe, app, aoi_id, port, feedback)
         time.sleep(3)  # give Streamlit a moment to boot before opening the browser
         webbrowser.open(url)
-        feedback.pushInfo(f"ScruTech report: {url} (results: {results})")
+        feedback.pushInfo(f"ScruTech report: {url} (AOI: {aoi_id})")
         return {"URL": url}
 
     # --- helpers -------------------------------------------------------------
-    def _launch(self, python_exe: str, app: Path, results: str, port: int, feedback) -> None:
+    def _launch(self, python_exe: str, app: Path, aoi_id: str, port: int, feedback) -> None:
         from ._external import _ENV_STRIP
 
         cmd = [
@@ -147,7 +148,7 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             "false",
         ]
 
-        # The report only needs SCRUTECH_RESULTS; never hand credentials to it (it renders
+        # The report only needs the AOI id; never hand credentials to it (it renders
         # local data and has no use for GEE/R2 secrets) — least privilege for the child.
         def _is_secret(k: str) -> bool:
             up = k.upper()
@@ -156,7 +157,7 @@ class ReportLaunchAlgorithm(QgsProcessingAlgorithm):
             )
 
         env = {k: v for k, v in os.environ.items() if k not in _ENV_STRIP and not _is_secret(k)}
-        env["SCRUTECH_RESULTS"] = results
+        env["SCRUTECH_AOI_ID"] = aoi_id
         feedback.pushInfo("Launching: " + " ".join(cmd))
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
             subprocess, "DETACHED_PROCESS", 0

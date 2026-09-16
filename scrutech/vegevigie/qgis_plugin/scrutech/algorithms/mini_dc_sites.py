@@ -11,11 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingParameterBoolean,
+    QgsProcessingParameterExtent,
     QgsProcessingParameterFile,
 )
 from qgis.PyQt.QtCore import QCoreApplication
@@ -27,6 +29,7 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
     """Score cadastral parcels for mini-data-center siting (multi-criteria funnel)."""
 
     NO_GENERATE = "NO_GENERATE"
+    EXTENT = "EXTENT"
     PYTHON_EXE = "PYTHON_EXE"
 
     def name(self) -> str:
@@ -63,6 +66,9 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
+        )
+        self.addParameter(
             QgsProcessingParameterFile(
                 self.PYTHON_EXE,
                 self.tr("Python executable with the mini_dc stack (geopandas, duckdb)"),
@@ -91,6 +97,11 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
                 self.tr("Set 'Python executable' to a venv with geopandas + duckdb.")
             )
         no_generate = self.parameterAsBool(parameters, self.NO_GENERATE, context)
+        wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
+        if rect.isEmpty():
+            raise QgsProcessingException(self.tr("The extent is empty."))
+        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
 
         mini_dc_dir = Path(__file__).resolve().parents[1] / "mini_dc"
         script = mini_dc_dir / "run.py"
@@ -98,11 +109,13 @@ class MiniDcSitesAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr(f"Bundled mini_dc engine not found: {script}"))
 
         args = ["--no-generate"] if no_generate else []
+        args.extend(["--bbox", ",".join(str(value) for value in bbox)])
         code = run_engine(python_exe, script, args, feedback)
         if code != 0:
             raise QgsProcessingException(self.tr(f"mini_dc engine failed (exit {code}). See log."))
 
-        out_dir = mini_dc_dir / "data" / "outputs"
+        label = "bbox_" + "_".join(f"{value:.4f}" for value in bbox)
+        out_dir = mini_dc_dir / "data" / "outputs" / f"aoi_{label}"
         loaded = 0
         for fname, label in (
             ("parcelles_eligibles.geojson", "Mini DC — parcelles éligibles"),

@@ -3,7 +3,7 @@
 Runs the SDBPi pipeline in an external Python (it needs GeoPandas + requests +
 network — not QGIS's bundled stack) and loads the vacancy-candidate layer. The
 AOI-first signature and output routing to the ScruTech layout/DB land with the core
-refactor; for now it drives the tool's ``--insee`` CLI.
+refactor; it drives the tool's AOI-capable ``--bbox`` CLI.
 """
 
 from __future__ import annotations
@@ -11,14 +11,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingParameterEnum,
+    QgsProcessingParameterExtent,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterString,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
@@ -30,7 +31,7 @@ _SOURCES = ["api", "geo_file", "grandlyon"]
 class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
     """Cross BD TOPO buildings with active SIRENE establishments to flag vacancy."""
 
-    INSEE = "INSEE"
+    EXTENT = "EXTENT"
     BUFFER = "BUFFER"
     SOURCE = "SOURCE"
     PYTHON_EXE = "PYTHON_EXE"
@@ -50,7 +51,7 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
             "Cross BD TOPO commercial/industrial buildings with active geolocated SIRENE "
-            "establishments over a commune (INSEE code): a building with none nearby is a "
+            "establishments over an area of interest: a building with none nearby is a "
             "vacancy CANDIDATE (to verify on the ground, not a certainty). Runs in an "
             "external Python that has the SDBPi stack (GeoPandas, requests) — set 'Python "
             "executable' to a venv with it. Needs internet (BD TOPO WFS + SIRENE)."
@@ -69,7 +70,7 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None) -> None:  # noqa: N802
         self.addParameter(
-            QgsProcessingParameterString(self.INSEE, self.tr("Code INSEE commune"), "01053")
+            QgsProcessingParameterExtent(self.EXTENT, self.tr("Area of interest (extent)"))
         )
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -101,7 +102,11 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
     ) -> dict:
         from ._external import run_engine
 
-        insee = self.parameterAsString(parameters, self.INSEE, context).strip()
+        wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
+        if rect.isEmpty():
+            raise QgsProcessingException(self.tr("The extent is empty."))
+        bbox = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
         buffer_m = self.parameterAsDouble(parameters, self.BUFFER, context)
         source = _SOURCES[self.parameterAsEnum(parameters, self.SOURCE, context)]
         python_exe = self.parameterAsString(parameters, self.PYTHON_EXE, context).strip()
@@ -118,17 +123,25 @@ class SdbpiVacanceAlgorithm(QgsProcessingAlgorithm):
         code = run_engine(
             python_exe,
             script,
-            ["--insee", insee, "--buffer", str(buffer_m), "--source", source],
+            [
+                "--bbox",
+                ",".join(str(value) for value in bbox),
+                "--buffer",
+                str(buffer_m),
+                "--source",
+                source,
+            ],
             feedback,
         )
         if code != 0:
             raise QgsProcessingException(self.tr(f"SDBPi engine failed (exit {code}). See log."))
 
-        out_gpkg = sdbpi_dir / "BDD" / "_vacance" / insee / f"batiments_vacance_{insee}.gpkg"
+        label = "bbox_" + "_".join(f"{value:.4f}" for value in bbox)
+        out_gpkg = sdbpi_dir / "BDD" / "_vacance" / label / f"batiments_vacance_{label}.gpkg"
         if not out_gpkg.exists():
             raise QgsProcessingException(self.tr(f"Expected SDBPi output not found: {out_gpkg}"))
         details = QgsProcessingContext.LayerDetails(
-            f"SDBPi {insee} — bâtiments inoccupés (candidats)", context.project(), "sdbpi"
+            "SDBPi emprise — bâtiments inoccupés (candidats)", context.project(), "sdbpi"
         )
         context.addLayerToLoadOnCompletion(str(out_gpkg), details)
         feedback.pushInfo(f"Loaded {out_gpkg}")

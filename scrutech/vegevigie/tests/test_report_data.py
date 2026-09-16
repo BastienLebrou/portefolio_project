@@ -27,3 +27,13 @@ def test_discover_finds_pillar_outputs(tmp_path) -> None:
     assert "Biotrame" in present
     assert "Écobuage" in present
     assert "AlphaEarth (changement)" in present
+
+
+def test_discover_scopes_central_store_to_aoi(tmp_path) -> None:
+    output = tmp_path / "biotrame" / "aoi=bbox-1" / "output"
+    output.mkdir(parents=True)
+    (output / "biotrame_priority.geojson").write_text("{}")
+
+    data = discover(tmp_path, "bbox-1")
+
+    assert data.biotrame == output / "biotrame_priority.geojson"

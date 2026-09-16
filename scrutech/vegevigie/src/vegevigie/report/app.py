@@ -1,10 +1,10 @@
 """ScruTech visual report (Streamlit) — one page summarising an analysis folder.
 
-Reads the results folder from ``SCRUTECH_RESULTS`` and renders every pillar output it
+Reads the selected AOI from the central store and renders every pillar output it
 finds: a shared map (biotrame hexagons, PAF interface, AlphaEarth change) plus raster
 thumbnails (VegeVigie trend/drought, écobuage) and headline metrics. Launched from QGIS:
 
-    SCRUTECH_RESULTS=<folder> streamlit run src/vegevigie/report/app.py
+    SCRUTECH_AOI_ID=<aoi-id> streamlit run src/vegevigie/report/app.py
 """
 
 from __future__ import annotations
@@ -26,12 +26,15 @@ st.title("🛰️ ScruTech — rapport de diagnostic environnemental")
 
 
 def _results() -> ReportInputs:
-    folder = os.environ.get("SCRUTECH_RESULTS", ".")
-    return discover(folder)
+    from core.storage import data_root
+
+    return discover(data_root(), os.environ.get("SCRUTECH_AOI_ID"))
 
 
 data = _results()
-st.caption(f"Dossier de résultats : `{data.folder}`")
+st.caption(f"AOI : `{os.environ.get('SCRUTECH_AOI_ID', 'non définie')}`")
+if st.button("Rafraîchir les sorties"):
+    st.rerun()
 
 if not data.any():
     st.warning(

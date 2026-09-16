@@ -17,6 +17,7 @@ from pathlib import Path
 
 from qgis.core import (
     QgsApplication,
+    QgsAuthMethodConfig,
     QgsCoordinateReferenceSystem,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
@@ -229,7 +230,7 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         elif os.environ.get("SCRUTECH_GEE_CREDENTIALS"):
             raw = os.environ["SCRUTECH_GEE_CREDENTIALS"]
         else:
-            config = QgsApplication.authManager().authMethodConfig(auth_id) if auth_id else None
+            config = self._auth_config(auth_id) if auth_id else None
             raw = config.configMap().get("json_credentials") if config else None
         if not raw:
             raise QgsProcessingException(
@@ -244,6 +245,16 @@ class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
         except json.JSONDecodeError as exc:
             msg = self.tr("GEE credential is not valid JSON: {}").format(exc)
             raise QgsProcessingException(msg) from exc
+
+    def _auth_config(self, auth_id: str) -> QgsAuthMethodConfig | None:
+        """Load a complete auth config on QGIS 4, with QGIS 3 compatibility."""
+        manager = QgsApplication.authManager()
+        legacy_loader = getattr(manager, "authMethodConfig", None)
+        if legacy_loader is not None:
+            return legacy_loader(auth_id)
+
+        config = QgsAuthMethodConfig()
+        return config if manager.loadAuthenticationConfig(auth_id, config, True) else None
 
     def _resolve_output_folder(self, parameters, context) -> Path:
         value = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)

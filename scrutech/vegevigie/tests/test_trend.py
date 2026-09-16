@@ -3,6 +3,7 @@
 import numpy as np
 import pymannkendall as pmk
 import pytest
+import rioxarray  # noqa: F401 — registers the .rio accessor
 import xarray as xr
 
 from vegevigie.trend import BROWNING, GREENING, NO_TREND, mk_sen_1d, trend_dataset
@@ -79,6 +80,14 @@ def test_trend_dataset_over_cube() -> None:
     assert out["trend_class"].sel(y=0, x=0).item() == GREENING
     assert out["trend_class"].sel(y=0, x=1).item() == BROWNING
     assert out["trend_class"].values.ravel().tolist().count(NO_TREND) == 2
+
+
+def test_trend_dataset_preserves_crs() -> None:
+    da = xr.DataArray(np.ones((6, 1, 1)), dims=("time", "y", "x")).rio.write_crs("EPSG:2154")
+
+    out = trend_dataset(da, min_valid=4)
+
+    assert out.rio.crs.to_epsg() == 2154
 
 
 def test_trend_dataset_lazy_with_dask() -> None:
