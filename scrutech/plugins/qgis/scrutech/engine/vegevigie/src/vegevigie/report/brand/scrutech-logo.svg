@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="Logo ScruTech avec emblème Mantis">
+  <defs>
+    <clipPath id="lgIrisL"><ellipse cx="78" cy="66" rx="24" ry="34"/></clipPath>
+    <clipPath id="lgIrisR"><ellipse cx="150" cy="66" rx="24" ry="34"/></clipPath>
+  </defs>
+  <g transform="translate(8,16) scale(0.9)">
+    <rect x="72" y="96" width="13" height="60" rx="6" fill="#5C6A30" transform="rotate(-9 78 126)"/>
+    <rect x="143" y="96" width="13" height="60" rx="6" fill="#5C6A30" transform="rotate(9 150 126)"/>
+    <ellipse cx="110" cy="160" rx="40" ry="10" fill="#37401D"/>
+    <g transform="rotate(-9 78 66)">
+      <ellipse cx="78" cy="66" rx="31" ry="41" fill="#661C1A"/>
+      <ellipse cx="78" cy="66" rx="24" ry="34" fill="#FBF7EC"/>
+      <ellipse cx="78" cy="67" rx="8.5" ry="12" fill="#241F18"/>
+      <circle cx="73.5" cy="60" r="3.6" fill="#FBF7EC"/>
+    </g>
+    <g transform="rotate(9 150 66)">
+      <ellipse cx="150" cy="66" rx="31" ry="41" fill="#661C1A"/>
+      <ellipse cx="150" cy="66" rx="24" ry="34" fill="#FBF7EC"/>
+      <ellipse cx="150" cy="67" rx="8.5" ry="12" fill="#241F18"/>
+      <circle cx="145.5" cy="60" r="3.6" fill="#FBF7EC"/>
+    </g>
+  </g>
+  <text x="232" y="112" font-family="'Bricolage Grotesque','Arial Black','Arial',sans-serif" font-weight="800" font-size="88" letter-spacing="-2"><tspan fill="#661C1A">Scru</tspan><tspan fill="#B23F2C">Tech</tspan></text>
+  <text x="236" y="150" font-family="'IBM Plex Mono','Consolas',monospace" font-size="18" letter-spacing="1.5" fill="#37401D">voir ce que l'œil ne voit pas</text>
+</svg>

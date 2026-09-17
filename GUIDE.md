@@ -7,7 +7,7 @@ Ce dépôt regroupe plusieurs outils d'analyse de territoire sous une même plat
 
 ## À comprendre en premier (sinon rien n'a de sens)
 
-Le moteur central, c'est **`scrutech/vegevigie/`**. C'est lui qui fait tourner presque tous
+Le moteur central, c'est **`scrutech/packages/vegevigie/`**. C'est lui qui fait tourner presque tous
 les outils (VegeVigie, PAFF, Écobuage, Biotrame).
 
 Du coup, certains dossiers portent le nom d'un outil mais sont **presque vides** : le code qui
@@ -15,9 +15,9 @@ s'exécute vraiment est ailleurs.
 
 | Dossier au nom trompeur | Ce qu'il contient vraiment | Le vrai code qui tourne est ici |
 |---|---|---|
-| `scrutech/paff/` | des explications, un schéma | `scrutech/vegevigie/src/vegevigie/interface.py` |
-| `scrutech/ecobuage/` | le calcul « pur » + des notes | `scrutech/vegevigie/src/vegevigie/ecobuage_aoi.py` |
-| `scrutech/biotrame/` | le calcul « pur » (grille, score) | `scrutech/vegevigie/src/vegevigie/biotrame_aoi.py` |
+| `scrutech/docs/paf/` | des explications, un schéma | `scrutech/packages/vegevigie/src/vegevigie/interface.py` |
+| `scrutech/packages/ecobuage/` | le calcul « pur » + des notes | `scrutech/packages/vegevigie/src/vegevigie/ecobuage_aoi.py` |
+| `scrutech/packages/biotrame/` | le calcul « pur » (grille, score) | `scrutech/packages/vegevigie/src/vegevigie/biotrame_aoi.py` |
 
 > **Règle simple :** un fichier en `..._aoi.py` = « lance l'outil sur une zone ».
 > Les autres fichiers à côté = les briques de calcul qu'il assemble.
@@ -26,9 +26,9 @@ s'exécute vraiment est ailleurs.
 
 ## Lancer un outil : 2 portes d'entrée, pas plus
 
-1. **En ligne de commande** : la commande `vegevigie` (définie dans `scrutech/vegevigie/`).
+1. **En ligne de commande** : la commande `vegevigie` (définie dans `scrutech/packages/vegevigie/`).
    Exemple pour une démo rapide : `vegevigie run --small`.
-2. **En un clic dans QGIS** : l'extension dans `scrutech/vegevigie/qgis_plugin/`.
+2. **En un clic dans QGIS** : l'extension dans `scrutech/plugins/qgis/`.
 
 Tout le reste n'est appelé que par ces deux portes.
 
@@ -41,14 +41,14 @@ qu'il utilise.
 
 | Outil | Fichier qui le lance | Briques de calcul |
 |---|---|---|
-| **VegeVigie** (verdissement, sécheresse) | `vegevigie/src/vegevigie/pipeline.py` | `trend.py`, `drought.py`, `seasonal.py`, `breaks.py` |
-| **Biotrame** (zones prioritaires) | `vegevigie/src/vegevigie/biotrame_aoi.py` | `biotrame/src/biotrame/mesh.py`, `score.py`, `aggregate.py` ; `vegevigie/src/vegevigie/wetland.py` (zones humides) |
-| **PAFF** (forêt ↔ maisons) | `vegevigie/src/vegevigie/interface.py` | `core/sources.py` (bâti, forêt) |
-| **Écobuage** (aptitude au brûlage) | `vegevigie/src/vegevigie/ecobuage_aoi.py` | `ecobuage/ecobuage.py` ; `core/sources.py` (routes, bâti) |
-| **AlphaEarth** (changement annuel) | `alphaearth/src/alphaearth/pipeline.py` | `client.py`, `change.py`, `classifier.py` |
-| **SDBPi** (bâtiments vides) | `sdbpi/run_vacancy.py` | `sdbpi_processing.py`, `sdbpi_sources.py` |
-| **Mini data centers** (choix de sites) | `mini_dc/outil/run.py` | `mini_dc_pipeline.py`, `mini_dc_checks.py` |
-| **Climate Risk** (fournisseurs, EUDR) | `climate_risk_analyzer/` (plugin QGIS) | prototype |
+| **VegeVigie** (verdissement, sécheresse) | `packages/vegevigie/src/vegevigie/pipeline.py` | `trend.py`, `drought.py`, `seasonal.py`, `breaks.py` |
+| **Biotrame** (zones prioritaires) | `packages/vegevigie/src/vegevigie/biotrame_aoi.py` | `packages/biotrame/src/biotrame/mesh.py`, `score.py`, `aggregate.py` |
+| **PAFF** (forêt ↔ maisons) | `packages/vegevigie/src/vegevigie/interface.py` | `packages/core/src/core/sources.py` |
+| **Écobuage** (aptitude au brûlage) | `packages/vegevigie/src/vegevigie/ecobuage_aoi.py` | `packages/ecobuage/ecobuage.py` ; `packages/core/src/core/sources.py` |
+| **AlphaEarth** (changement annuel) | `packages/alphaearth/src/alphaearth/pipeline.py` | `client.py`, `change.py`, `classifier.py` |
+| **SDBPi** (bâtiments vides) | `applications/sdbpi/run_vacancy_analysis.py` | `config.py`, `network.py`, `processing.py`, `sources.py` |
+| **Mini data centers** (choix de sites) | `applications/mini-data-centers/outil/run_pipeline.py` | `config.py`, `database.py`, `pipeline.py`, `pipeline_checks.py` |
+| **Climate Risk** (fournisseurs, EUDR) | `applications/climate-risk-analyzer/` (plugin QGIS) | prototype |
 
 *(Tous ces chemins sont sous `scrutech/`.)*
 
@@ -57,7 +57,7 @@ lancent seulement en ligne de commande, avec leur script `run`.
 
 ---
 
-## Le socle commun : `scrutech/core/src/core/`
+## Le socle commun : `scrutech/packages/core/src/core/`
 
 Réutilisé par **tous** les outils. Si tu ne dois retenir qu'un dossier, c'est celui-là.
 
@@ -72,19 +72,20 @@ Réutilisé par **tous** les outils. Si tu ne dois retenir qu'un dossier, c'est 
 | `constants.py` | les repères communs (systèmes de coordonnées) |
 
 Les scripts qui **préparent la donnée** (téléchargement, création de la base, publication dans
-le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/data_setup/`.
+le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/data/setup/`.
 
 ---
 
 ## Nommage : deviner un chemin
 
-- **Dossier d'outil** : le nom court de l'outil, en minuscules (`vegevigie/`, `biotrame/`,
-  `paff/`, `mini_dc/`). Exception : l'extension QGIS nomme ses algorithmes PAFF `paf_*`.
+- **Dossier de projet** : les paquets sont dans `packages/`, les applications dans
+  `applications/`, la documentation dans `docs/` et l'extension dans `plugins/`.
 - **Paquet Python installable** : `<outil>/src/<outil>/` + `pyproject.toml` (`core`, `biotrame`,
   `alphaearth`, `vegevigie`). Exception voulue : `ecobuage/ecobuage.py` reste un fichier
   unique, embarqué tel quel dans l'extension.
-- **Projets à plat** (`sdbpi/`, `mini_dc/outil/`) : modules partagés préfixés `<outil>_*.py` ;
-  scripts lançables nommés par un verbe anglais (`run.py`, `run_vacancy.py`, `download_arcep.py`).
+- **Applications autonomes** (`applications/sdbpi/`, `applications/mini-data-centers/outil/`) :
+  modules nommés selon leur responsabilité et scripts lançables explicites (`run_pipeline.py`,
+  `run_vacancy_analysis.py`, `download_fiber_data.py`).
 - **Lancer un outil sur une zone** : `<outil>_aoi.py`.
 - **Noms de fichiers `.py`** : en anglais.
 - **Docs** : un `README.md` par dossier. Les noms conventionnels (`README`, `GUIDE`, `SECURITY`,
@@ -101,7 +102,7 @@ le cloud) et le schéma de la base (`schema.sql`) sont à part, dans `scrutech/d
 | `GUIDE.md` | **ce fichier** : la carte pour s'y retrouver dans le code |
 | `SECURITY.md` | la politique de sécurité |
 | `scrutech/INSTALLATION.md` | comment un tiers utilise l'outil sans télécharger des Go de données |
-| `scrutech/vegevigie/qgis_plugin/TODO.md` | le suivi à jour de l'extension QGIS (ce qui est fait, ce qui reste) |
+| `scrutech/plugins/qgis/TODO.md` | le suivi à jour de l'extension QGIS (ce qui est fait, ce qui reste) |
 
 ---
 

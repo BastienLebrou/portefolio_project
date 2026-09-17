@@ -1,0 +1,142 @@
+# TODO — Plugin QGIS ScruTech (mise en release)
+
+> Suivi d'exécution avant mise à disposition du plugin comme fonctionnalité utilisable.
+> C'est la checklist vivante. Dernière mise à jour : 2026-09-16.
+
+## État des points soulevés (session du 2026-09-01)
+
+1. **Test sur une autre machine** — Bastien teste sur un autre poste cette semaine.
+   Rien à faire de mon côté avant son retour ; le packaging (§ ci-dessous) doit être prêt
+   pour ce test.
+2. **Build de packaging** — voir § Packaging & sécurité.
+3. **Tests plugin (pytest-qgis / chargement QGIS headless)** — Bastien s'en charge
+   prochainement. Pas d'action pour l'instant, l'extension se charge déjà sans
+   interface dans QGIS 4.2.0 (vérifié le 2026-09-16).
+4. **Test bootstrap** — voir § Bootstrap.
+5. **Vraie TVB régionale (biotrame)** — déjà désactivée par défaut : le pilier reste sur le
+   proxy proximité tant que `SCRUTECH_TVB_WFS` (ou le paramètre d'algo) n'est pas
+  renseigné (voir `scrutech/packages/biotrame/tvb_sources.md`). Rien à coder — reste en TODO
+   pour validation du endpoint AURA depuis un réseau non restreint.
+6. **Scaffold v2 de l'extension (spec QGIS 4.0, STAC/SAR)** : mis en pause, puis retiré de
+   l'arbre le 2026-09-15. Son dernier état est conservé par le tag git
+   `archive/plugin-v2-paused` (`git checkout archive/plugin-v2-paused -- scrutech/plugin_v2_paused`).
+   Sera repris plus tard
+   comme fonctionnalité à part, avec son propre branding, pas fusionné dans le hub v1
+  (`plugins/qgis/`).
+7. **Points en suspens** (palette icônes, `experimental=True`, version `0.4.0`, soumission
+   au dépôt officiel QGIS) — actés comme non bloquants pour une v1 de test. À trancher au
+   moment de la publication publique, pas avant.
+
+---
+
+## Packaging & sécurité
+
+### Build
+- [ ] Rebuild `dist/scrutech.zip` juste avant le test externe (`python scrutech/plugins/qgis/package.py`).
+- [ ] Vérifier le contenu du zip avant envoi : engine + config bundlés, **aucun** fichier
+      `analyse_financiere/`, secret, clé API ou `.env` dedans (garde-fou CLAUDE.md §2.2).
+- [ ] Documenter dans `scrutech/plugins/qgis/README.md` la procédure exacte testée : Install from
+      ZIP → redémarrage QGIS → où pointer le Python externe.
+- [ ] Noter par build testé : date, machine, résultat (pass/fail + ce qui a coincé) — même
+      un simple historique en bas de ce fichier suffit, pas besoin d'outil dédié.
+
+### Sécurité — pour tout téléchargement déclenché par le plugin (deps actuelles ET futurs
+modèles GeoAI, § plus bas)
+
+Rien de tout ça n'est optionnel dès qu'un `requests.get`/`urlretrieve` apparaît dans le
+plugin — c'est le patch d'attaque le plus probable pour une extension distribuée
+publiquement :
+
+- **HTTPS uniquement**, vérification TLS jamais désactivée (`verify=False` interdit).
+- **URLs pinnées en dur** dans le code — jamais une URL de modèle/dépendance construite
+  depuis une entrée utilisateur non validée, jamais de redirection vers un miroir tiers.
+- **Checksum SHA-256 obligatoire**, vérifié avant toute utilisation du fichier — sinon rejet
+  silencieux et message clair, jamais un "on l'utilise quand même".
+- Cache de téléchargement **hors du repo git et hors du dossier plugin versionné** (dossier
+  profil QGIS utilisateur, type `~/.scrutech/models/`) — jamais commité, jamais bundlé
+  dans le zip (une AOI de 2 Go de poids modèle ferait exploser le zip et le dépôt).
+- **Aucune exécution de code arbitraire depuis un artefact téléchargé** : préférer
+  `.safetensors`/ONNX à un `.pt`/`.pth` pickle. Si `torch.load` est utilisé quand même,
+  forcer `weights_only=True` — le format pickle par défaut de PyTorch permet une RCE au
+  chargement, ce n'est pas une hypothèse théorique, c'est un vecteur connu de
+  l'écosystème ML.
+- **Toujours informer avant de télécharger** : taille, source, licence — jamais de
+  téléchargement silencieux de plusieurs centaines de Mo/Go sans confirmation explicite
+  (même règle que les gros téléchargements Sentinel-2, déjà actée en CLAUDE.md §10 côté
+  `vegevigie`).
+- Téléchargement en tâche asynchrone (`QgsTask` ou équivalent Processing `feedback`),
+  jamais bloquant l'UI QGIS.
+- **Licence de chaque modèle vérifiée et citée explicitement** avant toute intégration —
+  garde-fou CLAUDE.md §2.1 : uniquement de l'open véritable (Apache-2.0/MIT type), jamais
+  un modèle "recherche uniquement" ou à licence ambiguë. Vérifier au moment de
+  l'intégration, pas sur la base d'un souvenir — les dépôts HuggingFace changent parfois
+  de licence entre deux versions.
+
+---
+
+## Bootstrap test
+
+Objectif : un nouveau testeur (autre machine, zéro contexte) ne doit jamais se retrouver
+face à une stacktrace brute au premier essai.
+
+- [x] **« 0 · Démarrer ici ▸ Vérifier et installer ScruTech »** (2026-09-16) : vérifie le
+      Python externe et ses modules, internet (Planetary Computer, Géoplateforme, geo.api),
+      la clé GEE et le MNT, avec un journal [OK] / [À FAIRE] / [FACULTATIF]. Sur demande
+      (case à cocher), construit le Python externe avec uv dans `~/.scrutech/venv` à partir
+      des sources et du `uv.lock` embarqués dans le ZIP. `dependencies.py` et le mode
+      « dans le Python de QGIS » sont supprimés.
+- [x] Tourne avant tout autre outil ; un message dans QGIS le propose à la première ouverture
+      tant qu'aucun Python externe n'est trouvé.
+- [ ] Espace disque disponible : non vérifié (uv signale lui-même un disque plein).
+- [ ] GeoAI (extra `geoai`, torch) : pas encore installable depuis cet outil.
+
+---
+
+## GeoAI
+
+Liste complète d'idées et point d'implantation par pilier : voir le message de chat du
+2026-09-01 (pas dupliqué ici pour éviter deux sources qui divergent). Bastien a arbitré :
+**SAM (segmentation générale) en premier.**
+
+### Livré (2026-09-02) — MVP "Segment anything (SAM, experimental)"
+- Nouvel algorithme Processing, groupe **7 · GeoAI (modèles ouverts)** :
+  `scrutech/plugins/qgis/scrutech/algorithms/geoai_segment.py`.
+- Moteur : `vegevigie/src/vegevigie/geoai_segment.py` — télécharge le checkpoint SAM
+  ViT-B (Apache-2.0, ~375 Mo) une fois, **pin le sha256 en TOFU** (Meta ne publie aucun
+  hash officiel — documenté dans le module, pas de hash inventé), le vérifie à chaque
+  réutilisation. Dossier cache `~/.scrutech/models/`, hors repo, hors dossier plugin.
+- Dépendance **optionnelle** : `uv sync --extra geoai` (torch + `segment-geospatial`),
+  n'affecte ni l'install de base ni la CI existante.
+- Tourne uniquement dans l'interpréteur externe (jamais dans le Python de QGIS),
+  même pattern que les autres piliers lourds (`_external.run_spec`).
+- 3 tests offline sur le pinning TOFU (téléchargement mocké, pas de réseau dans les
+  tests) : `tests/test_geoai_segment.py`. Suite complète + ruff + mypy verts après ajout
+  (140 tests).
+- Doc utilisateur : `scrutech/plugins/qgis/README.md` § "Use — GeoAI segmentation (experimental)".
+- **Pas testé dans une vraie session QGIS** — même limite que le reste du plugin (§1 plus
+  haut). Le téléchargement réel (~375 Mo) n'a pas non plus été exercé depuis cet
+  environnement (réseau restreint) ; seule la logique de pinning est vérifiée par les
+  tests.
+
+### Durci (2026-09-15) — avant mise à disposition publique
+
+`segment_anything` (dépendance de `segment-geospatial`) charge le checkpoint en interne
+avec un `torch.load()` nu (pickle, RCE connue) — hors de notre contrôle. Ajout d'une porte
+de sécurité dans `segment_raster()` : le fichier (déjà vérifié sha256/TOFU) est d'abord
+rechargé nous-mêmes avec `weights_only=True` (`_reject_unsafe_checkpoint` dans
+`vegevigie/geoai_segment.py`) ; s'il contient autre chose qu'un état de tenseurs simple, il
+est rejeté avant d'atteindre le loader non sûr. Pas de `.safetensors` disponible côté Meta
+pour ce checkpoint — `weights_only=True` est le fallback documenté dans ce même TODO.
+2 tests ajoutés (`test_reject_unsafe_checkpoint_*`, `pytest.importorskip("torch")` — donc
+skip hors extra `geoai`, comme le reste de la suite torch). Les 4 points restants de la
+checklist § Sécurité (HTTPS, URL pinnée, cache hors repo, sha256 obligatoire) étaient déjà
+en place avant ce passage — vérifiés à cette occasion, rien à changer.
+
+### Backlog restant (pas commencé, pas prioritaire pour l'instant)
+- Intégration écobuage : auto-dériver le raster critère combustible/embroussaillement
+  depuis un raster brut au lieu d'exiger des rasters alignés en entrée.
+- Prithvi (IBM/NASA, Apache-2.0) — cartographie post-incendie pour PAF.
+- Clay Foundation Model (Apache-2.0) — alternative locale à AlphaEarth, sans compte/quota
+  Earth Engine.
+- Segmentation texte-guidée (Grounding DINO + SAM, Apache-2.0) — "segmente les zones
+  brûlées" en langage naturel, valeur démo forte.

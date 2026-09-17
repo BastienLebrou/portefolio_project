@@ -66,27 +66,27 @@ foncé**, les 9 zones prioritaires ; **en rouge brique**, les 32 à étudier ; *
 982 hors enjeu.
 
 <p align="center">
-  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Carte en nid d'abeilles : zones prioritaires pour la nature en Isère" width="60%">
+  <img src="scrutech/packages/vegevigie/docs/biotrame_priority_demo.png" alt="Carte en nid d'abeilles : zones prioritaires pour la nature en Isère" width="60%">
 </p>
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte de la pente de Sen et des tendances significatives" width="100%"><br>
+      <img src="scrutech/packages/vegevigie/docs/trend_map_demo.png" alt="Carte de la pente de Sen et des tendances significatives" width="100%"><br>
       <sub><b>La végétation pousse-t-elle ou décline-t-elle ?</b><br>41,5 % en hausse significative, 7,3 % en déclin</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte de l'anomalie et de la fréquence de stress hydrique" width="100%"><br>
+      <img src="scrutech/packages/vegevigie/docs/drought_demo.png" alt="Carte de l'anomalie et de la fréquence de stress hydrique" width="100%"><br>
       <sub><b>Où la végétation a-t-elle soif ?</b><br>Anomalie instantanée et fréquence de stress sur la période</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/commune_ranking_demo.png" alt="Verdissement et brunissement par commune" width="100%"><br>
+      <img src="scrutech/packages/vegevigie/docs/commune_ranking_demo.png" alt="Verdissement et brunissement par commune" width="100%"><br>
       <sub><b>Quelles communes surveiller ?</b><br>Part de la surface en verdissement vs en brunissement</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/rupture_year_demo.png" alt="Carte de l'année de rupture détectée par le test de Pettitt" width="100%"><br>
+      <img src="scrutech/packages/vegevigie/docs/rupture_year_demo.png" alt="Carte de l'année de rupture détectée par le test de Pettitt" width="100%"><br>
       <sub><b>Quand la tendance a-t-elle changé ?</b><br>Rupture détectée sur 55 % de la surface, surtout 2020-2023</sub>
     </td>
   </tr>
@@ -106,7 +106,7 @@ habitations, là où le débroussaillement devient obligatoire.
 La réponse est sélective — seuls 2,3 % de la surface ressortent réellement favorables.
 
 <p align="center">
-  <img src="scrutech/ecobuage/docs/aptitude_demo.png" alt="Carte du score d'aptitude au brûlage dirigé et de ses classes" width="80%">
+  <img src="scrutech/packages/ecobuage/docs/aptitude_demo.png" alt="Carte du score d'aptitude au brûlage dirigé et de ses classes" width="80%">
 </p>
 
 ## Les outils, une question chacun
@@ -125,10 +125,10 @@ La réponse est sélective — seuls 2,3 % de la surface ressortent réellement 
 *Stable : API et méthode figées. Bêta : fonctionnel, interface encore mouvante. Expérimental /
 Prototype : résultats à valider avant tout usage décisionnel.*
 
-Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/vegevigie/) ·
-[Biotrame](scrutech/biotrame/) · [AlphaEarth](scrutech/alphaearth/) · [PAF](scrutech/paff/) ·
-[Écobuage](scrutech/ecobuage/) · [SDBPi](scrutech/sdbpi/) ·
-[Mini data centers](scrutech/mini_dc/) · [Climate Risk](scrutech/climate_risk_analyzer/).
+Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/packages/vegevigie/) ·
+[Biotrame](scrutech/packages/biotrame/) · [AlphaEarth](scrutech/packages/alphaearth/) · [PAF](scrutech/docs/paf/) ·
+[Écobuage](scrutech/packages/ecobuage/) · [SDBPi](scrutech/applications/sdbpi/) ·
+[Mini data centers](scrutech/applications/mini-data-centers/) · [Climate Risk](scrutech/applications/climate-risk-analyzer/).
 
 ## Comment ça marche
 

@@ -1,0 +1,54 @@
+# VegeVigie default configuration (loaded by src/vegevigie/config.py).
+# Every tunable lives here — no magic numbers in the pipeline code (CLAUDE.md §7).
+
+aoi:
+  # Default full-scale AOI: département de l'Ardèche (07), from official admin boundaries.
+  name: ardeche
+  departement: "07"
+  # Small AOI used by default for smoke runs ("start small, scale later", CLAUDE.md §1).
+  # WGS84 lon/lat bbox around Alba-la-Romaine / Valvignères (~10 x 11 km).
+  small_bbox: [4.55, 44.52, 4.68, 44.62]
+
+time:
+  # Full analysis window (years, inclusive). Smoke runs override to a single year via CLI.
+  start: 2018
+  end: 2025
+
+stac:
+  provider: planetary-computer
+  collection: sentinel-2-l2a
+  # Scene-level cloud-cover ceiling (%) applied at STAC search time; per-pixel cloud
+  # removal happens later via the SCL mask.
+  max_cloud_cover: 60
+
+raster:
+  # Working resolution in metres. 60 m keeps a department-scale trend pass
+  # laptop-tractable; drop to 10-20 m only for small AOIs (CLAUDE.md §5).
+  resolution: 60
+  # Dask chunk edge size (pixels) for the datacube spatial dims.
+  chunk_size: 1024
+
+composite:
+  # Fill monthly NDVI gaps of at most this many consecutive months by temporal
+  # linear interpolation; longer gaps stay NaN. 0 disables gap-filling.
+  fill_max_gap: 1
+
+trend:
+  # Two-sided significance threshold for the Mann-Kendall test.
+  p_value: 0.05
+  # Minimum valid monthly observations a pixel needs before a trend is computed
+  # (fewer -> NaN). ~half a year of clear months.
+  min_valid_months: 6
+
+interface:
+  # Wildland-Urban Interface (forest↔built-up frontier) for the PAFF layer.
+  # Forest within this distance of a building is "at the interface". 50 m is the French
+  # Obligation Légale de Débroussaillement (OLD) default footprint.
+  contact_m: 50
+  # Projected CRS for all distance/area maths. Lambert-93 for metropolitan France;
+  # switch to the local UTM zone for other AOIs.
+  metric_crs: "EPSG:2154"
+
+paths:
+  # All outputs land under here; the whole tree is gitignored.
+  data_dir: data

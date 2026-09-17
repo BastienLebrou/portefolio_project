@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: scrutech/vegevigie
+        working-directory: scrutech/packages/vegevigie
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          cache-dependency-glob: "scrutech/vegevigie/uv.lock"
+          cache-dependency-glob: "scrutech/packages/vegevigie/uv.lock"
 
       - name: Set up Python
         run: uv python install 3.11
@@ -48,7 +48,7 @@ jobs:
       # SDBPi and mini_dc are flat-module projects: each conftest puts its own folder on
       # sys.path, so each runs in its own pytest session to keep those paths isolated.
       - name: Tests — SDBPi
-        run: uv run pytest ../sdbpi/tests
+        run: uv run pytest ../../applications/sdbpi/tests
 
       - name: Tests — mini_dc
-        run: uv run pytest ../mini_dc/outil/tests
+        run: uv run pytest ../../applications/mini-data-centers/outil/tests

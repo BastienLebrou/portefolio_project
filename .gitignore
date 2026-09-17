@@ -17,8 +17,8 @@ __pycache__/
 .pytest_cache/
 
 # Données réelles / générées — non versionnées
-/scrutech/vegevigie/data/
-/scrutech/mini_dc/Data_alba/
+/scrutech/packages/vegevigie/data/
+/scrutech/applications/mini-data-centers/Data_alba/
 
 # Simulations financières — NE JAMAIS publier (privé)
 /analyse_financiere/

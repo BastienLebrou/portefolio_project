@@ -1,0 +1,113 @@
+[project]
+name = "vegevigie"
+version = "0.1.0"
+description = "VegeVigie — NDVI trends & drought stress from Sentinel-2, commune by commune"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Bastien Lebrou" }]
+requires-python = ">=3.11"
+dependencies = [
+    # Shared ScruTech socle (AOI resolution, vector IO) — local editable, see [tool.uv.sources].
+    "scrutech-core",
+    # Écobuage scoring engine — consumed by the AOI-only écobuage orchestrator.
+    "scrutech-ecobuage",
+    # Biotrame H3 mesh + scoring — consumed by the AOI-only biotrame orchestrator.
+    "scrutech-biotrame",
+    # AlphaEarth engine — consumed by the AlphaEarth change runner task.
+    "scrutech-alphaearth",
+    # Core CLI + config (M0). The heavy datacube stack (odc-stac, xarray, dask, ...)
+    # is still added milestone by milestone, when the code that uses it lands (§6).
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    # M1 — vector AOI + STAC search.
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyarrow>=16.0",
+    "requests>=2.32",
+    "pystac-client>=0.8",
+    "planetary-computer>=1.0",
+    "matplotlib>=3.8",
+    # M2 — raster datacube stack.
+    "odc-stac>=0.3.10",
+    "xarray>=2024.6",
+    "rioxarray>=0.15",
+    "rasterio>=1.3",
+    "dask>=2024.6",
+    "numpy>=1.26",
+    "zarr>=2.18,<3",
+    "pandas>=2.2",
+    "bottleneck>=1.3",
+    # M4 — trend stats.
+    "scipy>=1.13",
+    "pymannkendall>=1.4",
+    # M6 — zonal store.
+    "duckdb>=1.0",
+    # M7 — dashboard (Streamlit charts native; no plotly dependency needed).
+    "streamlit>=1.36",
+    "leafmap>=0.35",
+]
+
+[project.optional-dependencies]
+# GeoAI (experimental, QGIS 'Segment anything' algorithm). NOT installed by default —
+# torch is heavy (~GB-scale) and would slow down every CI run / base install for a
+# feature most pillars don't need. Install explicitly: uv sync --extra geoai
+geoai = [
+    "segment-geospatial>=0.12",
+    "torch>=2.0",
+]
+
+[project.scripts]
+vegevigie = "vegevigie.cli:app"
+
+[tool.uv.sources]
+scrutech-core = { path = "../core", editable = true }
+scrutech-ecobuage = { path = "../ecobuage", editable = true }
+scrutech-biotrame = { path = "../biotrame", editable = true }
+scrutech-alphaearth = { path = "../alphaearth", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vegevigie"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "N",   # pep8-naming
+]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["vegevigie"]
+mypy_path = "src"
+# Lenient per CLAUDE.md §2 — tighten later if it stays cheap.
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+# Also runs the sibling package tests (all installed as vegevigie deps), so one CI
+# job covers core + ecobuage + biotrame + alphaearth + vegevigie.
+testpaths = ["tests", "../core/tests", "../biotrame/tests", "../alphaearth/tests"]
+addopts = "-q --import-mode=importlib"

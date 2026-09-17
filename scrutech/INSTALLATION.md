@@ -7,8 +7,8 @@ emprise**.
 
 ## 1. Le plugin QGIS (installable)
 
-Le plugin se construit en ZIP : `python scrutech/vegevigie/qgis_plugin/package.py` (bundle les
-moteurs), ou se déploie en dossier vif : `python scrutech/vegevigie/qgis_plugin/deploy_plugin.py`.
+Le plugin se construit en ZIP : `python scrutech/plugins/qgis/package.py` (bundle les
+moteurs), ou se déploie en dossier vif : `python scrutech/plugins/qgis/deploy_plugin.py`.
 Pour diffuser largement : publier le ZIP + un mini `plugins.xml` (dépôt de plugins QGIS).
 
 L'utilisateur tiers installe le ZIP (Extensions ▸ Installer depuis un ZIP), puis lance
@@ -33,7 +33,7 @@ setx R2_ACCESS_KEY_ID "..."
 setx R2_SECRET_ACCESS_KEY "..."
 setx R2_BUCKET "scrutech-data"
 
-python scrutech/data_setup/publish_r2.py "C:/.../ressources/mnt.tif" --as mnt/france.tif --cogify
+python scrutech/data/setup/publish_r2.py "C:/.../ressources/mnt.tif" --as mnt/france.tif --cogify
 ```
 
 `publish_r2.py` convertit le MNT en COG (`core.cog.to_cog`) puis l'envoie sur R2 (API S3).

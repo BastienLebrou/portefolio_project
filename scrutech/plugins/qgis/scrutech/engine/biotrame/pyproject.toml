@@ -1,0 +1,23 @@
+[project]
+name = "scrutech-biotrame"
+version = "0.1.0"
+description = "Maillage hexagonal H3 de priorisation écologique (croisement TVB / Natura 2000 / indicateurs satellite)."
+requires-python = ">=3.11"
+dependencies = [
+    "scrutech-core",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "h3>=4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/biotrame"]
+
+[tool.uv.sources]
+scrutech-core = { path = "../core", editable = true }
