@@ -23,11 +23,15 @@ _LOADABLE = {".geojson", ".tif", ".tiff", ".gpkg", ".parquet"}
 
 
 def data_root() -> Path:
-    """Store root: ``$SCRUTECH_DATA`` if set, else ``<repo>/scrutech/data``."""
+    """Store root: ``$SCRUTECH_DATA`` if set, else ``~/.scrutech/data``.
+
+    In the user's home, next to the engine Python and the GEE key: never inside the QGIS
+    plugin folder, which QGIS deletes when the plugin is updated or uninstalled.
+    """
     root = os.environ.get(ENV_ROOT)
     if root:
         return Path(root)
-    return Path(__file__).resolve().parents[3] / "data"
+    return Path.home() / ".scrutech" / "data"
 
 
 def db_path() -> Path:

@@ -11,6 +11,12 @@ def test_data_root_honours_env(monkeypatch, tmp_path: Path) -> None:
     assert db_path() == tmp_path / "scrutech.duckdb"
 
 
+def test_data_root_defaults_outside_the_plugin_folder(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.delenv(ENV_ROOT, raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    assert data_root() == tmp_path / ".scrutech" / "data"
+
+
 def test_product_path_layout(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv(ENV_ROOT, str(tmp_path))
     p = product_path("vegevigie", "insee-07005", "trend", "2018_2025", "sen_slope.tif")
