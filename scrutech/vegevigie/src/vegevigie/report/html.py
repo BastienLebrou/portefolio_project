@@ -60,7 +60,7 @@ body { margin: 0; background: var(--creme); color: var(--encre); font: 16px/1.6 
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 main { max-width: 1000px; margin: 0 auto; padding: 28px 16px 48px; }
 .masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; }
-.logo svg { display: block; width: 300px; max-width: 100%; height: auto; }
+.logo svg { display: block; width: 400px; max-width: 100%; height: auto; }
 .title { flex: 1 1 280px; }
 .eyebrow { margin: 0; font: 500 .8rem/1.4 var(--mono); letter-spacing: .12em;
   text-transform: uppercase; color: var(--olive); }
