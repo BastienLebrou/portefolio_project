@@ -89,18 +89,31 @@ les zones prioritaires ; **en orange**, celles à regarder de plus près ; **en 
   </tr>
 </table>
 
+PAF trace la même logique sur un autre risque : où la forêt touche-t-elle vraiment les
+habitations, là où le débroussaillement devient obligatoire.
+
+<p align="center">
+  <img src="scrutech/paff/docs/interface_demo.png" alt="Zones où la forêt touche les habitations, en rouge, sur une commune" width="60%">
+</p>
+<p align="center">
+  <sub><b>Où la forêt touche-t-elle les habitations ?</b><br>En rouge, l'interface habitat-forêt calculée par l'outil</sub>
+</p>
+
 ## Les outils, une question chacun
 
-| | Outil | La question à laquelle il répond |
-|:---:|---|---|
-| 🌿 | **VegeVigie** | La forêt se porte-t-elle bien ? En empilant dix ans de photos satellite, l'outil repère où la végétation pousse, où elle décline, et où elle souffre de la sécheresse. |
-| 🕸️ | **Biotrame** | Où concentrer les efforts pour la nature ? En croisant tous les indicateurs sur une grille, l'outil met en avant les zones prioritaires (compensation écologique). |
-| 🛰️ | **AlphaEarth** | Qu'est-ce qui a changé sur le terrain d'une année à l'autre ? On s'appuie sur des « empreintes » satellite de Google pour classer le paysage et repérer les évolutions. |
-| 🔥 | **PAF** | Où le feu menace-t-il les maisons ? L'outil trace la ligne exacte où la forêt touche les habitations, là où le débroussaillement est obligatoire. |
-| 🌾 | **Écobuage** | Quelles parcelles peut-on brûler sans danger ? Chaque zone reçoit une note selon la végétation, la pente, l'accès et les protections en place. |
-| 🏚️ | **SDBPi** | Quels locaux commerciaux semblent vides ? On croise les bâtiments et les entreprises actives : pas d'entreprise enregistrée à l'adresse, bâtiment à vérifier. |
-| 🏢 | **Mini data centers** | Où installer un petit data center chez des particuliers ? On écarte les terrains impossibles, puis on note ceux qui restent. |
-| 🌍 | **Climate Risk** | Mes fournisseurs sont-ils sur des zones déboisées ou menacées par le climat ? Un prototype de conformité (réglementation européenne EUDR). |
+| | Outil | La question à laquelle il répond | Statut |
+|:---:|---|---|:---:|
+| 🌿 | **VegeVigie** | La forêt se porte-t-elle bien ? En empilant dix ans de photos satellite, l'outil repère où la végétation pousse, où elle décline, et où elle souffre de la sécheresse. | Stable |
+| 🕸️ | **Biotrame** | Où concentrer les efforts pour la nature ? En croisant tous les indicateurs sur une grille, l'outil met en avant les zones prioritaires (compensation écologique). | Bêta |
+| 🛰️ | **AlphaEarth** | Qu'est-ce qui a changé sur le terrain d'une année à l'autre ? On s'appuie sur des « empreintes » satellite de Google pour classer le paysage et repérer les évolutions. | Bêta |
+| 🔥 | **PAF** | Où le feu menace-t-il les maisons ? L'outil trace la ligne exacte où la forêt touche les habitations, là où le débroussaillement est obligatoire. | Expérimental |
+| 🌾 | **Écobuage** | Quelles parcelles peut-on brûler sans danger ? Chaque zone reçoit une note selon la végétation, la pente, l'accès et les protections en place. | Expérimental |
+| 🏚️ | **SDBPi** | Quels locaux commerciaux semblent vides ? On croise les bâtiments et les entreprises actives : pas d'entreprise enregistrée à l'adresse, bâtiment à vérifier. | Expérimental |
+| 🏢 | **Mini data centers** | Où installer un petit data center chez des particuliers ? On écarte les terrains impossibles, puis on note ceux qui restent. | Expérimental |
+| 🌍 | **Climate Risk** | Mes fournisseurs sont-ils sur des zones déboisées ou menacées par le climat ? Un prototype de conformité (réglementation européenne EUDR). | Prototype |
+
+*Stable : API et méthode figées. Bêta : fonctionnel, interface encore mouvante. Expérimental /
+Prototype : résultats à valider avant tout usage décisionnel.*
 
 Chaque outil a sa propre page détaillée : [VegeVigie](scrutech/vegevigie/) ·
 [Biotrame](scrutech/biotrame/) · [AlphaEarth](scrutech/alphaearth/) · [PAF](scrutech/paff/) ·
@@ -145,6 +158,27 @@ n'importe quel script, voir le [**guide du dépôt**](GUIDE.md) ; la
 [politique de sécurité](SECURITY.md) complète le tableau.
 
 </details>
+
+## Un test grandeur nature, en chiffres
+
+Résultats d'un vrai passage de la chaîne complète sur une zone test de 5 communes en Isère
+(Brézins, Plan, Saint-Étienne-de-Saint-Geoirs, Saint-Geoirs, Saint-Pierre-de-Bressieux —
+environ 1 575 ha). Pas une simulation : ce sont les couches produites par les outils sur cette
+zone.
+
+| Outil | Ce qui a été mesuré |
+|---|---|
+| 🌿 **VegeVigie** | Sur les 1 575 ha : **41,5 % en hausse significative** de NDVI, **7,3 % en déclin significatif**, le reste sans tendance nette. Une rupture statistique (test de Pettitt) est détectée sur **54,9 % de la surface**, très majoritairement en **2020, 2021 et 2023** — les années de sécheresse marquée dans la région. **25 % de la surface (397 ha)** reste durablement au-dessus du seuil de stress hydrique. |
+| 🕸️ **Biotrame** | Sur 1 023 hexagones (1 477 ha), seuls **9 hexagones (13 ha, 0,9 %)** ressortent en priorité maximale pour la compensation écologique, et **32 (46 ha, 3,1 %)** en priorité moyenne — le reste hors enjeu prioritaire. Une vraie sélection, pas une carte où tout est rouge. |
+| 🔥 **PAF** | **47,6 km** d'interface habitat-forêt identifiés sur la zone, soit **49 ha** de bande à débroussailler obligatoirement. |
+| 🌾 **Écobuage** | Aptitude moyenne **15,7/100** : seuls **5,9 % de la surface (93 ha)** dépassent le seuil favorable. Le détail par classe : 76,9 % exclu, 20,8 % moyen, **2,3 % (36 ha) réellement favorable au brûlage**. |
+
+Le classement par commune (VegeVigie) montre des écarts nets : Plan ressort avec **64 % de
+sa surface en verdissement** et l'anomalie moyenne la plus forte, contre 35 % pour Brézins ou
+Saint-Pierre-de-Bressieux.
+
+<sub>Zone de démonstration, pas un échantillon représentatif du territoire national — les
+seuils (favorable/prioritaire/stress) sont ceux configurés par défaut dans chaque outil.</sub>
 
 ## Le projet en chiffres
 
