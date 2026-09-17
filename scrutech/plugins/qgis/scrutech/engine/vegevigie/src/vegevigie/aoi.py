@@ -30,7 +30,14 @@ def clip_to_bbox(communes: gpd.GeoDataFrame, bbox: BBox) -> gpd.GeoDataFrame:
     Pure geometry op — kept whole-commune (not cut) so downstream zonal stats stay
     meaningful; a commune is included if it overlaps the bbox at all.
     """
+    # box(*bbox) construit le rectangle shapely correspondant au tuple (minx, miny,
+    # maxx, maxy). "Pure geometry op" = cette fonction ne lit ni n'écrit aucun fichier,
+    # elle ne fait que transformer les données reçues en argument — donc facilement
+    # testable avec de simples GeoDataFrame construits à la main, sans disque ni réseau.
     aoi_geom = box(*bbox)
+    # On garde la commune ENTIÈRE dès qu'elle touche la bbox (pas juste la partie qui
+    # est dedans) : couper une commune en deux fausserait les statistiques calculées
+    # ensuite par commune (surface, moyenne...) sur une entité qui n'existe pas vraiment.
     selected = communes[communes.intersects(aoi_geom)].copy()
     logger.info("Clipped to bbox %s: %d/%d communes overlap", bbox, len(selected), len(communes))
     return selected
@@ -38,6 +45,9 @@ def clip_to_bbox(communes: gpd.GeoDataFrame, bbox: BBox) -> gpd.GeoDataFrame:
 
 def dissolve_boundary(communes: gpd.GeoDataFrame, name: str) -> gpd.GeoDataFrame:
     """Dissolve commune polygons into a single AOI outline (pure)."""
+    # "Dissoudre" (union_all) fusionne tous les polygones communaux en UNE SEULE
+    # géométrie (le contour extérieur du groupe), comme si on retirait les frontières
+    # internes entre communes voisines — l'emprise globale du département étudié.
     merged = communes.union_all()
     return gpd.GeoDataFrame({"name": [name]}, geometry=[merged], crs=communes.crs)
 
@@ -60,6 +70,8 @@ def build_aoi(
     aoi_path = raw_dir / "aoi.parquet"
 
     if not force and communes_path.exists() and aoi_path.exists():
+        # Idempotence : si le résultat existe déjà, on ne refait pas l'appel réseau.
+        # `force=True` (option --force côté CLI) permet de forcer un recalcul explicite.
         logger.info("AOI outputs already present; use --force to rebuild. Skipping.")
         return communes_path, aoi_path
 

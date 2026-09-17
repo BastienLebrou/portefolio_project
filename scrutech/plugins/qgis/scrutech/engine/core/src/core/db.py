@@ -22,7 +22,7 @@ from core.storage import db_path
 
 logger = logging.getLogger("scrutech")
 
-SCHEMA_SQL = Path(__file__).resolve().parents[3] / "data_setup" / "schema.sql"
+SCHEMA_SQL = Path(__file__).resolve().parents[3].parent / "data" / "setup" / "schema.sql"
 
 # Table/column names are interpolated into SQL (they can't be bound as parameters), so we
 # refuse anything that isn't a plain identifier — defence-in-depth against SQL injection even

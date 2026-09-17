@@ -1,0 +1,102 @@
+ScruTech pour QGIS · installation et prise en main
+==================================================
+
+Ce qu'il faut
+-------------
+- QGIS 4.2 ou plus récent (Windows, macOS ou Linux).
+- Une connexion internet et environ 2 Go d'espace disque libre.
+- Aucun droit administrateur, aucun Python à installer soi-même.
+
+
+Démarrage rapide (3 étapes)
+---------------------------
+1. Installer l'extension
+   QGIS ▸ Extensions ▸ Installer/Gérer les extensions ▸ onglet « Installer depuis un ZIP »
+   ▸ choisir le fichier ZIP de ScruTech ▸ « Installer l'extension ».
+   Confirmez l'avertissement de sécurité : l'extension ne vient pas du dépôt officiel QGIS.
+
+2. Préparer les calculs (une seule fois)
+   Un bandeau « ScruTech » s'affiche en haut de la carte : cliquez sur « Installer maintenant ».
+   Le téléchargement (environ 1 Go, 5 à 15 minutes) se suit dans la barre des tâches, en bas
+   à droite de QGIS. Vous pouvez continuer à travailler pendant ce temps. Tout est automatique :
+   ScruTech installe son propre Python à part, sans modifier QGIS.
+   Le bandeau a disparu ? Extensions ▸ ScruTech ▸ Vérifier et installer ScruTech ▸ Exécuter.
+
+3. Lancer un premier diagnostic
+   Quand le bandeau annonce « ScruTech est prêt », cliquez sur « Diagnostic complet ».
+   Tracez la zone d'étude (une commune pour commencer), gardez les réglages proposés et cliquez
+   sur Exécuter. Les couches arrivent dans le groupe « Diagnostic ScruTech » et le rapport
+   s'ouvre dans le navigateur.
+
+Tous les outils sont dans la Boîte à outils de traitements (Ctrl+Alt+T) ▸ ScruTech. Chacun a
+une aide intégrée, dans la partie droite de sa fenêtre.
+
+
+Clé Google Earth Engine (facultatif, seulement pour AlphaEarth)
+---------------------------------------------------------------
+Sans clé, tout fonctionne sauf AlphaEarth, que le diagnostic saute simplement.
+
+Obtenir une clé :
+  1. Créez un projet Google Cloud et enregistrez-le pour Earth Engine :
+     https://code.earthengine.google.com/register (gratuit en usage non commercial).
+  2. Dans ce projet, créez un compte de service et donnez-lui les rôles
+     « Earth Engine Resource Viewer » et « Service Usage Consumer ».
+  3. Créez une clé JSON pour ce compte et téléchargez le fichier.
+
+L'enregistrer dans ScruTech (au choix) :
+  - Dans QGIS : Extensions ▸ ScruTech ▸ Vérifier et installer ScruTech ▸ champ
+    « Clé Google Earth Engine » ▸ Exécuter. La clé est vérifiée puis rangée à sa place ;
+    AlphaEarth la retrouve ensuite toute seule.
+  - En une commande PowerShell (remplacez le chemin de votre fichier) :
+      New-Item -ItemType Directory -Force "$HOME\.scrutech" | Out-Null; Copy-Item "C:\chemin\vers\ma-cle.json" "$HOME\.scrutech\gee_key.json"
+  - macOS ou Linux, dans un terminal :
+      mkdir -p ~/.scrutech && cp /chemin/vers/ma-cle.json ~/.scrutech/gee_key.json
+
+Cette clé est personnelle : ne la partagez pas et ne la rangez pas dans un dossier synchronisé
+ou partagé.
+
+
+Installation minimale ou complète
+---------------------------------
+- Minimale (par défaut) : tous les outils sauf GeoAI, environ 1 Go.
+- Avec GeoAI (segmenter une image en objets avec Segment Anything) : Extensions ▸ ScruTech ▸
+  Vérifier et installer ScruTech ▸ cochez « Ajouter GeoAI » ▸ Exécuter. Environ 1 Go de plus,
+  modèle compris. L'image à segmenter se prépare avec « 1 · Préparer l'emprise ▸ Image
+  aérienne de la zone ».
+
+
+Commandes utiles (PowerShell)
+-----------------------------
+Voir ce que ScruTech a installé :
+    Get-ChildItem "$HOME\.scrutech"
+
+Réinstaller le moteur de calcul à neuf (QGIS fermé), puis relancer QGIS ▸ « Installer maintenant » :
+    Remove-Item -Recurse -Force "$HOME\.scrutech\venv"
+
+Installer « uv » à la main si le téléchargement automatique est bloqué (proxy d'entreprise) :
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+Tout désinstaller : désinstallez l'extension dans QGIS, puis supprimez le dossier ScruTech.
+Attention, cela efface aussi la clé Google Earth Engine et les analyses en cache.
+    Remove-Item -Recurse -Force "$HOME\.scrutech"
+
+(macOS ou Linux : remplacez ces commandes par ls ~/.scrutech, rm -rf ~/.scrutech/venv et
+rm -rf ~/.scrutech ; uv s'installe avec : curl -LsSf https://astral.sh/uv/install.sh | sh)
+
+
+Où sont les fichiers
+--------------------
+Tout est rangé dans le dossier personnel, sous .scrutech (sous Windows : C:\Users\<vous>\.scrutech).
+  venv           le Python de calcul (environ 1 Go)
+  bin            l'installateur uv, téléchargé si besoin
+  data           les analyses déjà calculées, rechargées sans refaire le calcul
+  models         le modèle Segment Anything (GeoAI seulement)
+  gee_key.json   la clé Google Earth Engine
+
+
+En cas de problème
+------------------
+Extensions ▸ ScruTech ▸ Vérifier et installer ScruTech ▸ Exécuter. Le journal liste chaque point
+en [OK], [À FAIRE] ou [FACULTATIF], avec la marche à suivre.
+Derrière un proxy : QGIS ▸ Préférences ▸ Options ▸ Réseau.
+Une zone refusée comme « trop grande » : réduisez l'emprise ou prenez des pixels plus grands.

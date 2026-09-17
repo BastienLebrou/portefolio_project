@@ -59,9 +59,7 @@ def _candidates(plugin_root: Path) -> list[str]:
     hint = plugin_root / HINT_FILE
     if hint.exists():
         out.append(hint.read_text(encoding="utf-8").strip())
-    out.append(
-        str(_python_in(plugin_root.parents[2] / "packages" / "vegevigie" / ".venv"))
-    )
+    out.append(str(_python_in(plugin_root.parents[2] / "packages" / "vegevigie" / ".venv")))
     out.append(str(_python_in(USER_VENV)))
     return out
 

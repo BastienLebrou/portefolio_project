@@ -42,7 +42,7 @@ _GEE_STEPS = (
     "  2. Dans ce projet, créez un compte de service et donnez-lui les rôles\n"
     "     « Earth Engine Resource Viewer » et « Service Usage Consumer ».\n"
     "  3. Créez une clé JSON pour ce compte, rangez le fichier en lieu sûr (jamais dans un\n"
-    "     dossier partagé) et indiquez-le dans l'outil AlphaEarth."
+    "     dossier partagé) et indiquez-le ici : il sera enregistré pour AlphaEarth."
 )
 
 
@@ -50,6 +50,7 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
     """Check that ScruTech can run, and install its external Python on request."""
 
     INSTALL = "INSTALL"
+    GEOAI = "GEOAI"
     GEE_KEY = "GEE_KEY"
     UV_EXE = "UV_EXE"
 
@@ -70,18 +71,23 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
             "<p>À lancer <b>en premier</b>, puis chaque fois qu'un outil signale un problème. "
             "Il vérifie que tout est prêt et dit quoi faire sinon.</p>"
             "<p><b>Première utilisation</b><br>"
-            "1. Cochez « Installer ou mettre à jour le Python de ScruTech ».<br>"
-            "2. Cliquez sur Exécuter. L'installation télécharge environ 1 Go, dure quelques "
-            "minutes et ne se fait qu'une fois. Elle ne modifie pas votre QGIS : les calculs "
-            "lourds tournent dans un Python à part.<br>"
-            "3. Si le programme gratuit « uv » manque, le journal explique comment "
-            "l'installer en une ligne.</p>"
+            "1. Cochez « Installer ou mettre à jour le Python de ScruTech » (déjà coché si vous "
+            "venez du bouton « Installer maintenant »).<br>"
+            "2. Facultatif : indiquez votre clé Google Earth Engine (.json). Elle est vérifiée "
+            "puis enregistrée, et AlphaEarth la retrouve toute seule.<br>"
+            "3. Cliquez sur Exécuter. L'installation télécharge environ 1 Go, dure 5 à 15 "
+            "minutes et ne se fait qu'une fois. Tout est automatique, y compris l'installateur "
+            "« uv » s'il manque. Votre QGIS n'est pas modifié : les calculs lourds tournent dans "
+            "un Python à part, dans votre dossier personnel (.scrutech).</p>"
+            "<p><b>Installation minimale ou complète</b><br>L'installation de base couvre tous "
+            "les outils sauf GeoAI (groupe 6). Cochez « Ajouter GeoAI » seulement si vous voulez "
+            "segmenter des images avec Segment Anything : environ 1 Go de plus.</p>"
             "<p><b>Ce qui est vérifié</b><br>"
             "1. Le Python de ScruTech et ses modules.<br>"
             "2. L'accès internet aux services utilisés (images satellite, données IGN, "
             "communes).<br>"
-            "3. La clé Google Earth Engine, si vous en indiquez une (seulement pour "
-            "AlphaEarth).<br>"
+            "3. La clé Google Earth Engine (seulement pour AlphaEarth) : celle indiquée, sinon "
+            "celle déjà enregistrée.<br>"
             "4. Le MNT déclaré, s'il y en a un (écobuage, zones humides de Biotrame).</p>"
             "<p><b>Résultat</b><br>Le journal liste chaque point : [OK], [À FAIRE] ou "
             "[FACULTATIF].</p>"
@@ -109,9 +115,19 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.GEOAI,
+                self.tr("Ajouter GeoAI : Segment Anything, groupe 6 (environ 1 Go de plus)"),
+                defaultValue=False,
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterFile(
                 self.GEE_KEY,
-                self.tr("Clé Google Earth Engine à vérifier (.json, facultatif)"),
+                self.tr(
+                    "Clé Google Earth Engine (.json, facultatif) : vérifiée puis enregistrée "
+                    "pour AlphaEarth"
+                ),
                 behavior=_compat.FILE_BEHAVIOR_FILE,
                 optional=True,
                 extension="json",
@@ -155,8 +171,10 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
         python_exe = _venv.find_python(plugin_root)
         report = _setup.check_env(python_exe) if python_exe else {}
         ready = bool(python_exe) and not report.get("error") and not report.get("missing")
-        if not ready and self.parameterAsBool(parameters, self.INSTALL, context):
-            python_exe = self._install(parameters, context, feedback, plugin_root)
+        geoai = self.parameterAsBool(parameters, self.GEOAI, context)
+        wanted = self.parameterAsBool(parameters, self.INSTALL, context) or geoai
+        if wanted and (not ready or (geoai and not report.get("geoai"))):
+            python_exe = self._install(parameters, context, feedback, plugin_root, geoai)
             report = _setup.check_env(python_exe)
             ready = not report.get("error") and not report.get("missing")
 
@@ -165,8 +183,8 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(f"[OK] Python de ScruTech (Python {report['python']}) : {python_exe}")
             if not report.get("geoai"):
                 feedback.pushInfo(
-                    "[FACULTATIF] GeoAI (groupe 6) n'est pas installé : il demande un module "
-                    "de plusieurs Go (torch). Rien à faire si vous ne l'utilisez pas."
+                    "[FACULTATIF] GeoAI (groupe 6) n'est pas installé. Pour segmenter des "
+                    "images, cochez « Ajouter GeoAI » et relancez (environ 1 Go de plus)."
                 )
         elif not python_exe:
             feedback.reportError(
@@ -189,10 +207,13 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
             )
         return ready
 
-    def _install(self, parameters, context, feedback, plugin_root: Path) -> str:
+    def _install(self, parameters, context, feedback, plugin_root: Path, geoai: bool) -> str:
         uv = self.parameterAsString(parameters, self.UV_EXE, context).strip() or _setup.find_uv()
         if not uv:
-            raise QgsProcessingException(_setup.UV_MISSING)
+            try:
+                uv = _setup.download_uv(feedback.pushInfo)
+            except OSError as exc:
+                raise QgsProcessingException(_setup.UV_MISSING.format(error=exc)) from exc
         project = _setup.engine_project(plugin_root)
         if project is None:
             raise QgsProcessingException(
@@ -202,7 +223,13 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
         feedback.pushInfo(
             f"Installation dans {_setup.USER_VENV} ({_setup.ENV_SIZE}, quelques minutes)…"
         )
-        code = _setup.install_env(uv, project, feedback.pushInfo, feedback.isCanceled)
+        try:
+            code = _setup.install_env(uv, project, feedback.pushInfo, feedback.isCanceled, geoai)
+        except OSError as exc:
+            raise QgsProcessingException(
+                f"Le programme uv ne se lance pas ({uv}) : {exc}. Indiquez un autre uv dans les "
+                "paramètres avancés, ou supprimez ce fichier pour qu'il soit retéléchargé."
+            ) from exc
         if code == -1:
             raise QgsProcessingException("Installation annulée.")
         if code != 0:
@@ -252,6 +279,14 @@ class SetupCheckAlgorithm(QgsProcessingAlgorithm):
                 + _GEE_STEPS
             )
             return
+        if not problems and path:
+            saved = _setup.save_gee_key(key_text)
+            if saved is not None:
+                source = str(saved)
+                feedback.pushInfo(
+                    f"[OK] Clé Google Earth Engine enregistrée dans {saved} : AlphaEarth la "
+                    "trouvera toute seule, inutile de la redonner."
+                )
         if problems:
             feedback.reportError(
                 f"[À FAIRE] Clé Google Earth Engine ({source}) : "

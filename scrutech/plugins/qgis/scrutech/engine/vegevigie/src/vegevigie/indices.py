@@ -49,10 +49,16 @@ SCL_DROP_CLASSES: frozenset[int] = frozenset(
 # Works for numpy arrays and xarray DataArrays alike. The dispatch helpers below
 # keep xarray labels/coords (and dask laziness) intact — plain np.where / np.isin
 # would silently drop them and return a bare ndarray.
+# TypeVar déclare un "type générique" : il documente que compute_ndvi(red, nir), par
+# exemple, renvoie le MÊME type que ce qu'on lui a passé (numpy array en -> numpy array
+# out, xarray en -> xarray out), sans dupliquer la fonction pour chaque type.
 ArrayT = TypeVar("ArrayT")
 
 
 def _is_xarray(obj: object) -> bool:
+    # Astuce simple pour éviter un `import xarray` en haut de fichier (coûteux si xarray
+    # n'est pas installé et pas nécessaire) : on regarde juste le nom du module de la
+    # classe de l'objet, sans avoir besoin d'importer xarray pour faire un isinstance().
     return type(obj).__module__.startswith("xarray")
 
 

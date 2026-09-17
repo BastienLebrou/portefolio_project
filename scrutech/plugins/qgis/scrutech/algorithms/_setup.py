@@ -22,14 +22,20 @@ USER_VENV = Path.home() / ".scrutech" / "venv"
 DEFAULT_GEE_KEY = Path.home() / ".scrutech" / "gee_key.json"
 # Measured on the reference install (uv sync --no-dev, without the optional GeoAI extra).
 ENV_SIZE = "environ 1 Go"
+# uv is fetched here when missing: the user's own folder, no admin rights, PATH untouched.
+UV_HOME = Path.home() / ".scrutech" / "bin"
+# Pinned to the uv that wrote uv.lock, so an install never meets a newer lock format.
+UV_VERSION = "0.12.13"
+_UV_RELEASES = "https://github.com/astral-sh/uv/releases/download"
 
 UV_MISSING = (
-    "Le programme « uv » (installateur Python gratuit, édité par Astral) est introuvable.\n"
+    "Le programme « uv » (installateur Python gratuit, édité par Astral) n'a pas pu être "
+    "téléchargé automatiquement ({error}).\n"
     "1. Ouvrez PowerShell (menu Démarrer) et collez cette ligne :\n"
     '   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"\n'
     "   (macOS ou Linux : curl -LsSf https://astral.sh/uv/install.sh | sh)\n"
-    "2. Redémarrez QGIS et relancez cet outil. Si uv reste introuvable, indiquez son chemin "
-    "dans les paramètres avancés (souvent %USERPROFILE%\\.local\\bin\\uv.exe)."
+    "2. Relancez cet outil. Si uv reste introuvable, indiquez son chemin dans les paramètres "
+    "avancés (souvent %USERPROFILE%\\.local\\bin\\uv.exe)."
 )
 
 # Run inside the external Python: find_spec only locates modules, nothing is executed.
@@ -57,31 +63,104 @@ def find_uv() -> str:
 
     QGIS on Windows starts with its own PATH, so a PATH lookup alone often misses uv.
     """
-    exe = "uv.exe" if os.name == "nt" else "uv"
+    exe = _uv_exe()
     home = Path.home()
-    for cand in (shutil.which("uv"), home / ".local" / "bin" / exe, home / ".cargo" / "bin" / exe):
+    for cand in (
+        shutil.which("uv"),
+        UV_HOME / exe,
+        home / ".local" / "bin" / exe,
+        home / ".cargo" / "bin" / exe,
+    ):
         if cand and Path(cand).is_file():
             return str(cand)
     return ""
 
 
+def _uv_exe() -> str:
+    return "uv.exe" if os.name == "nt" else "uv"
+
+
+def uv_asset() -> str:
+    """The official uv release archive for this machine."""
+    import platform
+    import sys
+
+    arch = "aarch64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
+    if os.name == "nt":
+        return f"uv-{arch}-pc-windows-msvc.zip"
+    if sys.platform == "darwin":
+        return f"uv-{arch}-apple-darwin.tar.gz"
+    return f"uv-{arch}-unknown-linux-gnu.tar.gz"
+
+
+def download_uv(log: Callable[[str], None]) -> str:
+    """Fetch the pinned official uv into :data:`UV_HOME` and return its path.
+
+    A single ~20 MB archive from Astral's GitHub releases, over HTTPS: no installer script,
+    no admin rights, nothing added to PATH. Raises OSError on network or archive problems.
+    """
+    import io
+    import tarfile
+    import urllib.request
+    import zipfile
+
+    asset = uv_asset()
+    url = f"{_UV_RELEASES}/{UV_VERSION}/{asset}"
+    log(f"Téléchargement de uv {UV_VERSION} (installateur Python, environ 20 Mo) : {url}")
+    with urllib.request.urlopen(url, timeout=120) as resp:  # noqa: S310 — fixed https URL
+        data = resp.read()
+    exe = _uv_exe()
+    if asset.endswith(".zip"):
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = [n for n in archive.namelist() if n.rsplit("/", 1)[-1] == exe]
+            if not names:
+                raise OSError(f"{exe} absent de l'archive {asset}")
+            binary = archive.read(names[0])
+    else:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+            members = [m for m in archive.getmembers() if m.name.rsplit("/", 1)[-1] == exe]
+            handle = archive.extractfile(members[0]) if members else None
+            if handle is None:
+                raise OSError(f"{exe} absent de l'archive {asset}")
+            binary = handle.read()
+    UV_HOME.mkdir(parents=True, exist_ok=True)
+    target = UV_HOME / exe
+    target.write_bytes(binary)
+    target.chmod(0o755)
+    log(f"uv installé : {target}")
+    return str(target)
+
+
 def engine_project(plugin_root: Path) -> Path | None:
     """The ``vegevigie`` project to build from: bundled in the ZIP, else the dev repo."""
-    for cand in (plugin_root / "engine" / "vegevigie", plugin_root.parents[1]):
+    dev = plugin_root.parents[2] / "packages" / "vegevigie"  # scrutech/plugins/qgis/scrutech
+    for cand in (plugin_root / "engine" / "vegevigie", dev):
         if (cand / "pyproject.toml").is_file() and (cand / "uv.lock").is_file():
             return cand
     return None
 
 
 def install_env(
-    uv: str, project: Path, log: Callable[[str], None], canceled: Callable[[], bool]
+    uv: str,
+    project: Path,
+    log: Callable[[str], None],
+    canceled: Callable[[], bool],
+    geoai: bool = False,
 ) -> int:
-    """``uv sync`` the engine into :data:`USER_VENV`, streaming uv's output. -1 if canceled."""
+    """``uv sync`` the engine into :data:`USER_VENV`, streaming uv's output. -1 if canceled.
+
+    Minimal by default; ``geoai`` adds the optional Segment Anything stack (torch).
+    """
     env = _clean_env()
     env["UV_PROJECT_ENVIRONMENT"] = str(USER_VENV)
+    # uv's own Python only: a Microsoft Store "python" alias (WindowsApps), a conda or a pyenv
+    # shim on the user's machine gives a venv that cannot start ("No Python at ...").
+    env["UV_PYTHON_PREFERENCE"] = "only-managed"
     # Pinned: uv would otherwise pick any Python >= 3.11 on the machine, and some locked
     # wheels (numcodecs…) do not exist for the newest one. uv downloads 3.11 if needed.
     cmd = [uv, "sync", "--frozen", "--no-dev", "--python", "3.11", "--project", str(project)]
+    if geoai:
+        cmd += ["--extra", "geoai"]
     log("Commande : " + " ".join(cmd))
     proc = subprocess.Popen(
         cmd,
@@ -139,6 +218,38 @@ def check_gee_key(text: str) -> list[str]:
     fields = ("client_email", "private_key", "project_id")
     problems += [f"champ « {name} » manquant" for name in fields if not key.get(name)]
     return problems
+
+
+def install_problem(log: str) -> str:
+    """The line of a failed setup run's log worth showing in QGIS's message bar.
+
+    A « [À FAIRE] » line if the check wrote one; else the error the run ended on, read from
+    the bottom and skipping its numbered steps and indented commands to reach its headline.
+    """
+    lines = [line for line in log.splitlines() if line.strip()]
+    todo = [line.strip() for line in lines if "À FAIRE" in line]
+    if todo:
+        return todo[0][:220]
+    for line in reversed(lines):
+        if not line[0].isspace() and not line.split(".", 1)[0].isdigit():
+            return line.strip()[:220]
+    return "raison inconnue"
+
+
+def save_gee_key(key_text: str) -> Path | None:
+    """Store a valid key at :data:`DEFAULT_GEE_KEY`, where AlphaEarth finds it on its own.
+
+    Returns where it went (None if that very key was already there). A different key already
+    in place is kept next to it as ``gee_key.json.bak`` rather than lost.
+    """
+    target = DEFAULT_GEE_KEY
+    if target.is_file():
+        if target.read_text(encoding="utf-8") == key_text:
+            return None
+        target.replace(target.with_name(target.name + ".bak"))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(key_text, encoding="utf-8")
+    return target
 
 
 # Run inside the external Python: authenticates and makes one tiny computation, so a missing

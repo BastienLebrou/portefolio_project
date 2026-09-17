@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from qgis.core import QgsApplication
+from qgis.core import QgsApplication, QgsProcessingFeedback
 
 # Make the flat ``ecobuage`` engine (bundled next to this file) importable by the native
 # écobuage tool.
@@ -16,6 +16,7 @@ if str(_PLUGIN_DIR) not in sys.path:
 from .provider import ScruTechProvider  # noqa: E402 — after sys.path setup
 
 _MENU = "ScruTech"
+_TITLE = "ScruTech"
 
 
 class ScruTechPlugin:
@@ -25,6 +26,7 @@ class ScruTechPlugin:
         self.iface = iface
         self.provider: ScruTechProvider | None = None
         self.actions: list = []
+        self._install = None  # (task, context, feedback) kept alive while installing
 
     def initProcessing(self) -> None:  # noqa: N802 — QGIS API name
         self.provider = ScruTechProvider()
@@ -37,40 +39,94 @@ class ScruTechPlugin:
 
         icon = QIcon(str(_PLUGIN_DIR / "icon.svg"))
         for text, algorithm_id in (
-            ("Vérifier et installer ScruTech", "scrutech:setup_check"),
-            ("Analyser la végétation d'une emprise (VegeVigie)", "scrutech:analyze_extent"),
+            ("Diagnostic complet (clé en main)", "scrutech:diagnostic_complet"),
+            ("Vérifier et installer ScruTech (clé GEE, GeoAI)", "scrutech:setup_check"),
         ):
             action = QAction(icon, text, self.iface.mainWindow())
             action.triggered.connect(lambda _=False, alg=algorithm_id: self._open(alg))
             self.iface.addPluginToMenu(_MENU, action)
             self.actions.append(action)
-        self.iface.addToolBarIcon(self.actions[-1])
+        self.iface.addToolBarIcon(self.actions[0])
         self._guide_first_use()
 
-    def _open(self, algorithm_id: str) -> None:
+    def _open(self, algorithm_id: str, parameters: dict | None = None) -> None:
         from qgis import processing
 
-        processing.execAlgorithmDialog(algorithm_id, {})
+        processing.execAlgorithmDialog(algorithm_id, parameters or {})
 
+    # --- first use -------------------------------------------------------------
     def _guide_first_use(self) -> None:
-        """No external Python yet: point the user at the setup tool, right in QGIS."""
+        """No external Python yet: offer to install it in one click, right when QGIS loads."""
         from .algorithms._venv import find_python
 
         if find_python(_PLUGIN_DIR):
             return
+        self._message(
+            "Bienvenue. Une installation unique prépare les calculs de ScruTech : environ 1 Go, "
+            "5 à 15 minutes, sans modifier QGIS.",
+            "info",
+            [
+                ("Installer maintenant", self._install_in_background),
+                ("Options (clé GEE, GeoAI)", self._setup_dialog),
+            ],
+        )
+
+    def _setup_dialog(self) -> None:
+        self._open("scrutech:setup_check", {"INSTALL": True})
+
+    def _install_in_background(self) -> None:
+        """Run « Vérifier et installer » as a QGIS task: progress at the bottom, cancellable."""
+        from qgis.core import QgsProcessingAlgRunnerTask, QgsProcessingContext
+
+        if self._install is not None:
+            return
+        self.iface.messageBar().clearWidgets()
+        algorithm = QgsApplication.processingRegistry().createAlgorithmById("scrutech:setup_check")
+        context, feedback = QgsProcessingContext(), QgsProcessingFeedback()
+        task = QgsProcessingAlgRunnerTask(algorithm, {"INSTALL": True}, context, feedback)
+        task.executed.connect(self._installed)
+        self._install = (task, context, feedback)
+        QgsApplication.taskManager().addTask(task)
+        self._message(
+            "Installation en cours, suivie dans la barre des tâches en bas de QGIS. Vous "
+            "pouvez continuer à travailler.",
+            "info",
+            [],
+            duration=15,
+        )
+
+    def _installed(self, successful: bool, results: dict) -> None:
+        _task, _context, feedback = self._install
+        self._install = None
+        self.iface.messageBar().clearWidgets()
+        if successful and results.get("PRET"):
+            self._message(
+                "ScruTech est prêt. Lancez un premier diagnostic de votre zone.",
+                "success",
+                [("Diagnostic complet", lambda: self._open("scrutech:diagnostic_complet"))],
+            )
+            return
+        from .algorithms._setup import install_problem
+
+        reason = install_problem(feedback.textLog())
+        self._message(
+            f"L'installation de ScruTech n'a pas abouti : {reason}",
+            "critical",
+            [("Voir le détail et réessayer", self._setup_dialog)],
+        )
+
+    def _message(self, text: str, level: str, buttons: list, duration: int = 0) -> None:
         from qgis.core import Qgis
         from qgis.PyQt.QtWidgets import QPushButton
 
+        levels = getattr(Qgis, "MessageLevel", Qgis)
         bar = self.iface.messageBar()
-        item = bar.createMessage(
-            "ScruTech",
-            "Première utilisation : lancez « Vérifier et installer ScruTech » pour préparer "
-            "les outils.",
-        )
-        button = QPushButton("Vérifier et installer")
-        button.clicked.connect(lambda: self._open("scrutech:setup_check"))
-        item.layout().addWidget(button)
-        bar.pushWidget(item, getattr(Qgis, "MessageLevel", Qgis).Info)
+        item = bar.createMessage(_TITLE, text)
+        for label, callback in buttons:
+            button = QPushButton(label)
+            button.clicked.connect(lambda _=False, run=callback: run())
+            item.layout().addWidget(button)
+        bar.pushWidget(item, getattr(levels, level.capitalize()), duration)
 
     def unload(self) -> None:
         for action in self.actions:

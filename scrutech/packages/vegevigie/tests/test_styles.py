@@ -6,7 +6,8 @@ import importlib.util
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-_STYLES = Path(__file__).resolve().parents[3] / "plugins" / "qgis" / "scrutech" / "algorithms" / "_styles.py"
+_PLUGIN = Path(__file__).resolve().parents[3] / "plugins" / "qgis" / "scrutech"
+_STYLES = _PLUGIN / "algorithms" / "_styles.py"
 
 
 def _load():

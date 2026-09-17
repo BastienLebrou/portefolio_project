@@ -19,6 +19,11 @@ import leafmap.foliumap as leafmap
 import pandas as pd
 import streamlit as st
 
+# Ce fichier n'a pas de fonction main() : Streamlit exécute le script de HAUT EN BAS à
+# chaque interaction de l'utilisateur (un clic, un changement de sélection...). Chaque
+# `st.xxx(...)` affiche un élément dans la page au fur et à mesure que le script
+# s'exécute — c'est un modèle très différent d'un serveur web classique, mais qui rend
+# l'écriture d'un tableau de bord aussi simple qu'un script séquentiel.
 from vegevigie.config import load_settings
 from vegevigie.dashboard.data import find_outputs, slope_color
 from vegevigie.store import rank_communes

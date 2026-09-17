@@ -50,6 +50,10 @@ def _climatology_for_each_step(
 ) -> xr.DataArray:
     """Broadcast a (month, y, x) climatology field back onto the time axis."""
     month_of_step = monthly[time_dim].dt.month
+    # .sel(month=month_of_step) fait une sélection "vectorisée" : au lieu de choisir UN
+    # mois (field.sel(month=3)), on lui passe tout un tableau de mois (un par pas de
+    # temps de la série) et xarray reconstruit un tableau (time, y, x) où chaque pas de
+    # temps récupère la tranche climatologique de SON propre mois calendaire.
     return field.sel(month=month_of_step)
 
 
