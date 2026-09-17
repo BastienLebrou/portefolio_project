@@ -150,7 +150,8 @@ class EudrClimateRiskAnalyzerPlugin:
             QgsProject.instance().addMapLayer(layer)
             self.dock_widget.populate_results(scored_rows)
             self.dock_widget.set_status(
-                "Analysis complete: {} supplier location(s) loaded.".format(len(scored_rows))
+                "Analysis complete: {} supplier location(s) loaded. Scores are SIMULATED "
+                "(random placeholders), not a real risk assessment.".format(len(scored_rows))
             )
         except Exception as exc:
             self.dock_widget.set_status("Analysis failed.")
@@ -314,7 +315,7 @@ def resolve_raw_material(row, selected_raw_material):
 
 def build_supplier_point_layer(scored_rows, raw_material):
     """Create an in-memory WGS84 point layer from scored supplier rows."""
-    layer_name = "EUDR Climate Risk - {}".format(raw_material)
+    layer_name = "EUDR Climate Risk (SIMULATED scores) - {}".format(raw_material)
     layer = QgsVectorLayer("Point?crs=EPSG:4326", layer_name, "memory")
     provider = layer.dataProvider()
 

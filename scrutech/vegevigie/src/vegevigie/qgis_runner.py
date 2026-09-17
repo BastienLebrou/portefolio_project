@@ -30,6 +30,10 @@ def main(argv: list[str] | None = None) -> int:
     spec = json.loads(Path(argv[0]).read_text())
 
     task = spec.get("task", "vegevigie_analyze")
+    problem = area_problem(spec)
+    if problem:
+        print("RESULT " + json.dumps({"error": problem}), flush=True)
+        return 1
     if task == "paf_interface_aoi":
         return _run_paf_interface_aoi(spec)
     if task == "alphaearth_change":
@@ -101,6 +105,44 @@ def main(argv: list[str] | None = None) -> int:
         flush=True,
     )
     return 0
+
+
+# Largest emprise (km²) before a run exhausts memory or takes hours; AlphaEarth samples and the
+# DEM download are capped in their own code. ponytail: review estimates, calibrate on real runs.
+_MAX_KM2 = {"paf_interface_aoi": 1000.0, "ecobuage_aoi": 1000.0}
+_BIOTRAME_MAX_KM2 = {8: 5000.0, 9: 1000.0, 10: 150.0}
+# VegeVigie costs pixels × months. Measured: 0.8 M pixel-months in 41 s, so 20 M is ~15 min.
+_VEGEVIGIE_MAX_PIXEL_MONTHS = 20_000_000
+
+
+def area_problem(spec: dict) -> str | None:
+    """Why the emprise is too large for this task (plain French), or None if it is fine."""
+    task = spec.get("task", "vegevigie_analyze")
+    if "bbox" not in spec or task not in (*_MAX_KM2, "biotrame_aoi", "vegevigie_analyze"):
+        return None
+    from core.aoi import resolve_aoi
+
+    km2 = resolve_aoi(tuple(spec["bbox"])).to_l93().area / 1e6
+    advice = "Réduisez l'emprise (une commune ou un groupe de communes)"
+    if task == "vegevigie_analyze":
+        resolution = float(spec.get("resolution") or 60)
+        months = 12 * (int(spec["end"]) - int(spec["start"]) + 1)
+        limit = _VEGEVIGIE_MAX_PIXEL_MONTHS / months * resolution**2 / 1e6
+        advice += ", prenez des pixels plus grands (résolution en m) ou raccourcissez la période"
+    elif task == "biotrame_aoi":
+        resolution = int(spec.get("resolution", 8))
+        limit = _BIOTRAME_MAX_KM2.get(resolution, min(_BIOTRAME_MAX_KM2.values()))
+    else:
+        limit = _MAX_KM2[task]
+    if km2 <= limit:
+        return None
+
+    def km(value: float) -> str:
+        return f"{value:,.0f}".replace(",", "\u202f") + "\u00a0km²"
+
+    return (
+        f"Zone trop grande\u00a0: {km(km2)} pour {km(limit)} au plus avec ces réglages. {advice}."
+    )
 
 
 def _run_paf_interface_aoi(spec: dict) -> int:

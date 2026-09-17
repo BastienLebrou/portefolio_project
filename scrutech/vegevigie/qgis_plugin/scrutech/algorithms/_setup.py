@@ -79,7 +79,9 @@ def install_env(
     """``uv sync`` the engine into :data:`USER_VENV`, streaming uv's output. -1 if canceled."""
     env = _clean_env()
     env["UV_PROJECT_ENVIRONMENT"] = str(USER_VENV)
-    cmd = [uv, "sync", "--frozen", "--no-dev", "--project", str(project)]
+    # Pinned: uv would otherwise pick any Python >= 3.11 on the machine, and some locked
+    # wheels (numcodecs…) do not exist for the newest one. uv downloads 3.11 if needed.
+    cmd = [uv, "sync", "--frozen", "--no-dev", "--python", "3.11", "--project", str(project)]
     log("Commande : " + " ".join(cmd))
     proc = subprocess.Popen(
         cmd,

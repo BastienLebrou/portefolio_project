@@ -40,3 +40,20 @@ def test_user_venv_is_searched_after_the_dev_venv(tmp_path) -> None:
     dev = str(_venv._python_in(tmp_path / "vegevigie" / ".venv"))
     user = str(_venv._python_in(_setup.USER_VENV))
     assert candidates.index(dev) < candidates.index(user)
+
+
+def test_install_pins_the_engine_python(monkeypatch, tmp_path) -> None:
+    seen = {}
+
+    class _Proc:
+        stdout: list[str] = []
+
+        def __init__(self, cmd, **_kwargs):
+            seen["cmd"] = cmd
+
+        def wait(self) -> int:
+            return 0
+
+    monkeypatch.setattr(_setup.subprocess, "Popen", _Proc)
+    assert _setup.install_env("uv", tmp_path, lambda _line: None, lambda: False) == 0
+    assert seen["cmd"][seen["cmd"].index("--python") + 1] == "3.11"

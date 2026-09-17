@@ -76,6 +76,11 @@ def test_search_and_cache_writes_and_reuses(tmp_path: Path) -> None:
     search_and_cache(backend, params, cache, force=True)
     assert backend.searches == 2
 
+    # Same file name, another emprise: the old scenes must not be reused.
+    other = build_search_params((5.3, 45.3, 5.4, 45.4), 2020, 2020, "sentinel-2-l2a", 60)
+    search_and_cache(backend, other, cache)
+    assert backend.searches == 3
+
 
 def test_load_cached_items_roundtrip(tmp_path: Path) -> None:
     backend = _FakeBackend()

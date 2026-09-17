@@ -109,12 +109,17 @@ def search_and_cache(
 ) -> list[dict[str, Any]]:
     """Search via ``backend``, cache the (unsigned) item list as JSON, return it.
 
-    Idempotent: an existing cache is reused unless ``force``. We deliberately cache
-    unsigned items — PC signing tokens expire, so signing is redone at load time.
+    Idempotent: an existing cache is reused unless ``force`` or it was searched with other
+    ``params`` (another bbox or cloud cover in the same folder must not reuse its scenes). We
+    deliberately cache unsigned items — PC signing tokens expire, so signing is redone at load
+    time.
     """
     if not force and cache_path.exists():
-        logger.info("Using cached item list at %s (use --force to refresh)", cache_path)
-        return load_cached_items(cache_path)
+        payload = json.loads(cache_path.read_text())
+        if payload.get("params") == json.loads(json.dumps(params)):
+            logger.info("Using cached item list at %s (use --force to refresh)", cache_path)
+            return payload["items"]
+        logger.info("Cached item list at %s was for other parameters; searching again", cache_path)
 
     items = backend.search(params)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
