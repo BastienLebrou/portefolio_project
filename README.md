@@ -188,13 +188,13 @@ du projet.
 <!-- AUTO-STATS:START -->
 | 📦 Commits | 📅 Jours actifs | 🗂️ Projets |
 |:---:|:---:|:---:|
-| **94** | **41** | **1** |
+| **121** | **44** | **1** |
 
 | 🐍 Lignes de Python | ✅ Tests automatisés | 🥇 Langage principal |
 |:---:|:---:|:---:|
-| **16 254** | **154** | **Python (70,9 %)** |
+| **18 325** | **179** | **Python (80,4 %)** |
 
-*Dernière mise à jour automatique : 15 septembre 2026 à 14:06 (heure de Paris) — commit `0d7e320`.*
+*Dernière mise à jour automatique : 17 septembre 2026 à 14:04 (heure de Paris) — commit `ff89a96`.*
 <!-- AUTO-STATS:END -->
 
 <picture>
