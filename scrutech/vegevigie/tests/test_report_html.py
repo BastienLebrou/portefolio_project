@@ -85,6 +85,8 @@ def test_report_summarises_every_tool_with_qgis_legends(tmp_path: Path) -> None:
     assert "prioritaire\u00a0: 0,5\u00a0ha" in page  # label : value, no agreement to get wrong
     assert "léger dépérissement" in page  # the full QGIS legend is shown
     assert "srcdoc=" in page and "leaflet" in page.lower()
+    # Branded and self-contained: the ScruTech logo and Mantis travel inside the file.
+    assert 'aria-label="Logo ScruTech' in page and "data:image/png;base64," in page
 
 
 def test_report_without_analyses_says_what_to_do(tmp_path: Path) -> None:

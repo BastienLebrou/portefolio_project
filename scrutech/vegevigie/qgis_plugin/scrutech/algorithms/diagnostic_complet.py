@@ -1,10 +1,11 @@
 """« Diagnostic complet » : every emprise tool one after the other, then the report.
 
-Runs ① VegeVigie, ② AlphaEarth, ③ PAFF, ④ écobuage and Biotrame on one extent as child
-algorithms and hands each the outputs of the previous ones (vegetation trend and drought to
-écobuage and Biotrame, the DEM downloaded for écobuage to Biotrame). A failing step is logged and
-skipped, never fatal (a missing GEE key must not cost the rest), then the HTML report of the zone
-is written and opened.
+Downloads the IGN DEM first, then runs ① VegeVigie, ② AlphaEarth, ③ PAFF, ④ écobuage and
+Biotrame on one extent as child algorithms, handing each the outputs of the previous ones (the
+DEM to écobuage and Biotrame, vegetation trend and drought to écobuage, the trend to Biotrame). A
+failing step is logged and skipped, never fatal (a missing GEE key must not cost the rest), then
+the HTML report of the zone is written and opened. Shown above the numbered groups: it is the
+entry point for a first diagnostic, the groups are for tuning one analysis.
 """
 
 from __future__ import annotations
@@ -13,30 +14,44 @@ from pathlib import Path
 
 from qgis.core import (
     QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
     QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingMultiStepFeedback,
     QgsProcessingOutputFile,
+    QgsProcessingParameterEnum,
     QgsProcessingParameterExtent,
     QgsProcessingParameterFolderDestination,
     QgsProcessingParameterNumber,
     QgsProcessingUtils,
+    QgsProject,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
 from . import _qgis_compat as _compat
 from ._venv import python_param
 
+# Biotrame hexagon sizes offered to the user: (label, H3 resolution).
+_HEXAGONS = [
+    ("Grands (≈ 5 km², pour un territoire)", 7),
+    ("Moyens (≈ 70 ha, conseillé pour une commune)", 8),
+    ("Fins (≈ 10 ha)", 9),
+    ("Très fins (≈ 1,5 ha, pour une petite zone)", 10),
+]
+_MNT_BEST_M = 5.0  # the DEM is fetched at 5 m when the zone allows it (sharper slopes)
+_MNT_MAX_PX = 25_000_000  # same limit as core.sources.MNT_MAX_PX (the engine refuses above)
+
 
 class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
-    """All the emprise analyses in a row, chained, then the report."""
+    """The DEM, then all the emprise analyses in a row, chained, then the report."""
 
     EXTENT = "EXTENT"
     START_YEAR = "START_YEAR"
     END_YEAR = "END_YEAR"
-    RESOLUTION = "RESOLUTION"
+    PIXEL = "PIXEL"
+    HEXAGONS = "HEXAGONS"
     PYTHON_EXE = "PYTHON_EXE"
     OUTPUT_FOLDER = "OUTPUT_FOLDER"
     REPORT = "REPORT"
@@ -48,34 +63,40 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
         return self.tr("Diagnostic complet (clé en main)")
 
     def group(self) -> str:
-        return self.tr("2 · Analyser une emprise")
+        return ""  # no group: listed above the numbered groups, at the top of ScruTech
 
     def groupId(self) -> str:  # noqa: N802
-        return "indicateurs"
+        return ""
 
     def shortHelpString(self) -> str:  # noqa: N802
         return self.tr(
-            "<p>Lance <b>toutes les analyses de la zone</b> l'une après l'autre, puis ouvre le "
-            "<b>rapport de synthèse</b> : ① végétation (VegeVigie), ② changements "
-            "(AlphaEarth), ③ interface habitat-forêt (PAFF), ④ aptitude à l'écobuage, puis la "
-            "priorisation écologique (Biotrame).</p>"
-            "<p>Chaque analyse profite des précédentes : la tendance et la sécheresse de la "
-            "végétation nourrissent l'écobuage et Biotrame, et le MNT téléchargé pour "
-            "l'écobuage sert aux zones humides de Biotrame.</p>"
+            "<p>Le <b>diagnostic de territoire en une fois</b> : ScruTech télécharge le MNT de "
+            "la zone, lance toutes les analyses l'une après l'autre, puis ouvre le <b>rapport "
+            "de synthèse</b>.</p>"
+            "<p>Dans l'ordre : MNT IGN, ① végétation (VegeVigie), ② changements (AlphaEarth), "
+            "③ interface habitat-forêt (PAFF), ④ aptitude à l'écobuage, priorisation "
+            "écologique (Biotrame). Chaque analyse profite des précédentes : le MNT sert à "
+            "l'écobuage et aux zones humides de Biotrame, la tendance et la sécheresse de la "
+            "végétation nourrissent l'écobuage et Biotrame.</p>"
             "<p><b>Avant de lancer</b><br>Avoir lancé « 0 · Démarrer ici ▸ Vérifier et "
             "installer ScruTech ». Une connexion internet. Pour AlphaEarth, une clé Google "
             "Earth Engine : sans elle, cette étape est sautée et le reste continue.</p>"
             "<p><b>Étapes</b><br>"
-            "1. Zone d'étude : une commune ou un groupe de communes (1 000 km² au plus).<br>"
-            "2. Période : 2020 à 2025 par défaut. AlphaEarth compare la première et la "
-            "dernière année.<br>"
-            "3. Dossier de résultats : un sous-dossier par analyse, et le rapport.<br>"
-            "4. Exécuter : de quelques minutes à une demi-heure selon la taille de la zone.</p>"
+            "1. Zone d'étude : une commune ou un groupe de communes.<br>"
+            "2. Années d'analyse : 2020 à 2025 par défaut (au moins 2 années). AlphaEarth "
+            "compare la première et la dernière.<br>"
+            "3. Précision : la taille du pixel de la végétation et de l'écobuage. 30 m par "
+            "défaut ; 10 m pour une petite zone, 60 m pour une grande.<br>"
+            "4. Précision de Biotrame : la taille des hexagones.<br>"
+            "5. Dossier de résultats : un sous-dossier par analyse, et le rapport.<br>"
+            "6. Exécuter : de quelques minutes à une demi-heure selon la zone.</p>"
             "<p><b>Résultat</b><br>Toutes les couches stylées, rangées dans le groupe "
             "« Diagnostic ScruTech », et le rapport ouvert dans le navigateur. Le journal "
             "récapitule les analyses réussies et celles sautées, avec la raison.</p>"
-            "<p><b>Bon à savoir</b><br>Une analyse qui échoue n'arrête pas les autres. Chaque "
-            "analyse reste disponible seule dans ce groupe pour affiner ses réglages.</p>"
+            "<p><b>Bon à savoir</b><br>Plus le pixel est fin, plus la zone doit être petite : à "
+            "30 m sur 6 ans, la végétation accepte environ 250 km² ; à 60 m, environ 1 000 km². "
+            "Une analyse refusée ou en échec n'arrête pas les autres. Pour affiner une "
+            "analyse, relancez-la seule depuis son groupe.</p>"
         )
 
     def createInstance(self) -> DiagnosticCompletAlgorithm:  # noqa: N802
@@ -108,15 +129,21 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
                 )
             )
         self.addParameter(
-            _compat.advanced(
-                QgsProcessingParameterNumber(
-                    self.RESOLUTION,
-                    self.tr("Résolution de la végétation (m) : 60 conseillé"),
-                    type=_compat.NUMBER_INTEGER,
-                    defaultValue=60,
-                    minValue=10,
-                    maxValue=200,
-                )
+            QgsProcessingParameterNumber(
+                self.PIXEL,
+                self.tr("Précision : taille du pixel (m), 30 conseillé"),
+                type=_compat.NUMBER_INTEGER,
+                defaultValue=30,
+                minValue=10,
+                maxValue=200,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.HEXAGONS,
+                self.tr("Précision de Biotrame : taille des hexagones"),
+                options=[self.tr(label) for label, _res in _HEXAGONS],
+                defaultValue=1,
             )
         )
         self.addParameter(python_param(self.PYTHON_EXE))
@@ -135,9 +162,10 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
     ) -> dict:
         from qgis import processing
 
-        rect = self.parameterAsExtent(
-            parameters, self.EXTENT, context, crs=QgsCoordinateReferenceSystem("EPSG:4326")
-        )
+        from ._layers import queue_layer
+
+        wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        rect = self.parameterAsExtent(parameters, self.EXTENT, context, crs=wgs84)
         if rect.isEmpty():
             raise QgsProcessingException(
                 self.tr("La zone d'étude est vide : choisissez une emprise.")
@@ -148,6 +176,8 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(
                 self.tr("L'année de début doit précéder l'année de fin (au moins 2 années).")
             )
+        pixel = self.parameterAsInt(parameters, self.PIXEL, context)
+        hexagons = _HEXAGONS[self.parameterAsEnum(parameters, self.HEXAGONS, context)][1]
         root = self._resolve_output_folder(parameters, context)
         common = {
             # Same extent string for every step, so they all share one cache id and one report.
@@ -155,51 +185,71 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
             f"{rect.yMaximum()} [EPSG:4326]",
             "PYTHON_EXE": self.parameterAsString(parameters, self.PYTHON_EXE, context).strip(),
         }
-        resolution = self.parameterAsInt(parameters, self.RESOLUTION, context)
+        mnt_path = str(root / "mnt" / "mnt.tif")
 
-        # (label, algorithm, sub-folder, extra parameters from the outputs of earlier steps)
+        # (label, algorithm, parameters given the outputs of the steps before it)
         steps = [
+            (
+                "MNT IGN de la zone",
+                "scrutech:mnt_aoi",
+                lambda out: {"RESOLUTION": self._mnt_resolution(rect, pixel), "OUTPUT": mnt_path},
+            ),
             (
                 "① Végétation (VegeVigie)",
                 "scrutech:analyze_extent",
-                "vegevigie",
-                lambda out: {"START_YEAR": start, "END_YEAR": end, "RESOLUTION": resolution},
+                lambda out: {
+                    "START_YEAR": start,
+                    "END_YEAR": end,
+                    "RESOLUTION": pixel,
+                    "OUTPUT_FOLDER": str(root / "vegevigie"),
+                },
             ),
             (
                 "② Changements (AlphaEarth)",
                 "scrutech:alphaearth_change",
-                "alphaearth",
-                lambda out: {"YEAR1": start, "YEAR2": end},
+                lambda out: {
+                    "YEAR1": start,
+                    "YEAR2": end,
+                    "OUTPUT_FOLDER": str(root / "alphaearth"),
+                },
             ),
             (
                 "③ Interface habitat-forêt (PAFF)",
                 "scrutech:paf_interface_aoi",
-                "paff",
-                lambda out: {},
+                lambda out: {"OUTPUT_FOLDER": str(root / "paff")},
             ),
             (
                 "④ Aptitude à l'écobuage",
                 "scrutech:ecobuage_aptitude_aoi",
-                "ecobuage",
-                lambda out: {"VEG_TREND": out.get("TREND"), "VEG_DROUGHT": out.get("DROUGHT")},
+                lambda out: {
+                    "MNT": out.get("OUTPUT"),
+                    "RESOLUTION": pixel,
+                    "VEG_TREND": out.get("TREND"),
+                    "VEG_DROUGHT": out.get("DROUGHT"),
+                    "OUTPUT_FOLDER": str(root / "ecobuage"),
+                },
             ),
             (
                 "Priorisation écologique (Biotrame)",
                 "scrutech:biotrame_priority",
-                "biotrame",
-                lambda out: {"VEG_TREND": out.get("TREND"), "MNT": out.get("MNT")},
+                lambda out: {
+                    "RESOLUTION": hexagons,
+                    "VEG_TREND": out.get("TREND"),
+                    "MNT": out.get("OUTPUT") or out.get("MNT"),
+                    "OUTPUT_FOLDER": str(root / "biotrame"),
+                },
             ),
         ]
         multi = QgsProcessingMultiStepFeedback(len(steps) + 1, feedback)
         outputs: dict = {}
         done: list[str] = []
         skipped: list[tuple[str, str]] = []
-        for i, (label, alg_id, folder, extra) in enumerate(steps):
+        for i, (label, alg_id, step_params) in enumerate(steps):
             if feedback.isCanceled():
                 raise QgsProcessingException(self.tr("Annulé."))
             multi.setCurrentStep(i)
             feedback.pushInfo(f"=== {label}")
-            params = {**common, **extra(outputs), "OUTPUT_FOLDER": str(root / folder)}
+            params = {**common, **step_params(outputs)}
             params = {k: v for k, v in params.items() if v not in (None, "")}
             try:
                 outputs.update(
@@ -213,8 +263,10 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
                     raise QgsProcessingException(self.tr("Annulé.")) from exc
                 skipped.append((label, str(exc).strip()))
                 feedback.reportError(f"{label} : étape sautée. {exc}")
+        if outputs.get("OUTPUT"):
+            queue_layer(context, outputs["OUTPUT"], self.tr("MNT IGN de la zone"))
 
-        if not done:
+        if not set(done) - {steps[0][0]}:  # no analysis at all, at most the DEM
             raise QgsProcessingException(
                 self.tr("Aucune analyse n'a abouti. ")
                 + " | ".join(f"{label} : {why}" for label, why in skipped)
@@ -237,12 +289,22 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
         for layer_id in context.layersToLoadOnCompletion():
             details = context.layerToLoadOnCompletionDetails(layer_id)
             details.groupName = self.tr("Diagnostic ScruTech")
-        feedback.pushInfo(
-            f"Diagnostic terminé : {len(done)} analyse(s) sur {len(steps)} réussie(s)."
-        )
+        feedback.pushInfo(f"Diagnostic terminé : {len(done)} étape(s) sur {len(steps)} réussie(s).")
         for label, why in skipped:
             feedback.pushWarning(f"{label} sautée : {why}")
         return {self.OUTPUT_FOLDER: str(root), self.REPORT: report}
+
+    @staticmethod
+    def _mnt_resolution(rect, pixel: int) -> float:
+        """5 m when the zone fits the IGN DEM download limit at 5 m, else the analysis pixel."""
+        to_l93 = QgsCoordinateTransform(
+            QgsCoordinateReferenceSystem("EPSG:4326"),
+            QgsCoordinateReferenceSystem("EPSG:2154"),
+            QgsProject.instance(),
+        )
+        box = to_l93.transformBoundingBox(rect)
+        fits = (box.width() / _MNT_BEST_M) * (box.height() / _MNT_BEST_M) <= _MNT_MAX_PX
+        return _MNT_BEST_M if fits else float(pixel)
 
     def _resolve_output_folder(self, parameters, context) -> Path:
         value = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)

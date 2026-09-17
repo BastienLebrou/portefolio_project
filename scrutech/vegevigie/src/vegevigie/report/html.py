@@ -33,6 +33,82 @@ _MAP_NOTE = (
     "chiffres et les phrases s'affichent sans connexion."
 )
 _FOOTER = "Rapport généré par ScruTech à partir des analyses enregistrées pour la zone {}."
+_GUIDE = (
+    "J'ai lu les couches de la zone pour vous : voici, analyse par analyse, ce qu'elles "
+    "montrent. Ces chiffres orientent une visite de terrain, ils ne la remplacent pas."
+)
+
+# ScruTech brand (see the brand folder README): palette, type, logo, emblem and Mantis sprite
+# (quantized to 32 colours, 21 KB). The fonts need internet; offline, the fallbacks apply.
+_BRAND = Path(__file__).resolve().parent / "brand"
+_FONTS = (
+    "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;"
+    "12..96,800&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600"
+    "&amp;family=Silkscreen&amp;display=swap"
+)
+_CSS = """
+:root {
+  --creme: #F1E8D2; --papier: #FBF7EC; --bordeaux: #661C1A; --brique: #B23F2C;
+  --olive: #5C6A30; --olive-fonce: #37401D; --encre: #2B261D; --doux: #6B6150;
+  --trait: rgba(55, 64, 29, .18);
+  --titre: "Bricolage Grotesque", "Arial Black", Arial, sans-serif;
+  --corps: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--creme); color: var(--encre); font: 16px/1.6 var(--corps);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+main { max-width: 1000px; margin: 0 auto; padding: 28px 16px 48px; }
+.masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; }
+.logo svg { display: block; width: 300px; max-width: 100%; height: auto; }
+.title { flex: 1 1 280px; }
+.eyebrow { margin: 0; font: 500 .8rem/1.4 var(--mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--olive); }
+h1 { margin: 2px 0 8px; font: 800 2.1rem/1.1 var(--titre); color: var(--bordeaux); }
+.meta { margin: 0; font: .85rem/1.5 var(--mono); color: var(--doux); }
+.card { margin-top: 20px; padding: 20px 24px 24px; background: var(--papier);
+  border: 1px solid var(--trait); border-radius: 12px; }
+h2 { margin: 0 0 16px; font: 700 1.35rem/1.2 var(--titre); color: var(--bordeaux); }
+h3 { margin: 0 0 4px; font: 700 1.05rem/1.3 var(--titre); color: var(--olive-fonce); }
+h4 { margin: 0 0 6px; font: 600 .9rem/1.3 var(--corps); color: var(--olive-fonce); }
+p { margin: 0 0 8px; }
+.figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px; }
+.figure { padding: 4px 0 4px 14px; border-left: 3px solid var(--brique); }
+.figure .tool { margin: 0 0 2px; font: 500 .75rem/1.4 var(--mono); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--olive); }
+.figure .value { margin: 0; font: 600 1rem/1.45 var(--corps); }
+.figure .value::first-letter { text-transform: uppercase; }
+.map { width: 100%; height: 540px; background: var(--creme); border: 1px solid var(--trait);
+  border-radius: 8px; }
+.note { margin: 8px 0 0; font-size: .85rem; color: var(--doux); }
+.legends { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px; margin-top: 16px; }
+.legend ul { margin: 0; padding: 0; list-style: none; font-size: .86rem; }
+.legend li { margin: 2px 0; }
+.swatch { display: inline-block; width: 14px; height: 14px; margin-right: 8px;
+  vertical-align: -2px; border: 1px solid rgba(43, 38, 29, .25); border-radius: 2px; }
+.guide { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; padding: 14px 18px;
+  background: var(--creme); border-radius: 10px; }
+.guide p { margin: 0; }
+.mantis { flex: none; width: 120px; height: auto; }
+.name { display: block; font: .8rem/1.5 "Silkscreen", var(--mono); color: var(--brique); }
+article { padding: 14px 0 6px; border-top: 1px solid var(--trait); }
+article:first-of-type { border-top: 0; }
+footer { display: flex; align-items: center; gap: 16px; margin-top: 28px; font-size: .85rem;
+  color: var(--doux); }
+footer p { margin: 0; }
+.emblem svg { display: block; width: 52px; height: auto; }
+.signature { font: 500 .85rem/1.4 var(--mono); color: var(--olive-fonce); }
+@media (max-width: 600px) {
+  .card { padding: 16px; } h1 { font-size: 1.7rem; } .map { height: 420px; }
+  .guide { flex-direction: column; align-items: flex-start; }
+}
+@media print {
+  body { background: #fff; } main { padding: 0; } .card { break-inside: avoid; }
+  .map { height: 480px; }
+}
+"""
 
 
 @dataclass(frozen=True)
@@ -448,16 +524,27 @@ def _map(bbox: tuple[float, float, float, float], parts: _Parts) -> str:
 def _page(
     aoi_id: str, bbox: tuple[float, float, float, float], data: ReportInputs, parts: _Parts
 ) -> str:
+    import base64
+
     import geopandas as gpd
     from shapely.geometry import box
 
     km2 = float(gpd.GeoSeries([box(*bbox)], crs=4326).to_crs(2154).area.iloc[0]) / 1e6
     e = html.escape
-    rows = "".join(
-        f"<tr><th>{e(tool)}</th><td>{e(_typo(text))}</td></tr>" for tool, text in parts.figures
+    logo = (_BRAND / "scrutech-logo.svg").read_text(encoding="utf-8")
+    emblem = (_BRAND / "mantis-emblem.svg").read_text(encoding="utf-8")
+    mantis = base64.b64encode((_BRAND / "mantis.png").read_bytes()).decode("ascii")
+    favicon = base64.b64encode(emblem.encode("utf-8")).decode("ascii")
+
+    figures = "".join(
+        f"<div class='figure'><p class='tool'>{e(tool)}</p><p class='value'>{e(_typo(text))}</p>"
+        "</div>"
+        for tool, text in parts.figures
     )
     reading = "".join(
-        f"<h3>{e(tool)}</h3>" + "".join(f"<p>{e(_typo(s))}</p>" for s in sentences)
+        f"<article><h3>{e(tool)}</h3>"
+        + "".join(f"<p>{e(_typo(s))}</p>" for s in sentences)
+        + "</article>"
         for tool, sentences in parts.sentences
     )
     legends = "".join(
@@ -470,67 +557,50 @@ def _page(
         + "</ul></div>"
         for _layer, name, legend in parts.layers
     )
-    meta = _typo(
-        f"Emprise de {_num(km2, 1)} km² · rapport du {date.today():%d/%m/%Y} · analyses : "
-        + ", ".join(data.present())
-    )
     map_block = ""
     if parts.layers:
         map_block = (
-            "<section><h2>Carte</h2>"
+            "<section class='card'><h2>Carte</h2>"
             f"<iframe class='map' title='Carte' srcdoc=\"{e(_map(bbox, parts), quote=True)}\">"
             "</iframe><p class='note'>"
             + e(_typo(_MAP_NOTE))
             + f"</p><div class='legends'>{legends}</div></section>"
         )
+    zone = _typo(f"Emprise de {_num(km2, 1)} km² · {date.today():%d/%m/%Y}")
+    tools = _typo("Analyses : " + ", ".join(data.present()))
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rapport ScruTech</title>
-<style>
-:root {{ --ink: #1d2a24; --muted: #5c6b63; --line: #d9e0dc; --accent: #1b7837; }}
-body {{ margin: 0; background: #ffffff; color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }}
-main {{ max-width: 980px; margin: 0 auto; padding: 32px 16px 48px; }}
-.kicker {{ margin: 0; color: var(--accent); font-weight: 600; letter-spacing: .04em; }}
-h1 {{ margin: 4px 0 6px; font-size: 1.9rem; }}
-h2 {{ margin: 36px 0 12px; font-size: 1.3rem; border-bottom: 2px solid var(--line);
-  padding-bottom: 6px; }}
-h3 {{ margin: 20px 0 4px; font-size: 1.05rem; }}
-h4 {{ margin: 0 0 6px; font-size: .9rem; }}
-p {{ margin: 0 0 8px; }}
-.meta, .note {{ color: var(--muted); font-size: .92rem; }}
-table {{ width: 100%; border-collapse: collapse; }}
-th, td {{ text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line);
-  vertical-align: top; }}
-th {{ width: 34%; font-weight: 600; }}
-td::first-letter {{ text-transform: uppercase; }}
-.map {{ width: 100%; height: 540px; border: 1px solid var(--line); border-radius: 6px; }}
-.legends {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px; margin-top: 12px; }}
-.legend ul {{ list-style: none; margin: 0; padding: 0; font-size: .88rem; }}
-.swatch {{ display: inline-block; width: 14px; height: 14px; margin-right: 8px;
-  vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }}
-footer {{ margin-top: 40px; color: var(--muted); font-size: .85rem; }}
-@media (max-width: 600px) {{ th {{ width: auto; display: block; border: 0; padding-bottom: 0; }}
-  td {{ display: block; }} .map {{ height: 420px; }} }}
-@media print {{ main {{ padding: 0; }} .map {{ height: 480px; }}
-  section {{ break-inside: avoid; }} }}
-</style>
+<title>Diagnostic ScruTech</title>
+<link rel="icon" href="data:image/svg+xml;base64,{favicon}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{_FONTS}">
+<style>{_CSS}</style>
 </head>
 <body>
 <main>
-<header>
-<p class="kicker">ScruTech · Diagnostic de territoire</p>
+<header class="masthead">
+<div class="logo">{logo}</div>
+<div class="title">
+<p class="eyebrow">Diagnostic de territoire</p>
 <h1>Rapport de la zone</h1>
-<p class="meta">{e(meta)}</p>
+<p class="meta">{e(zone)}</p>
+<p class="meta">{e(tools)}</p>
+</div>
 </header>
-<section><h2>En bref</h2><table>{rows}</table></section>
+<section class="card"><h2>En bref</h2><div class="figures">{figures}</div></section>
 {map_block}
-<section><h2>Lecture des résultats</h2>{reading}</section>
-<footer>{e(_typo(_FOOTER.format(aoi_id)))}</footer>
+<section class="card"><h2>Lecture des résultats</h2>
+<div class="guide"><img class="mantis" alt="Mantis, la mascotte de ScruTech"
+ src="data:image/png;base64,{mantis}"><p><span class="name">Mantis</span>{e(_typo(_GUIDE))}</p>
+</div>
+{reading}
+</section>
+<footer><div class="emblem">{emblem}</div><div><p class="signature">ScruTech · voir ce que
+ l'œil ne voit pas</p><p>{e(_typo(_FOOTER.format(aoi_id)))}</p></div></footer>
 </main>
 </body>
 </html>

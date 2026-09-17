@@ -29,6 +29,8 @@ class ScruTechProvider(QgsProcessingProvider):
 
     def loadAlgorithms(self) -> None:  # noqa: N802 — QGIS API name
         # Ordered as the workflow reads in the toolbox (groups are numbered 0→6).
+        # No group: the full diagnostic sits above the numbered groups.
+        self.addAlgorithm(DiagnosticCompletAlgorithm())
         # 0 · Démarrer ici
         self.addAlgorithm(SetupCheckAlgorithm())
         # 1 · Préparer l'emprise
@@ -36,7 +38,6 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(MntFromAoiAlgorithm())
         self.addAlgorithm(OrthoFromAoiAlgorithm())
         # 2 · Analyser une emprise (dans l'ordre ①→④)
-        self.addAlgorithm(DiagnosticCompletAlgorithm())
         self.addAlgorithm(AnalyzeExtentAlgorithm())
         self.addAlgorithm(AlphaEarthChangeAlgorithm())
         self.addAlgorithm(InterfaceFromAoiAlgorithm())
