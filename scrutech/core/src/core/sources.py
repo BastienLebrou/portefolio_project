@@ -199,11 +199,13 @@ def _force_2d(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 # (not flown everywhere yet), RGE ALTI fills its gaps. Nodata sentinels: -9999 / -99999.
 WMS_R_URL = "https://data.geopf.fr/wms-r/wms"
 MNT_LAYERS = (
-    "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93",
-    "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",
+    "IGNF_LIDAR-HD_MNT_ELEVATION.ELEVATIONGRIDCOVERAGE.LAMB93",  # LiDAR HD, best, partial
+    "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",  # RGE ALTI, all of France, fills the gaps
 )
-MNT_TILE_PX = 2000  # server max is 5010 px; smaller tiles keep each request light
+ORTHO_LAYER = "ORTHOIMAGERY.ORTHOPHOTOS"  # BD ORTHO, 20 cm RGB aerial photos of France
+WMS_TILE_PX = 2000  # server max is 5010 px; smaller tiles keep each request light
 MNT_MAX_PX = 25_000_000  # ~100 MB of float32: small zones first (e.g. 25 x 25 km at 5 m)
+ORTHO_MAX_PX = 25_000_000  # ~75 MB of RGB: 2.5 x 2.5 km at 10 cm, 10 x 10 km at 40 cm
 
 
 def fetch_mnt(
@@ -220,63 +222,118 @@ def fetch_mnt(
     Returns ``(path, info)``. Raises ValueError (in French, for the user) when the grid is too
     large or when the IGN has no elevation for the zone.
     """
-    import math
-
-    import rasterio
-    from rasterio.transform import from_origin
-
     report = progress or (lambda _pct, _msg: None)
     a = resolve_aoi(aoi)
-    minx, miny, maxx, maxy = a.to_l93().bounds
-    minx, miny, maxx, maxy = minx - margin_m, miny - margin_m, maxx + margin_m, maxy + margin_m
-    width = max(1, math.ceil((maxx - minx) / resolution))
-    height = max(1, math.ceil((maxy - miny) / resolution))
-    if width * height > MNT_MAX_PX:
-        raise ValueError(
-            f"Zone trop grande pour télécharger le MNT à {resolution:g} m ({width} x {height} "
-            f"pixels, maximum {MNT_MAX_PX // 1_000_000} millions) : réduisez la zone ou "
-            "augmentez la résolution (par exemple 10 ou 25 m)."
-        )
-
-    dem = np.full((height, width), np.nan, dtype="float32")
-    tiles = [(r, c) for r in range(0, height, MNT_TILE_PX) for c in range(0, width, MNT_TILE_PX)]
-    for i, (row, col) in enumerate(tiles, 1):
-        h, w = min(MNT_TILE_PX, height - row), min(MNT_TILE_PX, width - col)
-        bbox = (
-            minx + col * resolution,
-            maxy - (row + h) * resolution,
-            minx + (col + w) * resolution,
-            maxy - row * resolution,
-        )
+    grid = _l93_grid(a, resolution, margin_m, MNT_MAX_PX, "le MNT", "10 ou 25 m")
+    dem = np.full((grid.height, grid.width), np.nan, dtype="float32")
+    tiles = grid.tiles()
+    for i, (row, col, h, w, bbox) in enumerate(tiles, 1):
         dem[row : row + h, col : col + w] = _mnt_tile(bbox, w, h, timeout)
         report(int(10 + 85 * i / len(tiles)), f"MNT IGN : tuile {i}/{len(tiles)}")
 
     valid = np.isfinite(dem)
     if not valid.any():
         raise ValueError("Aucune altitude IGN pour cette zone (le MNT IGN couvre la France).")
-    out_path = Path(out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    profile = {
-        "driver": "GTiff",
-        "width": width,
-        "height": height,
-        "count": 1,
-        "dtype": "float32",
-        "crs": L93,
-        "transform": from_origin(minx, maxy, resolution, resolution),
-        "nodata": float("nan"),
-        "compress": "deflate",
-        "tiled": True,
-    }
-    with rasterio.open(out_path, "w", **profile) as dst:
-        dst.write(dem, 1)
+    grid.write(out_path, dem[np.newaxis], nodata=float("nan"))
     info = {
         "mnt_resolution": resolution,
         "mnt_tiles": len(tiles),
         "mnt_coverage_pct": round(100.0 * float(valid.mean()), 1),
     }
     logger.info("IGN DEM %s: %s", a.aoi_id, info)
-    return out_path, info
+    return Path(out_path), info
+
+
+def fetch_ortho(
+    aoi: object,
+    out_path: Path,
+    *,
+    resolution: float = 0.5,
+    timeout: int = 120,
+    progress=None,
+) -> tuple[Path, dict]:
+    """Download the IGN aerial photo (BD ORTHO, RGB) over the AOI as one Lambert-93 GeoTIFF.
+
+    The image Segment Anything needs: real colours at 20 cm to a few metres, unlike the 10 m
+    Sentinel-2 bands. Same tiling as :func:`fetch_mnt`; raises ValueError (French) if too large.
+    """
+    report = progress or (lambda _pct, _msg: None)
+    a = resolve_aoi(aoi)
+    grid = _l93_grid(a, resolution, 0.0, ORTHO_MAX_PX, "l'image aérienne", "1 ou 2 m")
+    image = np.zeros((3, grid.height, grid.width), dtype="uint8")
+    tiles = grid.tiles()
+    for i, (row, col, h, w, bbox) in enumerate(tiles, 1):
+        image[:, row : row + h, col : col + w] = _wms_rgb(bbox, w, h, timeout)
+        report(int(10 + 85 * i / len(tiles)), f"Image aérienne IGN : tuile {i}/{len(tiles)}")
+    grid.write(out_path, image, photometric="RGB")
+    info = {"ortho_resolution": resolution, "ortho_tiles": len(tiles), "ortho_px": grid.size}
+    logger.info("IGN ortho %s: %s", a.aoi_id, info)
+    return Path(out_path), info
+
+
+class _L93Grid:
+    """A north-up Lambert-93 pixel grid, cut in WMS tiles, written as one GeoTIFF."""
+
+    def __init__(self, minx: float, maxy: float, width: int, height: int, res: float) -> None:
+        self.minx, self.maxy, self.width, self.height, self.res = minx, maxy, width, height, res
+
+    @property
+    def size(self) -> list[int]:
+        return [self.width, self.height]
+
+    def tiles(self) -> list[tuple[int, int, int, int, tuple[float, float, float, float]]]:
+        """(row, col, height, width, L93 bbox) of each WMS tile, row by row."""
+        out = []
+        for row in range(0, self.height, WMS_TILE_PX):
+            for col in range(0, self.width, WMS_TILE_PX):
+                h, w = min(WMS_TILE_PX, self.height - row), min(WMS_TILE_PX, self.width - col)
+                bbox = (
+                    self.minx + col * self.res,
+                    self.maxy - (row + h) * self.res,
+                    self.minx + (col + w) * self.res,
+                    self.maxy - row * self.res,
+                )
+                out.append((row, col, h, w, bbox))
+        return out
+
+    def write(self, path: Path, bands: np.ndarray, **profile) -> None:
+        import rasterio
+        from rasterio.transform import from_origin
+
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        profile = {
+            "driver": "GTiff",
+            "width": self.width,
+            "height": self.height,
+            "count": bands.shape[0],
+            "dtype": bands.dtype.name,
+            "crs": L93,
+            "transform": from_origin(self.minx, self.maxy, self.res, self.res),
+            "compress": "deflate",
+            "tiled": True,
+            **profile,
+        }
+        with rasterio.open(path, "w", **profile) as dst:
+            dst.write(bands)
+
+
+def _l93_grid(
+    a: Aoi, resolution: float, margin_m: float, max_px: int, what: str, coarser: str
+) -> _L93Grid:
+    """The grid covering the AOI at ``resolution``; ValueError (French) above ``max_px``."""
+    import math
+
+    minx, miny, maxx, maxy = a.to_l93().bounds
+    minx, miny, maxx, maxy = minx - margin_m, miny - margin_m, maxx + margin_m, maxy + margin_m
+    width = max(1, math.ceil((maxx - minx) / resolution))
+    height = max(1, math.ceil((maxy - miny) / resolution))
+    if width * height > max_px:
+        raise ValueError(
+            f"Zone trop grande pour télécharger {what} à {resolution:g} m ({width} x {height} "
+            f"pixels, maximum {max_px // 1_000_000} millions) : réduisez la zone ou prenez des "
+            f"pixels plus grands (par exemple {coarser})."
+        )
+    return _L93Grid(minx, maxy, width, height, resolution)
 
 
 def _mnt_tile(bbox: tuple, width: int, height: int, timeout: int) -> np.ndarray:
@@ -292,7 +349,22 @@ def _mnt_tile(bbox: tuple, width: int, height: int, timeout: int) -> np.ndarray:
 
 def _wms_elevation(layer: str, bbox: tuple, width: int, height: int, timeout: int) -> np.ndarray:
     """GetMap one elevation layer as a float32 array (NaN where the IGN has no data)."""
+    arr = _getmap(layer, bbox, width, height, "image/geotiff", timeout)[0].astype("float32")
+    arr[arr < -1000] = np.nan  # ponytail: -9999 / -99999 sentinels; no French land below -1000 m
+    return arr
+
+
+def _wms_rgb(bbox: tuple, width: int, height: int, timeout: int) -> np.ndarray:
+    """GetMap the aerial photo as a (3, height, width) uint8 array (JPEG: 20x lighter)."""
+    return _getmap(ORTHO_LAYER, bbox, width, height, "image/jpeg", timeout)[:3]
+
+
+def _getmap(layer: str, bbox: tuple, width: int, height: int, fmt: str, timeout: int) -> np.ndarray:
+    """One WMS-R GetMap in Lambert-93, decoded to a (bands, height, width) array."""
+    import warnings
+
     import rasterio
+    from rasterio.errors import NotGeoreferencedWarning
 
     params = {
         "SERVICE": "WMS",
@@ -304,13 +376,13 @@ def _wms_elevation(layer: str, bbox: tuple, width: int, height: int, timeout: in
         "BBOX": ",".join(f"{v:.3f}" for v in bbox),
         "WIDTH": str(width),
         "HEIGHT": str(height),
-        "FORMAT": "image/geotiff",
+        "FORMAT": fmt,
     }
     resp = requests.get(WMS_R_URL, params=params, timeout=timeout)
     resp.raise_for_status()
     if not resp.headers.get("content-type", "").startswith("image/"):
-        raise RuntimeError(f"MNT IGN : réponse inattendue du service ({resp.text[:200]})")
-    with rasterio.MemoryFile(resp.content) as mem, mem.open() as ds:
-        arr = ds.read(1, out_shape=(height, width)).astype("float32")
-    arr[arr < -1000] = np.nan  # ponytail: -9999 / -99999 sentinels; no French land below -1000 m
-    return arr
+        raise RuntimeError(f"IGN : réponse inattendue du service ({resp.text[:200]})")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", NotGeoreferencedWarning)  # we georeference the tile
+        with rasterio.MemoryFile(resp.content) as mem, mem.open() as ds:
+            return ds.read(out_shape=(ds.count, height, width))

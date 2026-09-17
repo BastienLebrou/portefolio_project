@@ -25,6 +25,11 @@ logger = logging.getLogger("vegevigie")
 
 L93 = "EPSG:2154"
 _DEFAULT_WEIGHTS = {"combustible": 25.0, "embroussaillement": 25.0, "slope": 20.0, "access": 15.0}
+# VegeVigie values that score 1: the strongest classes of its QGIS legend, calibrated on real
+# runs (a Sen slope of +0.003 NDVI/month is "net verdissement", a yearly anomaly of -0.75 is "très
+# en dessous de la normale"). Looser bounds left both criteria near 0 and sank every score.
+EMBR_FULL_SLOPE = 0.003
+COMB_FULL_ANOMALY = -0.75
 
 
 def build_aptitude_from_aoi(
@@ -76,11 +81,13 @@ def build_aptitude_from_aoi(
     used = ["slope", "access"]
     embr = _read_to_grid(veg_trend_tif, transform, width, height)
     if embr is not None:  # positive NDVI trend on parcours = ligneous recolonisation
-        criteria.append((ecobuage.rescale(embr, 0.0, 0.01), weights["embroussaillement"]))
+        criteria.append(
+            (ecobuage.rescale(embr, 0.0, EMBR_FULL_SLOPE), weights["embroussaillement"])
+        )
         used.append("embroussaillement")
     drought = _read_to_grid(veg_drought_tif, transform, width, height)
     if drought is not None:  # more negative NDVI anomaly = drier senescent biomass = combustible
-        criteria.append((ecobuage.rescale(drought, 0.0, -2.0), weights["combustible"]))
+        criteria.append((ecobuage.rescale(drought, 0.0, COMB_FULL_ANOMALY), weights["combustible"]))
         used.append("combustible")
 
     report(80, "Weighted scoring…")

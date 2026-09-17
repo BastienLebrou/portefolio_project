@@ -125,7 +125,7 @@ def test_fetch_mnt_tiles_fills_lidar_gaps_and_caps_size(tmp_path, monkeypatch) -
         return np.full((height, width), 500.0, dtype="float32")  # RGE ALTI
 
     monkeypatch.setattr(sources, "_wms_elevation", fake_elevation)
-    monkeypatch.setattr(sources, "MNT_TILE_PX", 4)
+    monkeypatch.setattr(sources, "WMS_TILE_PX", 4)
     aoi = (4.585, 44.553, 4.586, 44.554)  # ~80 x 110 m
     path, info = sources.fetch_mnt(aoi, tmp_path / "mnt.tif", resolution=10.0)
 
@@ -137,3 +137,31 @@ def test_fetch_mnt_tiles_fills_lidar_gaps_and_caps_size(tmp_path, monkeypatch) -
     monkeypatch.setattr(sources, "MNT_MAX_PX", 10)
     with pytest.raises(ValueError, match="trop grande"):
         sources.fetch_mnt(aoi, tmp_path / "big.tif", resolution=10.0)
+
+
+def test_fetch_ortho_mosaics_rgb_tiles_in_place(tmp_path, monkeypatch) -> None:
+    import numpy as np
+    import pytest
+    import rasterio
+
+    def fake_getmap(layer, bbox, width, height, fmt, timeout):
+        assert layer == sources.ORTHO_LAYER and fmt == "image/jpeg"
+        tile = np.empty((3, height, width), dtype="uint8")
+        tile[0], tile[1], tile[2] = int(bbox[0]) % 251, int(bbox[3]) % 251, 7  # where it is
+        return tile
+
+    monkeypatch.setattr(sources, "_getmap", fake_getmap)
+    monkeypatch.setattr(sources, "WMS_TILE_PX", 4)
+    aoi = (4.585, 44.553, 4.586, 44.554)
+    path, info = sources.fetch_ortho(aoi, tmp_path / "ortho.tif", resolution=10.0)
+
+    with rasterio.open(path) as ds:
+        image = ds.read()
+        assert (ds.count, ds.dtypes[0], ds.crs.to_epsg()) == (3, "uint8", 2154)
+        # The top-left pixel of the tile at column 4 carries that tile's own west edge.
+        west = ds.transform.c + 4 * ds.transform.a
+        assert image[0, 0, 4] == int(west) % 251
+    assert info["ortho_tiles"] > 1 and (image[2] == 7).all()
+    monkeypatch.setattr(sources, "ORTHO_MAX_PX", 10)
+    with pytest.raises(ValueError, match="image aérienne"):
+        sources.fetch_ortho(aoi, tmp_path / "big.tif", resolution=10.0)

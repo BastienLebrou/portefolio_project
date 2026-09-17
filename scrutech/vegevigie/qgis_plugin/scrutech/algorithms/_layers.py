@@ -39,6 +39,7 @@ def queue_layer(
     if qml is not None:
         qml_path.write_text(qml, encoding="utf-8")
     details = QgsProcessingContext.LayerDetails(label, context.project(), label)
+    details.forceName = True  # else Processing's "use file name" setting shows the raw file name
     if qml_path.is_file():
         post = _ApplyStyle(str(qml_path))
         _KEEP.append(post)

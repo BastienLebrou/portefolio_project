@@ -97,13 +97,26 @@ def test_veg_rasters_add_criteria(tmp_path, monkeypatch) -> None:
         crs=L93,
         transform=from_origin(900_000, 6_400_500, 50, 50),
     ) as dst:
-        dst.write(np.full((10, 10), 0.008, dtype="float32"), 1)
+        # +0.003 NDVI/month: the "net verdissement" class of the VegeVigie legend.
+        dst.write(np.full((10, 10), 0.003, dtype="float32"), 1)
 
+    import ecobuage
+
+    scored: list = []
+    real_aptitude = ecobuage.aptitude
+    monkeypatch.setattr(
+        ecobuage,
+        "aptitude",
+        lambda criteria, exclusions=None: scored.extend(criteria) or real_aptitude(criteria),
+    )
     aoi = gpd.GeoDataFrame(geometry=[AOI], crs=L93)
     _, _, info = build_aptitude_from_aoi(
         aoi, dem, tmp_path / "out", resolution=50.0, veg_trend_tif=trend
     )
     assert "embroussaillement" in info["criteria"]
+    # A net greening scores the criterion in full (the old 0.01 bound gave 0.3 here).
+    embroussaillement = scored[info["criteria"].index("embroussaillement")][0]
+    assert np.nanmin(embroussaillement) == 1.0
 
 
 def test_without_dem_the_ign_dem_is_downloaded(tmp_path, monkeypatch) -> None:

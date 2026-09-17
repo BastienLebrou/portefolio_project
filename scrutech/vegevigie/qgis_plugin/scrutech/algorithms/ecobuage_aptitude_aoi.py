@@ -175,7 +175,11 @@ class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
             f"à exclure {payload.get('n_a_exclure', 0)} | critères : {payload.get('criteria')}"
         )
         self._queue_layers(payload, context)
-        return {"APTITUDE": payload.get("aptitude_path"), "CLASSES": payload.get("classes_path")}
+        return {
+            "APTITUDE": payload.get("aptitude_path"),
+            "CLASSES": payload.get("classes_path"),
+            "MNT": payload.get("mnt_path"),
+        }
 
     # --- helpers -------------------------------------------------------------
     def _resolve_mnt(self, parameters, context) -> str | None:

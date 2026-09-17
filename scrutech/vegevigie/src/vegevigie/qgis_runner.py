@@ -48,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_geoai_segment(spec)
     if task == "mnt_aoi":
         return _run_mnt_aoi(spec)
+    if task == "ortho_aoi":
+        return _run_ortho_aoi(spec)
     if task == "report":
         return _run_report(spec)
 
@@ -299,6 +301,27 @@ def _run_mnt_aoi(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
     print("RESULT " + json.dumps({"mnt_path": str(path), **info}), flush=True)
+    return 0
+
+
+def _run_ortho_aoi(spec: dict) -> int:
+    """IGN aerial photo of the AOI (BD ORTHO, RGB), tiled download then mosaic: SAM's input."""
+    from core.sources import fetch_ortho
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        path, info = fetch_ortho(
+            tuple(spec["bbox"]),
+            Path(spec["out_path"]),
+            resolution=float(spec.get("resolution", 0.5)),
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+    print("RESULT " + json.dumps({"ortho_path": str(path), **info}), flush=True)
     return 0
 
 
