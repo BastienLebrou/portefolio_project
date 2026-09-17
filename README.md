@@ -58,33 +58,36 @@ outils, jumelles à la main.
 
 ## Un aperçu, en images
 
-La carte ci-dessous est une vraie sortie de l'outil sur une zone en Ardèche. Chaque hexagone
-est une petite zone du territoire, coloriée selon son importance pour la nature : **en rouge**,
-les zones prioritaires ; **en orange**, celles à regarder de plus près ; **en gris**, le reste.
+Toutes les cartes ci-dessous sont de vraies sorties des outils, produites sur la même zone
+test : 5 communes en Isère (Brézins, Plan, Saint-Étienne-de-Saint-Geoirs, Saint-Geoirs,
+Saint-Pierre-de-Bressieux), environ 1 575 ha. Chaque hexagone de la carte Biotrame est une
+petite zone du territoire, coloriée selon son importance pour la nature : **en bordeaux
+foncé**, les 9 zones prioritaires ; **en rouge brique**, les 32 à étudier ; **en beige**, les
+982 hors enjeu.
 
 <p align="center">
-  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Carte en nid d'abeilles : zones prioritaires pour la nature en Ardèche" width="60%">
+  <img src="scrutech/vegevigie/docs/biotrame_priority_demo.png" alt="Carte en nid d'abeilles : zones prioritaires pour la nature en Isère" width="60%">
 </p>
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte des zones qui verdissent ou dépérissent" width="100%"><br>
-      <sub><b>La forêt verdit-elle ou dépérit-elle ?</b><br>Vert = ça pousse, rouge = ça décline</sub>
+      <img src="scrutech/vegevigie/docs/trend_map_demo.png" alt="Carte de la pente de Sen et des tendances significatives" width="100%"><br>
+      <sub><b>La végétation pousse-t-elle ou décline-t-elle ?</b><br>41,5 % en hausse significative, 7,3 % en déclin</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte du stress dû à la sécheresse" width="100%"><br>
-      <sub><b>Où la végétation a-t-elle soif ?</b><br>Les zones en stress hydrique ressortent</sub>
+      <img src="scrutech/vegevigie/docs/drought_demo.png" alt="Carte de l'anomalie et de la fréquence de stress hydrique" width="100%"><br>
+      <sub><b>Où la végétation a-t-elle soif ?</b><br>Anomalie instantanée et fréquence de stress sur la période</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/commune_ranking_demo.png" alt="Classement des communes" width="100%"><br>
-      <sub><b>Quelles communes surveiller ?</b><br>Un classement, commune par commune</sub>
+      <img src="scrutech/vegevigie/docs/commune_ranking_demo.png" alt="Verdissement et brunissement par commune" width="100%"><br>
+      <sub><b>Quelles communes surveiller ?</b><br>Part de la surface en verdissement vs en brunissement</sub>
     </td>
     <td align="center" width="50%">
-      <img src="scrutech/vegevigie/docs/monthly_ndvi_timeseries.png" alt="Évolution de la végétation mois par mois" width="100%"><br>
-      <sub><b>Comment ça évolue dans le temps ?</b><br>La santé de la végétation, mois après mois</sub>
+      <img src="scrutech/vegevigie/docs/rupture_year_demo.png" alt="Carte de l'année de rupture détectée par le test de Pettitt" width="100%"><br>
+      <sub><b>Quand la tendance a-t-elle changé ?</b><br>Rupture détectée sur 55 % de la surface, surtout 2020-2023</sub>
     </td>
   </tr>
 </table>
@@ -97,6 +100,13 @@ habitations, là où le débroussaillement devient obligatoire.
 </p>
 <p align="center">
   <sub><b>Où la forêt touche-t-elle les habitations ?</b><br>En rouge, l'interface habitat-forêt calculée par l'outil</sub>
+</p>
+
+Écobuage répond à une question inverse : sur cette même zone, où peut-on brûler sans danger ?
+La réponse est sélective — seuls 2,3 % de la surface ressortent réellement favorables.
+
+<p align="center">
+  <img src="scrutech/ecobuage/docs/aptitude_demo.png" alt="Carte du score d'aptitude au brûlage dirigé et de ses classes" width="80%">
 </p>
 
 ## Les outils, une question chacun
