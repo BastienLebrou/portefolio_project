@@ -51,6 +51,9 @@ def test_communes_in_aoi_filters_to_intersecting(monkeypatch) -> None:
     import core.aoi as aoi_mod
 
     # geo.api point lookups all resolve to département 07.
+    # La fausse fonction doit accepter les MÊMES arguments que l'originale (url, params,
+    # timeout), même si elle les ignore tous et renvoie toujours la même chose : sinon
+    # l'appel réel dans _depts_for_geom planterait avec une erreur de signature.
     dept07 = [{"codeDepartement": "07"}]
     monkeypatch.setattr(aoi_mod, "_get_json", lambda url, params, timeout: dept07)
 

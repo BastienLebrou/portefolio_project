@@ -16,6 +16,7 @@ AOI = box(4.60, 44.50, 4.70, 44.60)  # WGS84
 def test_priority_mesh_writes_outputs_and_axes(tmp_path, monkeypatch) -> None:
     import core.sources as sources
 
+    # monkeypatch.setattr évite le vrai appel réseau WFS (voir test_aoi.py pour le détail).
     # A reservoir covering the western half of the AOI (mock the WFS fetch).
     reservoirs = gpd.GeoDataFrame(
         {"kind": ["natura2000_sic"], "nom_site": ["X"]},

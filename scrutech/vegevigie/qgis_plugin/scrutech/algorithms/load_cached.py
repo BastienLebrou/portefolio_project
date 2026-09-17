@@ -25,6 +25,7 @@ from ._styles import style_for
 from ._venv import python_param, require_python
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class LoadCachedAlgorithm(QgsProcessingAlgorithm):
     """Load cached ScruTech products for an extent (no recomputation)."""
 

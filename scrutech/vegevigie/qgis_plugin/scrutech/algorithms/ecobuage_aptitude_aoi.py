@@ -31,6 +31,7 @@ from ._layers import queue_layer
 from ._venv import python_param, require_python
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class EcobuageAptitudeFromAoiAlgorithm(QgsProcessingAlgorithm):
     """Écobuage aptitude derived from an extent + a DEM (slope/access/exclusions auto)."""
 

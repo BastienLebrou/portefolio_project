@@ -20,6 +20,9 @@ PROCESSED_DIR = DATA_DIR / "processed"              # sorties intermédiaires
 OUTPUTS_DIR = DATA_DIR / "outputs"                  # livrables finaux
 DB_PATH = DATA_DIR / "mini_data_center.duckdb"      # base DuckDB persistée
 
+# Ce code s'exécute une seule fois, à l'IMPORT du module (dès qu'un autre fichier fait
+# `import config`) : ça garantit que les dossiers de travail existent avant que quoi que
+# ce soit essaie d'y écrire, sans que chaque script ait à y penser lui-même.
 for _d in (RAW_DIR, PROCESSED_DIR, OUTPUTS_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 

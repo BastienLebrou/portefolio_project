@@ -98,6 +98,11 @@ JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
 
 def sh(*args: str) -> str:
+    # subprocess.run() lance une commande système externe (ici toujours `git ...`) et
+    # attend qu'elle se termine. `capture_output=True, text=True` récupère sa sortie
+    # standard sous forme de texte (plutôt que l'afficher dans le terminal) ; `check=True`
+    # lève une exception si la commande échoue (code de retour non nul), pour ne jamais
+    # continuer silencieusement sur un résultat Git invalide.
     return subprocess.run(args, cwd=ROOT, check=True, capture_output=True, text=True).stdout
 
 
@@ -121,6 +126,10 @@ def tracked_files() -> list[Path]:
     return [ROOT / line for line in out.splitlines() if line.strip()]
 
 
+# Counter est un dictionnaire spécialisé pour COMPTER : Counter()[clé] += 1 marche même
+# si la clé n'existe pas encore (elle démarre à 0 implicitement), et .most_common()
+# trie automatiquement du plus fréquent au moins fréquent — évite d'écrire ce comptage
+# et ce tri à la main.
 def language_bytes() -> list[tuple[str, int]]:
     sizes: Counter[str] = Counter()
     for path in tracked_files():
@@ -162,8 +171,13 @@ def project_count() -> int:
 def weekly_series(dates: list[date], weeks: int = 26) -> list[tuple[date, int]]:
     """Commits par semaine ISO (lundi comme clef), fenêtre glissante."""
     today = date.today()
+    # `date.weekday()` renvoie 0 pour lundi ... 6 pour dimanche : soustraire ce nombre de
+    # jours à une date ramène toujours au LUNDI de sa semaine — la "clé" qui identifie
+    # une semaine entière, quel que soit le jour exact du commit à l'intérieur.
     monday = today - timedelta(days=today.weekday())
     per_week = Counter(d - timedelta(days=d.weekday()) for d in dates)
+    # Génère les `weeks` derniers lundis (du plus ancien au plus récent), et pour chacun
+    # va chercher son compte de commits dans `per_week` (0 si aucun commit cette semaine-là).
     return [(m, per_week.get(m, 0)) for m in (monday - timedelta(weeks=w) for w in range(weeks - 1, -1, -1))]
 
 
@@ -199,6 +213,12 @@ def bar_rounded_top(x: float, y: float, w: float, h: float, fill: str, r: float 
         return ""
     if r <= 0.6:
         return f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" fill="{fill}"/>\n'
+    # Un <path> SVG se décrit avec des commandes à une lettre : M (déplacer le "stylo"
+    # sans dessiner), V/H (ligne verticale/horizontale), Q (courbe de Bézier quadratique,
+    # utilisée ici pour arrondir les deux coins du haut), Z (fermer la forme en revenant
+    # au point de départ). Dessiner "à la main" une barre à coins arrondis en haut mais
+    # carrés en bas demande ce niveau de détail — pas de raccourci <rect rounded> qui
+    # n'arrondit que 2 coins sur 4 en SVG.
     return (
         f'<path d="M {x:.2f} {y + h:.2f} V {y + r:.2f} Q {x:.2f} {y:.2f} {x + r:.2f} {y:.2f} '
         f'H {x + w - r:.2f} Q {x + w:.2f} {y:.2f} {x + w:.2f} {y + r:.2f} V {y + h:.2f} Z" '
@@ -207,6 +227,10 @@ def bar_rounded_top(x: float, y: float, w: float, h: float, fill: str, r: float 
 
 
 def nice_max(v: int) -> int:
+    # Plutôt que de mettre l'axe vertical d'un graphique à la valeur maximale EXACTE
+    # (ex: 37, ce qui donnerait des graduations moches comme 9.25/18.5/27.75/37), on
+    # arrondit au premier "plafond agréable" de cette liste (ex: 37 -> 40) : les
+    # graduations tombent alors sur des nombres ronds, plus faciles à lire d'un coup d'œil.
     for cap in (4, 8, 12, 16, 20, 28, 40, 60, 80, 120, 160, 240, 400):
         if v <= cap:
             return cap
@@ -354,6 +378,11 @@ def banner_svg(theme: dict) -> str:
 # ── Bloc README ─────────────────────────────────────────────────────────────
 
 def paris_now() -> datetime:
+    # zoneinfo (stdlib depuis Python 3.9) sait convertir une heure vers un fuseau
+    # horaire nommé, gérant automatiquement l'heure d'été/hiver — contrairement à un
+    # simple décalage fixe (+1h ou +2h) qui se tromperait la moitié de l'année. Si la
+    # base de données de fuseaux horaires n'est pas installée sur la machine (ça arrive
+    # sur certains systèmes minimalistes), on retombe sur UTC plutôt que de planter.
     try:
         from zoneinfo import ZoneInfo
         return datetime.now(ZoneInfo("Europe/Paris"))
@@ -388,9 +417,16 @@ def stats_markdown(dates: list[date], langs: list[tuple[str, int]]) -> str:
 
 def inject_readme(block: str) -> None:
     content = README.read_text(encoding="utf-8")
+    # re.S (DOTALL) fait que "." dans le motif capture AUSSI les retours à la ligne
+    # (par défaut "." ne matche jamais \n) : nécessaire ici car le bloc de stats entre
+    # les deux marqueurs s'étend sur plusieurs lignes. `.*?` est "non-gourmand" (le "?")
+    # : il s'arrête au PREMIER marqueur de fin trouvé, pas au dernier de tout le fichier.
     pattern = re.compile(r"(<!-- AUTO-STATS:START -->).*?(<!-- AUTO-STATS:END -->)", re.S)
     if not pattern.search(content):
         raise SystemExit("Marqueurs AUTO-STATS introuvables dans README.md")
+    # re.sub avec une FONCTION (plutôt qu'un texte de remplacement) permet de réinjecter
+    # les deux marqueurs capturés (m.group(1), m.group(2)) autour du nouveau contenu :
+    # on remplace ce qu'il y a ENTRE les balises, jamais les balises elles-mêmes.
     README.write_text(pattern.sub(lambda m: m.group(1) + block + m.group(2), content),
                       encoding="utf-8")
 

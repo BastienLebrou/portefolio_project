@@ -12,6 +12,9 @@ def test_discover_empty_folder(tmp_path) -> None:
 
 
 def test_discover_finds_pillar_outputs(tmp_path) -> None:
+    # `discover` ne fait que repérer des fichiers PAR LEUR NOM (voir report/data.py) :
+    # inutile de créer de vrais GeoJSON/GeoTIFF valides pour ce test, un fichier vide ou
+    # un JSON minimal au bon endroit suffit à déclencher la détection.
     (tmp_path / "biotrame_priority.geojson").write_text("{}")
     (tmp_path / "ecobuage_classes.tif").write_bytes(b"")
     (tmp_path / "trend_sen_slope_2018_2022.tif").write_bytes(b"")

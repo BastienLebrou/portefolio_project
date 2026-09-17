@@ -77,6 +77,10 @@ def telecharger(dept: str, insee: str, out_dir: Path) -> None:
     elig = elig[elig["imb_id"].isin(ids)]
     fo = elig[elig["code_techno"] == "FO"]
     imb_fo = set(fo["imb_id"])
+    # groupby("imb_id") regroupe les lignes par immeuble ; .first() prend la première
+    # valeur d'opérateur rencontrée dans chaque groupe (un immeuble peut avoir plusieurs
+    # lignes d'éligibilité, une par opérateur fibre présent) ; .to_dict() transforme le
+    # résultat en dictionnaire {imb_id: operateur} pour un lookup rapide juste après.
     # opérateur fibre principal par immeuble (le premier rencontré)
     op_fo = fo.groupby("imb_id")["code_operateur"].first().to_dict()
     print(f"  immeubles avec fibre (FO) : {len(imb_fo)} / {len(imb)}")

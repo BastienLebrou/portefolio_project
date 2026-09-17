@@ -76,6 +76,8 @@ def main() -> None:
     write_duckdb(communes.drop(columns="geometry"), PROCESSED / "vegevigie.duckdb", "commune_stats")
     synthetic_timeline().to_parquet(PROCESSED / "drought_timeline_demo.parquet")
 
+    # idxmax() renvoie l'INDEX (le numéro de ligne) de la valeur maximale, pas la valeur
+    # elle-même ; .loc[index, "nom"] va ensuite chercher le nom de LA COMMUNE à cette ligne.
     greenest = communes.loc[communes["mean_sen_slope"].idxmax(), "nom"]
     print(f"Wrote synthetic demo data to {PROCESSED}")
     print(f"  {len(communes)} communes, greenest: {greenest}")

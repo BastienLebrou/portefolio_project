@@ -7,6 +7,9 @@ from alphaearth._columns import EMB_COLS
 from alphaearth.change import cosine_distance, detect_change
 
 
+# np.random.RandomState est l'ancienne API aléatoire de numpy (celle du projet utilise
+# ailleurs la nouvelle, np.random.default_rng — voir mini_dc/generate_synthetic.py) :
+# les deux existent encore, RandomState reste courante dans du code/tests plus anciens.
 def test_cosine_distance_identical_is_zero() -> None:
     a = np.random.RandomState(0).randn(5, 64)
     assert np.allclose(cosine_distance(a, a), 0.0, atol=1e-9)

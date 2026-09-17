@@ -28,6 +28,10 @@ _URL = (
 )
 
 
+# Même patron QGIS Processing que analyze_extent.py (initAlgorithm déclare les champs
+# du formulaire, processAlgorithm fait le travail au clic sur "Exécuter"). Ici le
+# calcul est léger (juste un appel réseau) donc il tourne directement DANS le
+# processus QGIS, pas de sous-processus externe comme pour les algos plus lourds.
 class LoadCommunesAlgorithm(QgsProcessingAlgorithm):
     """Download a département's commune polygons."""
 

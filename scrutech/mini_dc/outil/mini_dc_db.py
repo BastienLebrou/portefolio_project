@@ -37,6 +37,10 @@ def connect(read_only: bool = False) -> duckdb.DuckDBPyConnection:
 def table_count(con: duckdb.DuckDBPyConnection, table: str) -> int:
     """Nombre de lignes d'une table (0 si elle n'existe pas)."""
     try:
+        # .fetchone() récupère UNE ligne de résultat (ici il n'y en a qu'une : le
+        # total) ; c'est un tuple, donc [0] prend sa première (et seule) valeur.
         return con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
     except duckdb.Error:
+        # La table n'existe pas encore (pipeline pas encore lancé) : 0 est une réponse
+        # raisonnable plutôt que de faire planter l'appelant.
         return 0

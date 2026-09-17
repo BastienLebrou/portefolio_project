@@ -64,6 +64,8 @@ def main() -> None:
     write_duckdb(stats.drop(columns="geometry"), db, table="commune_stats")
     top_green = rank_communes(db, "mean_sen_slope", ascending=False, limit=5)
     top_brown = rank_communes(db, "mean_sen_slope", ascending=True, limit=5)
+    # missing_ok=True évite une erreur si le fichier a déjà été supprimé entre-temps ;
+    # cette base est juste temporaire pour la démo, on la jette une fois les classements lus.
     db.unlink(missing_ok=True)
 
     print("Top greening communes (synthetic):")

@@ -27,6 +27,11 @@ def pettitt_1d(y: np.ndarray, min_valid: int = 8) -> tuple[float, float, float]:
     if n_valid < min_valid:
         return (np.nan, np.nan, 0.0)
 
+    # y[:, None] transforme le vecteur 1D en colonne (n, 1), y[None, :] en ligne (1, n) ;
+    # numpy les "broadcast" (étend automatiquement chaque forme pour matcher l'autre)
+    # pour produire une matrice (n, n) de TOUTES les différences deux à deux d'un coup —
+    # sans boucle explicite. C'est la même idée que triu_indices dans trend.py, mais ici
+    # sous forme de matrice complète (utile pour ensuite sommer ligne par ligne).
     signs = np.sign(y[:, None] - y[None, :])  # (n, n); NaN pairs → NaN
     signs[~np.isfinite(signs)] = 0.0
     u = np.cumsum(signs.sum(axis=1))  # U_t, t = 0 … n-1

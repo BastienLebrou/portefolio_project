@@ -43,6 +43,11 @@ def test_summarize_item() -> None:
     }
 
 
+# _FakeBackend n'hérite d'AUCUNE classe : elle satisfait juste le Protocol StacBackend
+# (voir catalog.py) en ayant les bonnes méthodes avec les bonnes signatures — le "duck
+# typing" évoqué là-bas. En plus de simuler le réseau, elle COMPTE ses appels
+# (self.searches) pour que les tests vérifient le cache : pas de nouvel appel si le
+# résultat est déjà en cache, un appel de plus avec force=True.
 class _FakeBackend:
     stac_url = "fake://stac"
 

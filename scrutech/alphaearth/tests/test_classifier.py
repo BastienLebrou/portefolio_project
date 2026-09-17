@@ -31,6 +31,8 @@ def test_classify_adds_prediction_and_confidence() -> None:
     trained = train_classifier(_labelled())
     out = classify(trained, _labelled(n_per_class=10))
     assert {"predicted_class", "confidence"} <= set(out.columns)
+    # .between(0, 1) teste chaque valeur de la colonne d'un coup (0 <= x <= 1) ;
+    # .all() vérifie que TOUTES les lignes valident la condition, pas juste une.
     assert out["confidence"].between(0, 1).all()
     assert (
         out["predicted_class"] == out.index.map(lambda i: "forêt" if i < 10 else "eau")

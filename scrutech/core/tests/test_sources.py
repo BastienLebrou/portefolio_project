@@ -8,6 +8,11 @@ from shapely.geometry import box
 from core import sources
 
 
+# _FakeResp est un "test double" écrit à la main : une classe qui imite juste assez
+# l'interface d'une vraie réponse `requests` (une méthode .json(), une méthode
+# .raise_for_status() qui ne fait rien) pour que le code testé s'en satisfasse, sans
+# jamais faire de vrai appel réseau. Pas besoin d'une bibliothèque de mock pour ça :
+# une petite classe maison suffit quand l'interface à simuler est aussi simple.
 class _FakeResp:
     def __init__(self, payload: dict) -> None:
         self._payload = payload
@@ -47,6 +52,10 @@ def test_fetch_bdtopo_paginates_flattens_and_clips(monkeypatch) -> None:
         calls["n"] += 1
         return _FakeResp({"features": [inside, outside]})
 
+    # On remplace ici la fonction `get` du MODULE requests lui-même (importé dans
+    # sources.py), pas une fonction du projet comme dans les autres tests : ça intercepte
+    # tout appel `requests.get(...)` fait depuis `sources`, quelle que soit la fonction
+    # interne qui l'appelle.
     monkeypatch.setattr(sources.requests, "get", fake_get)
 
     gdf = sources.fetch_bdtopo(aoi, "BDTOPO_V3:zone_de_vegetation", ["cleabs", "nature"])

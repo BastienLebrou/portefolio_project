@@ -36,6 +36,8 @@ _SLOPE_LO, _SLOPE_HI, _SLOPE_RAMP = 15.0, 40.0, 10.0
 _NAN = float("nan")
 
 
+# Même patron QGIS Processing que analyze_extent.py — mais ici tout le calcul reste
+# DANS le processus QGIS (GDAL suffit, pas besoin d'interpréteur externe).
 class EcobuageAptitudeAlgorithm(QgsProcessingAlgorithm):
     """Weighted multi-criteria écobuage aptitude map + 3-class zoning."""
 

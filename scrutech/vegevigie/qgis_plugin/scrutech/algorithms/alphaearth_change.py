@@ -36,6 +36,7 @@ from . import _qgis_compat as _compat
 from ._venv import python_param, require_python
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class AlphaEarthChangeAlgorithm(QgsProcessingAlgorithm):
     """Year-over-year AlphaEarth change over an extent (GEE cosine distance)."""
 

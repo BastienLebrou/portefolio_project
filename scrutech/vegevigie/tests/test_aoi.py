@@ -47,6 +47,11 @@ def test_dissolve_boundary_merges_to_single_polygon() -> None:
 def test_build_aoi_skips_when_cached(monkeypatch, tmp_path) -> None:
     calls = {"n": 0}
 
+    # On remplace TEMPORAIREMENT la vraie fonction fetch_communes (qui ferait un appel
+    # réseau) par une fausse version qui compte juste combien de fois elle est appelée
+    # et renvoie des données inventées. `monkeypatch` (une fixture pytest) annule ce
+    # remplacement tout seul à la fin du test — le vrai code n'est jamais touché
+    # durablement, même si le test plante en cours de route.
     def fake_fetch(dept: str, timeout: int = 60) -> gpd.GeoDataFrame:
         calls["n"] += 1
         return _synthetic_communes()

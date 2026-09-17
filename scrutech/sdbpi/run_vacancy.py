@@ -208,6 +208,11 @@ def print_summary(result: gpd.GeoDataFrame, cfg: Config, gpkg: str, parquet: str
 # CLI                                                                          #
 # --------------------------------------------------------------------------- #
 def build_config_from_args(argv: list[str] | None = None) -> Config:
+    # argparse construit l'interface en ligne de commande : chaque add_argument() déclare
+    # une option (`--insee 01053`) que l'utilisateur peut passer au script. Un groupe
+    # "mutuellement exclusif" (add_mutually_exclusive_group) interdit de combiner
+    # --insee, --bbox et --emprise dans le même appel : une seule façon de désigner la
+    # zone d'étude à la fois (argparse lève une erreur claire sinon).
     p = argparse.ArgumentParser(description="POC détection bâtiments pro vacants.")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--insee", help="Code INSEE de la commune (ex. 01053).")
@@ -249,6 +254,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = run(cfg)
     except SourceError as exc:
+        # On attrape spécifiquement nos propres erreurs "métier" (source de données
+        # indisponible, réponse vide...) pour afficher un message clair côté utilisateur
+        # et sortir avec un code d'erreur (2), plutôt que de laisser remonter une
+        # exception Python brute avec sa trace complète.
         print(f"\n[ERREUR SOURCE] {exc}", file=sys.stderr)
         return 2
     gpkg, parquet = write_outputs(result, cfg)
@@ -256,5 +265,8 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+# Ce bloc ne s'exécute QUE si on lance ce fichier directement (`python run_vacance.py`),
+# pas s'il est importé depuis un autre script. `raise SystemExit(main())` transmet le
+# code de retour de main() (0 = succès) comme code de sortie du processus.
 if __name__ == "__main__":
     raise SystemExit(main())

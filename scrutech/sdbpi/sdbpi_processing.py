@@ -85,14 +85,25 @@ def count_etablissements(
     )
 
     if len(sirene_pts):
+        # sjoin = "spatial join" : comme une jointure pandas classique, mais basée sur
+        # une relation géométrique (`predicate="intersects"`) plutôt que sur une colonne
+        # commune. Ici : associe chaque point SIRENE à TOUS les buffers de bâtiment qui
+        # le contiennent (un même établissement peut matcher plusieurs bâtiments proches).
         joined = gpd.sjoin(
             sirene_pts[["siret", "geometry"]], buf, predicate="intersects", how="inner"
         )
-        # dict.fromkeys -> dédoublonne les SIRET tout en gardant un ordre stable.
+        # groupby("id_bati") régénère un groupe par bâtiment ; pour chaque groupe, on
+        # transforme la colonne "siret" (une liste de SIRET potentiellement en double)
+        # en liste dédoublonnée. `dict.fromkeys(s)` crée un dictionnaire dont les clés
+        # sont les éléments de `s` (les doublons s'écrasent automatiquement), et depuis
+        # Python 3.7 un dict garde l'ordre d'insertion -> on retrouve l'ordre d'origine
+        # sans les doublons.
         agg = joined.groupby("id_bati")["siret"].agg(lambda s: list(dict.fromkeys(s)))
     else:
         agg = pd.Series(dtype=object)
 
+    # .map(agg) associe à chaque bâtiment sa liste de SIRET (via son id_bati) ; un
+    # bâtiment absent de `agg` (aucun établissement à proximité) reçoit NaN.
     siret_lists = bati["id_bati"].map(agg)
     bati["nb_etab_actifs"] = siret_lists.apply(lambda x: len(x) if isinstance(x, list) else 0)
     bati["liste_siret"] = siret_lists.apply(lambda x: ",".join(x) if isinstance(x, list) else "")
@@ -107,6 +118,9 @@ def build_result(
     """Assemble le livrable : surface, statut d'occupation, métadonnées, colonnes ordonnées."""
     g = bati.copy()
     g["surface_bati_m2"] = g.geometry.area.round(1)
+    # np.where(condition, valeur_si_vrai, valeur_si_faux) calcule une colonne entière
+    # d'un coup, ligne par ligne — l'équivalent vectorisé d'un `if/else` répété pour
+    # chaque bâtiment, mais bien plus rapide qu'une boucle Python explicite.
     # statut : VACANT_CANDIDAT si aucun établissement actif rattaché, sinon OCCUPE.
     g["statut_occupation"] = np.where(
         g["nb_etab_actifs"] == 0, "VACANT_CANDIDAT", "OCCUPE"

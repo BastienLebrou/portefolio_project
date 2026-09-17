@@ -65,6 +65,11 @@ def summarize_item(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# `Protocol` (typing) décrit une "forme" attendue (ici : avoir une méthode `search` et
+# une méthode `sign`) SANS imposer d'héritage. N'importe quelle classe qui possède ces
+# méthodes avec la bonne signature est acceptée comme un StacBackend valide — c'est du
+# "duck typing" vérifié par les outils de typage statique (mypy), plus souple qu'une
+# classe abstraite classique.
 class StacBackend(Protocol):
     """Provider adapter: search returns raw item dicts; sign refreshes asset hrefs."""
 

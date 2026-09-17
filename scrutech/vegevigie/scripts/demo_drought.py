@@ -75,6 +75,9 @@ def main() -> None:
     tvals = timeline["time"].values
     yvals = timeline.values
     ax1.axhline(0, color="0.6", lw=0.8)
+    # fill_between(..., where=condition) ne colorie que les segments de la courbe où la
+    # condition est vraie : ici, la zone SOUS zéro en marron (sécheresse), au-dessus en
+    # vert (normal/humide) — deux appels, chacun filtrant une moitié de la courbe.
     ax1.fill_between(tvals, yvals, 0, where=yvals < 0, color="#a0522d", alpha=0.6)
     ax1.fill_between(tvals, yvals, 0, where=yvals >= 0, color="#2e8b57", alpha=0.6)
     ax1.plot(tvals, yvals, color="0.2", lw=1)

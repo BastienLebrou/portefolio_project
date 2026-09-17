@@ -30,6 +30,9 @@ def test_deseasonalize_recovers_the_true_trend() -> None:
     anom = deseasonalize(raw)
     x = np.arange(raw.size)
     true_slope = 0.1 / (raw.size - 1)  # the injected linear trend
+    # np.polyfit(x, y, 1) ajuste la droite (degré 1) qui passe "au mieux" par les
+    # points (x, y) — la régression linéaire classique ; [0] prend son coefficient
+    # directeur (la pente), [1] serait l'ordonnée à l'origine.
     slope_raw = np.polyfit(x, raw.to_numpy(), 1)[0]
     slope_anom = np.polyfit(x, anom.to_numpy(), 1)[0]
     # Deseasonalizing brings the estimated slope MUCH closer to the true trend.

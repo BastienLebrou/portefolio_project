@@ -33,6 +33,7 @@ from ._layers import queue_layer
 from ._venv import python_param, require_python
 
 
+# Même patron QGIS Processing que analyze_extent.py.
 class BiotramePriorityAlgorithm(QgsProcessingAlgorithm):
     """Hexagonal ecological-priority mesh (enjeu × connectivité × dégradation)."""
 

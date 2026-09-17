@@ -17,6 +17,10 @@ def _emb_gdf(n: int = 20) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(df, geometry=pts, crs="EPSG:4326")
 
 
+# monkeypatch.setenv définit une VARIABLE D'ENVIRONNEMENT juste pour la durée de ce
+# test (elle est restaurée automatiquement après) : ça redirige core.storage.data_root()
+# vers le dossier temporaire du test, sans jamais toucher au vrai dossier de données ni
+# devoir passer un paramètre explicite à travers toute la chaîne d'appels.
 def test_write_then_read_roundtrip(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("SCRUTECH_DATA", str(tmp_path))
     assert not store.has("insee-07005", 2024)

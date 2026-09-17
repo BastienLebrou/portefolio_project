@@ -74,6 +74,10 @@ def main() -> None:
     axes[0].set_title("Sen's slope (NDVI / year)")
     fig.colorbar(im, ax=axes[0], fraction=0.046, pad=0.04)
 
+    # ListedColormap fabrique une palette avec un NOMBRE FIXE de couleurs discrètes
+    # (une par classe : browning/no-trend/greening), contrairement à une colormap
+    # continue comme "RdYlGn" utilisée juste au-dessus pour la pente (un dégradé infini
+    # de couleurs). Adaptée ici car trend_class ne prend que 3 valeurs (-1, 0, 1).
     # Discrete class map: browning / no-trend / greening.
     class_cmap = ListedColormap(["#c0392b", "#efefef", "#2e8b57"])
     axes[1].imshow(tclass, cmap=class_cmap, vmin=-1.5, vmax=1.5)

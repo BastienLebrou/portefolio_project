@@ -17,6 +17,8 @@ from pathlib import Path
 
 import matplotlib
 
+# "Agg" écrit directement dans un fichier image sans essayer d'ouvrir une fenêtre —
+# nécessaire pour tourner sur un serveur/CI sans écran (voir demo_ndvi_masking.py).
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,6 +41,9 @@ def synthetic_series(seed: int = 7) -> xr.DataArray:
     noise = rng.normal(0, 0.04, len(times))
     ndvi = seasonal + noise
 
+    # rng.random(n) tire n nombres aléatoires uniformes dans [0, 1) ; comparé à 0.45,
+    # ça donne un tableau de True/False où environ 45% des valeurs sont True — une
+    # façon simple de simuler "45% des scènes sont perdues aux nuages" au hasard.
     # Cloud drops: ~45% of scenes masked (NaN).
     clouds = rng.random(len(times)) < 0.45
     ndvi[clouds] = np.nan

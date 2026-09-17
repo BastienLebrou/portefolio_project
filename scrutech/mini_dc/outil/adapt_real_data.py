@@ -51,6 +51,9 @@ def _trouver(motifs: list[str]) -> Path | None:
 
 def _col(gdf, candidats: list[str]) -> str | None:
     """Premier nom de colonne présent (insensible à la casse)."""
+    # `bas` associe chaque nom de colonne en minuscules à son nom RÉEL (avec sa casse
+    # d'origine) : {"siret": "SIRET", "commune": "Commune", ...}. On peut ainsi chercher
+    # "siret" et retrouver "SIRET" même si la casse diffère d'un jeu de données à l'autre.
     bas = {c.lower(): c for c in gdf.columns}
     for cand in candidats:
         if cand.lower() in bas:

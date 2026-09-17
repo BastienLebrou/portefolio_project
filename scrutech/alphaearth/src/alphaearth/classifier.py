@@ -46,16 +46,32 @@ def train_classifier(
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import cross_val_score
 
+    # x = les 64 colonnes d'embeddings (les "features", ce sur quoi le modèle apprend) ;
+    # y = la colonne d'étiquettes annotées à la main (ce que le modèle doit prédire).
     x = samples[EMB_COLS].to_numpy(dtype=float)
     y = samples[label_col].to_numpy()
+    # Une Random Forest est un ensemble de nombreux arbres de décision (n_estimators)
+    # qui votent ; n_jobs=-1 utilise tous les cœurs CPU disponibles ; random_state=42
+    # fixe le hasard interne pour que le résultat soit reproductible d'un run à l'autre.
     clf = RandomForestClassifier(n_estimators=n_estimators, n_jobs=-1, random_state=42)
 
+    # La validation croisée (cross-validation) découpe les données en `folds` paquets :
+    # elle entraîne sur tous les paquets sauf un, teste sur celui laissé de côté, répète
+    # en changeant le paquet de test, puis moyenne les scores. Ça donne une estimation
+    # honnête de la qualité du modèle (jamais testé sur les données qui ont servi à l'entraîner).
+    # On ne peut pas avoir plus de "folds" que le nombre d'exemples de la classe la plus
+    # rare (min_class), sinon un paquet de test se retrouverait sans aucun exemple de
+    # cette classe.
     min_class = int(np.unique(y, return_counts=True)[1].min())
     folds = max(2, min(cv, min_class))
-    cv_acc = float("nan")
+    cv_acc = float("nan")  # "nan" = valeur numérique manquante, si on ne peut pas calculer de score
     if len(y) >= 4 and min_class >= 2:
         cv_acc = float(cross_val_score(clf, x, y, cv=folds).mean())
 
+    # L'entraînement final se fait sur TOUTES les données annotées (contrairement à la
+    # validation croisée ci-dessus qui n'en utilisait qu'une partie à la fois) : on veut
+    # le modèle le plus complet possible pour l'usage réel, le score cv_acc sert juste
+    # d'indicateur de confiance à afficher à l'utilisateur.
     clf.fit(x, y)
     return TrainedModel(
         model=clf,
@@ -68,6 +84,10 @@ def train_classifier(
 def classify(trained: TrainedModel, embeddings: pd.DataFrame) -> pd.DataFrame:
     """Apply ``trained`` to ``embeddings`` (64 ``EMB_COLS``) -> + predicted_class + confidence."""
     x = embeddings[EMB_COLS].to_numpy(dtype=float)
+    # predict_proba renvoie, pour chaque pixel, la probabilité estimée pour CHAQUE classe
+    # (ex: [0.1, 0.8, 0.1] pour 3 classes) ; predict() renvoie directement la classe la
+    # plus probable. La "confiance" retenue est simplement la plus grande probabilité
+    # (proba.max(axis=1) = le max par ligne, donc par pixel).
     proba = trained.model.predict_proba(x)  # type: ignore[attr-defined]
     out = embeddings.copy()
     out["predicted_class"] = trained.model.predict(x)  # type: ignore[attr-defined]

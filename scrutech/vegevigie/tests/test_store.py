@@ -28,6 +28,10 @@ def test_write_geoparquet_roundtrip(tmp_path) -> None:
 
 
 def test_duckdb_write_drops_geometry(tmp_path) -> None:
+    # write_duckdb reçoit ici un GeoDataFrame (avec géométrie) mais l'écrit dans DuckDB
+    # SANS cette colonne (DuckDB n'a pas ici l'extension spatiale chargée) : la table
+    # ne sert qu'aux requêtes/classements attributaires, pas à afficher une carte —
+    # c'est le GeoParquet (test précédent) qui garde la géométrie pour QGIS.
     db = write_duckdb(_stats_gdf(), tmp_path / "v.duckdb", table="commune_stats")
     assert db.exists()
     top = rank_communes(db, metric="mean_sen_slope", limit=10)
