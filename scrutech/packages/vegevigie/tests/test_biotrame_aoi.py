@@ -113,3 +113,31 @@ def test_mnt_adds_wetland_enjeu_boost(tmp_path, monkeypatch) -> None:
     assert info["enjeu_boost"] == "zones_humides_mnt"
     scored = gpd.read_parquet(tmp_path / "out" / "biotrame_priority.parquet")
     assert float(scored["enjeu"].max()) > 0.0  # the basin lifted some hexagons' enjeu
+
+
+def test_patchy_decline_is_not_averaged_away(tmp_path) -> None:
+    from vegevigie.biotrame_aoi import BROWNING_FULL_SLOPE, _zonal_browning
+
+    # One 200 x 200 m cell: its west half in net decline, its east half greening as much.
+    hexagon = gpd.GeoDataFrame(
+        {"hex_id": ["h"]}, geometry=[box(900_000, 6_400_000, 900_200, 6_400_200)], crs="EPSG:2154"
+    )
+    slopes = np.full((20, 20), BROWNING_FULL_SLOPE, dtype="float32")
+    slopes[:, :10] = -BROWNING_FULL_SLOPE
+    trend = tmp_path / "trend.tif"
+    with rasterio.open(
+        trend,
+        "w",
+        driver="GTiff",
+        width=20,
+        height=20,
+        count=1,
+        dtype="float32",
+        crs="EPSG:2154",
+        transform=from_origin(900_000, 6_400_200, 10, 10),
+    ) as dst:
+        dst.write(slopes, 1)
+
+    degradation = _zonal_browning(hexagon, trend, BROWNING_FULL_SLOPE)
+
+    assert abs(degradation["h"] - 0.5) < 0.05  # the mean slope (0) would have said 0

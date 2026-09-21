@@ -44,11 +44,12 @@ def test_all_qml_are_wellformed_xml() -> None:
         ET.fromstring(body)  # raises if malformed
 
 
-def test_biotrame_qml_categorizes_on_classe() -> None:
+def test_biotrame_qml_grades_the_score_in_five_half_transparent_classes() -> None:
     m = _load()
     xml = m.biotrame_qml()
-    assert 'attr="classe"' in xml
-    assert xml.count("<category ") == 3  # 3 classes
+    assert 'type="graduatedSymbol"' in xml and 'attr="score"' in xml
+    assert xml.count("<range ") == 5
+    assert xml.count('alpha="0.5"') == 5  # the habitats underneath stay visible
 
 
 def test_vegevigie_styles_are_readable_classes() -> None:

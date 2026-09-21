@@ -53,7 +53,9 @@ def test_single_symbol_styles_give_their_colour() -> None:
     styles = _plugin_styles()
     assert parse_qml(styles.paff_line_qml()).entries[0][1] == "#b30000"
     assert parse_qml(styles.paff_zone_qml()).entries[0][1] == "#fc8d59"
-    assert [e[2] for e in parse_qml(styles.biotrame_qml()).entries][0] == "prioritaire"
+    biotrame = parse_qml(styles.biotrame_qml())
+    assert biotrame.kind == "DISCRETE" and biotrame.entries[-1][2] == "très forte (80 à 100)"
+    assert class_shares(np.array([10.0, 50.0, 95.0, 100.0]), biotrame) == [25.0, 0, 25.0, 0, 50.0]
 
 
 def test_report_summarises_every_tool_with_qgis_legends(tmp_path: Path) -> None:

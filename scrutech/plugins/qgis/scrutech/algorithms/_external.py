@@ -35,14 +35,18 @@ def _stream(cmd: list[str], env: dict, feedback, on_line: Callable[[str], None])
 
     The output is read in a thread so Cancel works even while the engine prints nothing for
     minutes (a datacube load): the process is killed at once and RuntimeError("Annulé.") raised.
+    The pipe is UTF-8 on both ends: with the Windows console encoding (cp1252), one "→" in a
+    progress message used to kill the engine with a 'charmap' error.
     """
     with subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         bufsize=1,
-        env=env,
+        env={**env, "PYTHONIOENCODING": "utf-8"},
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     ) as proc:
         lines: queue.Queue[str | None] = queue.Queue()

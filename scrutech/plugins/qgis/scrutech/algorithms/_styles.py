@@ -154,16 +154,21 @@ def ecobuage_classes_qml() -> str:
 
 
 # Biotrame classes (vector): alert semiology — the more urgent, the redder.
-_BIOTRAME_CATEGORIES = [
-    (2, "215,48,39,255", "prioritaire"),
-    (1, "253,174,97,255", "à étudier"),
-    (0, "204,204,204,255", "secondaire"),
+# Biotrame priority score (0-100) in 5 classes: grey for little need, then a yellow-to-red
+# alert ramp (ColorBrewer YlOrRd). Drawn at 50 % so the habitats underneath stay visible.
+_BIOTRAME_CLASSES = [
+    (0, 20, "217,217,217,255", "très faible (0 à 20)"),
+    (20, 40, "254,204,92,255", "faible (20 à 40)"),
+    (40, 60, "253,141,60,255", "moyenne (40 à 60)"),
+    (60, 80, "240,59,32,255", "forte (60 à 80)"),
+    (80, 100, "189,0,38,255", "très forte (80 à 100)"),
 ]
+_BIOTRAME_OPACITY = "0.5"
 
 
-def _fill_symbol(name: str, rgba: str) -> str:
+def _fill_symbol(name: str, rgba: str, alpha: str = "0.7") -> str:
     return (
-        f'      <symbol name="{name}" type="fill" alpha="0.7">\n'
+        f'      <symbol name="{name}" type="fill" alpha="{alpha}">\n'
         '        <layer class="SimpleFill">\n'
         '          <Option type="Map">\n'
         f'            <Option name="color" type="QString" value="{rgba}"/>\n'
@@ -177,22 +182,23 @@ def _fill_symbol(name: str, rgba: str) -> str:
 
 
 def biotrame_qml() -> str:
-    """Vector categorized style on the ``classe`` field (0/1/2), alert palette."""
-    cats = "\n".join(
-        f'      <category value="{v}" symbol="{i}" label="{lbl}" render="true"/>'
-        for i, (v, _rgba, lbl) in enumerate(_BIOTRAME_CATEGORIES)
+    """Vector graduated style on the ``score`` field (0-100), 5 classes, half transparent."""
+    ranges = "\n".join(
+        f'      <range lower="{lo}" upper="{hi}" symbol="{i}" label="{lbl}" render="true"/>'
+        for i, (lo, hi, _rgba, lbl) in enumerate(_BIOTRAME_CLASSES)
     )
     syms = "\n".join(
-        _fill_symbol(str(i), rgba) for i, (_v, rgba, _lbl) in enumerate(_BIOTRAME_CATEGORIES)
+        _fill_symbol(str(i), rgba, _BIOTRAME_OPACITY)
+        for i, (_lo, _hi, rgba, _lbl) in enumerate(_BIOTRAME_CLASSES)
     )
     return (
         "<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>\n"
         '<qgis version="3.34" styleCategories="Symbology">\n'
-        '  <renderer-v2 type="categorizedSymbol" attr="classe" forceraster="0"'
-        ' symbollevels="0" enableorderby="0">\n'
-        "    <categories>\n"
-        f"{cats}\n"
-        "    </categories>\n"
+        '  <renderer-v2 type="graduatedSymbol" attr="score" graduatedMethod="GraduatedColor"'
+        ' forceraster="0" symbollevels="0" enableorderby="0">\n'
+        "    <ranges>\n"
+        f"{ranges}\n"
+        "    </ranges>\n"
         "    <symbols>\n"
         f"{syms}\n"
         "    </symbols>\n"

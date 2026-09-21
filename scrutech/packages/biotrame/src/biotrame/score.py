@@ -2,9 +2,10 @@
 
 Score = **geometric mean of the available axes** (each 0-1), ×100. The geometric mean is
 deliberate: a hexagon must score on *all* axes to rank high (high ecological stake AND
-degrading AND connected). A zero on any axis → zero priority, and the mean stays comparable
-whatever the number of axes present (so runs with/without the satellite axis are on the
-same 0-100 scale).
+degrading AND connected), and the mean stays comparable whatever the number of axes present
+(so runs with/without the satellite axis are on the same 0-100 scale). Each axis counts at
+least ``AXIS_FLOOR``: an axis at zero caps the score low instead of wiping it out, so the
+stake and connectivity of a hexagon with no decline still rank it among its neighbours.
 """
 
 from __future__ import annotations
@@ -17,10 +18,13 @@ from biotrame.aggregate import corridor_proximity, reservoir_overlap, reservoir_
 
 # Class thresholds on the 0-100 score.
 PRIORITAIRE, A_ETUDIER = 66.0, 33.0
+# Lowest value an axis counts for. With 3 axes, one at zero caps the score at about 27 (two at
+# 1): below "à étudier", but no longer the flat 0 that hid 95 % of a real zone.
+AXIS_FLOOR = 0.02
 
 
 def priority_score(axes: dict[str, np.ndarray]) -> np.ndarray:
-    """Geometric mean (×100) of the non-None axes, each clipped to 0-1."""
+    """Geometric mean (×100) of the non-None axes, each clipped to AXIS_FLOOR-1."""
     # Rappel : la moyenne ARITHMÉTIQUE de [1.0, 0.0] est 0.5 (ça a l'air "moyen"), alors
     # que la moyenne GÉOMÉTRIQUE (racine n-ième du produit) de [1.0, 0.0] est 0 — un seul
     # axe à zéro fait tomber tout le score à zéro. C'est voulu ici (voir docstring du
@@ -28,7 +32,7 @@ def priority_score(axes: dict[str, np.ndarray]) -> np.ndarray:
     # clip(0,1) force chaque valeur à rester dans l'intervalle attendu (sécurité contre
     # une valeur aberrante en entrée).
     present = [
-        np.clip(np.asarray(a, dtype=float), 0.0, 1.0) for a in axes.values() if a is not None
+        np.clip(np.asarray(a, dtype=float), AXIS_FLOOR, 1.0) for a in axes.values() if a is not None
     ]
     if not present:
         raise ValueError("At least one axis is required to score.")

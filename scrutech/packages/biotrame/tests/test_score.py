@@ -6,17 +6,24 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from biotrame.mesh import hex_grid
-from biotrame.score import classify, priority_score, score_mesh
+from biotrame.score import A_ETUDIER, AXIS_FLOOR, classify, priority_score, score_mesh
 from shapely.geometry import box
 
 
 def test_priority_score_is_geometric_mean() -> None:
-    # A zero on any axis → zero; all-ones → 100.
+    # All-ones → 100; a zero axis counts as the floor: low, below "à étudier", not 0.
     axes = {"a": np.array([1.0, 0.0, 0.5]), "b": np.array([1.0, 1.0, 0.5])}
     got = priority_score(axes)
     assert got[0] == 100.0
-    assert got[1] == 0.0
+    assert np.isclose(got[1], np.sqrt(AXIS_FLOOR) * 100) and got[1] < A_ETUDIER
     assert np.isclose(got[2], 50.0)  # sqrt(0.25) * 100
+
+
+def test_a_zero_axis_no_longer_flattens_the_ranking() -> None:
+    # Same zero decline, different stakes: the ranking between them survives.
+    axes = {"enjeu": np.array([0.9, 0.2]), "degradation": np.array([0.0, 0.0])}
+    rich, poor = priority_score(axes)
+    assert rich > poor > 0
 
 
 def test_classify_thresholds() -> None:

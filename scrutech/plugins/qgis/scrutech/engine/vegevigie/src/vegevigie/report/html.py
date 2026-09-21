@@ -124,7 +124,7 @@ class Legend:
 
 
 def parse_qml(qml: str) -> Legend:
-    """Legend of a ScruTech QML style (pseudocolor, paletted or categorized)."""
+    """Legend of a ScruTech QML style (pseudocolor, paletted, categorized or graduated)."""
     root = ET.fromstring(re.sub(r"<!DOCTYPE[^>]*>", "", qml))
     shader = root.find(".//colorrampshader")
     if shader is not None:
@@ -144,6 +144,10 @@ def parse_qml(qml: str) -> Legend:
     for cat in root.iter("category"):
         colour, alpha = colours.get(cat.get("symbol"), ("#000000", 255))
         entries.append((float(cat.get("value", "nan")), colour, cat.get("label", ""), alpha))
+    for rng in root.iter("range"):  # graduated: a class holds the values up to its upper bound
+        kind = "DISCRETE"
+        colour, alpha = colours.get(rng.get("symbol"), ("#000000", 255))
+        entries.append((float(rng.get("upper", "nan")), colour, rng.get("label", ""), alpha))
     if not entries and colours:  # single symbol: one colour for the whole layer
         colour, alpha = next(iter(colours.values()))
         entries.append((0.0, colour, "", alpha))
@@ -386,32 +390,40 @@ def _biotrame(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None:
     import geopandas as gpd
 
     hexes = gpd.read_file(data.biotrame)
-    ranked = sorted(lg.entries, key=lambda e: -e[0])  # most urgent class first
-    counts = [int((hexes["classe"] == value).sum()) for value, *_rest in ranked]
-    parts.figures.append(("Biotrame", f"{ranked[0][2]} : {counts[0]} hexagones sur {len(hexes)}"))
+    idx = class_index(hexes["score"].to_numpy(dtype=float), lg)
+    counts = [int((idx == i).sum()) for i in range(len(lg.entries))]
+    names = [label.split(" (")[0] for _v, _c, label, _a in lg.entries]  # "forte (60 à 80)"
+    total = len(hexes)
+    parts.figures.append(
+        (
+            "Biotrame",
+            f"priorité {names[-1]} : {counts[-1]} · {names[-2]} : {counts[-2]} sur {total}",
+        )
+    )
     parts.sentences.append(
         (
             "Trame verte et bleue (Biotrame)",
             [
-                f"Sur {len(hexes)} hexagones, {counts[0]} sont en classe « {ranked[0][2]} » et "
-                f"{counts[1]} en classe « {ranked[1][2]} » pour la continuité écologique."
+                f"Sur {total} hexagones, {counts[-1]} ont une priorité {names[-1]} et "
+                f"{counts[-2]} une priorité {names[-2]} pour la continuité écologique. La note "
+                f"médiane est de {_num(float(hexes['score'].median()))} sur 100."
             ],
         )
     )
-    colour = {int(value): c for value, c, *_rest in lg.entries}
-    label = {int(value): text for value, _c, text, _a in lg.entries}
-    hexes["priorite"] = hexes["classe"].map(label)
+    hexes["priorite"] = [names[i] if i >= 0 else "" for i in idx]
+    hexes["couleur"] = [lg.entries[i][1] if i >= 0 else "#cccccc" for i in idx]
+    hexes["note"] = hexes["score"].round(0)
     layer = folium.GeoJson(
-        hexes[["classe", "priorite", "score", "geometry"]].to_crs(4326),
+        hexes[["priorite", "note", "couleur", "geometry"]].to_crs(4326),
         name="Biotrame",
         show=False,
         style_function=lambda f: {
-            "fillColor": colour.get(int(f["properties"]["classe"]), "#cccccc"),
+            "fillColor": f["properties"]["couleur"],
             "color": "#5a5a5a",
             "weight": 0.3,
-            "fillOpacity": 0.6,
+            "fillOpacity": 0.5,  # as in QGIS: the habitats stay visible underneath
         },
-        tooltip=folium.GeoJsonTooltip(fields=["priorite", "score"], aliases=["Priorité", "Score"]),
+        tooltip=folium.GeoJsonTooltip(fields=["priorite", "note"], aliases=["Priorité", "Note"]),
     )
     parts.layers.append((layer, "Biotrame : priorité", lg))
 

@@ -27,6 +27,11 @@ L93 = "EPSG:2154"
 WGS84 = "EPSG:4326"
 
 
+# Sen slope scored as fully degrading: -0.003 NDVI/month, the "net dépérissement" class of the
+# VegeVigie legend (calibrated on real runs). The former 0.01 left the axis near 0 everywhere.
+BROWNING_FULL_SLOPE = 0.003
+
+
 def build_priority_mesh_from_aoi(
     aoi: object,
     out_dir: Path,
@@ -36,7 +41,7 @@ def build_priority_mesh_from_aoi(
     mnt_path: str | Path | None = None,
     reservoir_kinds: tuple[str, ...] | None = None,
     corridor_max_m: float = 2000.0,
-    browning_scale: float = 0.01,
+    browning_scale: float = BROWNING_FULL_SLOPE,
     tvb_wfs_url: str | None = None,
     tvb_typename: str | None = None,
     progress=None,
@@ -106,8 +111,9 @@ def build_priority_mesh_from_aoi(
 def _zonal_browning(grid, trend_tif: str | Path, browning_scale: float) -> pd.Series:
     """Per-hexagon degradation (0-1) from a VegeVigie trend raster: browning = negative slope.
 
-    Zonal mean of the Sen slope per hexagon (nodata/NaN pixels skipped), then a negative mean
-    (browning) is rescaled to 0-1 over ``browning_scale`` NDVI-units/step. Greening → 0.
+    Each pixel is scored first (a slope of -``browning_scale`` or steeper = 1, greening = 0),
+    then averaged per hexagon (nodata/NaN pixels skipped): a hexagon half in decline scores about
+    0.5, where averaging the raw slopes would let the greening half cancel the decline out.
     """
     import rasterio
     from rasterio.features import rasterize
@@ -131,9 +137,9 @@ def _zonal_browning(grid, trend_tif: str | Path, browning_scale: float) -> pd.Se
     # par `rasterize`). C'est l'équivalent raster d'un `groupby(...).mean()` : une
     # statistique "zonale" par hexagone, sans boucle Python explicite sur les hexagones.
     idx = np.arange(1, len(g) + 1)
-    means = np.asarray(ndimage.mean(np.nan_to_num(arr), labels=labels, index=idx), dtype="float64")
-    degradation = np.clip(-means / browning_scale, 0.0, 1.0)
-    degradation = np.nan_to_num(degradation, nan=0.0)
+    per_pixel = np.clip(-np.nan_to_num(arr) / browning_scale, 0.0, 1.0)
+    means = ndimage.mean(per_pixel, labels=labels, index=idx)
+    degradation = np.nan_to_num(np.asarray(means, dtype="float64"), nan=0.0)
     return pd.Series(degradation, index=grid["hex_id"])
 
 
