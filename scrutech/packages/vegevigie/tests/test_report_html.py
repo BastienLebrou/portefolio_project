@@ -96,3 +96,39 @@ def test_report_without_analyses_says_what_to_do(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Aucune analyse"):
         build_report("bbox-none", (0, 0, 1, 1), {}, tmp_path / "r.html", tmp_path)
+
+
+def test_report_tells_the_future_climate_and_who_it_hits(tmp_path: Path) -> None:
+    import json
+
+    styles = _plugin_styles()
+    out = tmp_path / "store" / "projection" / "aoi=bbox-test" / "output"
+    out.mkdir(parents=True)
+    summary = {
+        "models": ["A", "B", "C", "D"],
+        "indicators": {
+            "jours_chauds": {"2025": [14, 11, 19], "2035": [18, 15, 24], "2055": [27, 24, 33]}
+        },
+        "hazard_increase": {"2035": 0.3, "2055": 0.9},
+    }
+    (out / "projection_climat.json").write_text(json.dumps(summary), encoding="utf-8")
+    today = np.full((10, 10), 0.3)
+    today[:1] = 0.9  # 10 % already strongly exposed
+    _tif(out / "exposition_2025.tif", today)
+    later = today.copy()
+    later[:3] = 0.9  # 30 % in 2055
+    _tif(out / "exposition_2055.tif", later)
+
+    html, tools = build_report(
+        "bbox-test",
+        (4.6, 44.55, 4.62, 44.56),
+        styles.report_styles(),
+        tmp_path / "r.html",
+        tmp_path / "store",
+    )
+
+    page = html.read_text(encoding="utf-8")
+    assert tools == ["Projection climatique"]
+    assert "14 aujourd&#x27;hui, puis 18 en 2035, 27 en 2055 (de 24 à 33 en 2055" in page
+    assert "10 % aujourd&#x27;hui, puis 30 % en 2055" in page
+    assert "Exposition 2055" in page and "TRACC" in page

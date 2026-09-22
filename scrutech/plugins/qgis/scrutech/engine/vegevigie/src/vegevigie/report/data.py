@@ -29,6 +29,7 @@ class ReportInputs:
     interface_zone: Path | None = None
     biotrame: Path | None = None
     alphaearth_change: Path | None = None
+    projection: Path | None = None
 
     def any(self) -> bool:
         """True if at least one pillar output was found."""
@@ -45,6 +46,7 @@ class ReportInputs:
             "Écobuage": self.ecobuage_classes or self.ecobuage_aptitude,
             "Biotrame": self.biotrame,
             "AlphaEarth": self.alphaearth_change,
+            "Projection climatique": self.projection,
         }
         return [name for name, path in mapping.items() if path is not None]
 
@@ -73,4 +75,5 @@ def discover(results_dir: str | Path, aoi_id: str | None = None) -> ReportInputs
         interface_zone=latest("interface_zone.geojson"),
         biotrame=latest("biotrame_priority.geojson"),
         alphaearth_change=latest("alphaearth_change_*[0-9].geojson"),
+        projection=latest("projection_climat.json"),
     )

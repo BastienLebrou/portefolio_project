@@ -105,6 +105,33 @@ def stress_frequency_qml() -> str:
     return _qml(1, 0.0, 50.0, _STRESS_CLASSES, "DISCRETE")
 
 
+_EXPOSURE_CLASSES = [
+    (0.2, "#fef0d9", "très faible"),
+    (0.4, "#fdcc8a", "faible"),
+    (0.6, "#fc8d59", "moyenne"),
+    (0.8, "#e34a33", "forte"),
+    ("inf", "#b30000", "très forte"),
+]
+# NDVI change by 2035 if the observed trend goes on (Sen slope x 120 months).
+_NDVI_PROJECTION_CLASSES = [
+    (-0.1, "#8c510a", "forte baisse"),
+    (-0.03, "#d8b365", "baisse"),
+    (0.03, "#f5f5f5", "stable"),
+    (0.1, "#7fbf7b", "hausse"),
+    ("inf", "#1b7837", "forte hausse"),
+]
+
+
+def exposure_qml() -> str:
+    """Future exposure of the vegetation (0-1): cream = resilient, dark red = hit hardest."""
+    return _qml(1, 0.0, 1.0, _EXPOSURE_CLASSES, "DISCRETE")
+
+
+def ndvi_projection_qml() -> str:
+    """Projected NDVI change if the trend goes on: brown = loss, green = gain."""
+    return _qml(1, -0.2, 0.2, _NDVI_PROJECTION_CLASSES, "DISCRETE")
+
+
 def _blend(a: str, b: str, t: float) -> str:
     """Hex colour at ``t`` (0-1) on the straight line from ``a`` to ``b``."""
     ca, cb = (tuple(int(c[i : i + 2], 16) for i in (1, 3, 5)) for c in (a, b))
@@ -251,6 +278,8 @@ _STYLE_BY_PREFIX = [
     ("ecobuage_aptitude", ecobuage_aptitude_qml),
     ("ecobuage_classes", ecobuage_classes_qml),
     ("biotrame_priority", biotrame_qml),
+    ("exposition_", exposure_qml),
+    ("ndvi_tendance_", ndvi_projection_qml),
 ]
 
 

@@ -62,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_ortho_aoi(spec)
     if task == "report":
         return _run_report(spec)
+    if task == "projection":
+        return _run_projection(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -366,6 +368,43 @@ def _run_report(spec: dict) -> int:
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
         return 1
     print("RESULT " + json.dumps({"html_path": str(path), "tools": tools}), flush=True)
+    return 0
+
+
+def _run_projection(spec: dict) -> int:
+    """Future climate of the zone (+10 to +30 years) and exposure maps from its cached state."""
+    from core.aoi import resolve_aoi
+    from core.storage import data_root
+
+    from vegevigie.projection import build_projection
+    from vegevigie.report.data import discover
+
+    def progress(pct: int, msg: str) -> None:
+        print(f"PROGRESS {pct} {msg}", flush=True)
+
+    try:
+        minx, miny, maxx, maxy = spec["bbox"]
+        # The zone's vegetation today, as last analysed (VegeVigie); climate only if none.
+        today = discover(data_root(), resolve_aoi(tuple(spec["bbox"])).aoi_id)
+        if today.stress is None and today.trend is None:
+            progress(5, "Pas d'analyse VegeVigie de la zone : climat seul, sans carte.")
+        files, summary = build_projection(
+            (miny + maxy) / 2,
+            (minx + maxx) / 2,
+            Path(spec["out_folder"]),
+            stress_tif=today.stress,
+            trend_tif=today.trend,
+            trend_class_tif=today.trend_class,
+            cache_dir=data_root() / "climat",
+            progress=progress,
+        )
+    except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
+        print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
+        return 1
+
+    _cache(spec, "projection", list(files))
+    result = {"paths": [str(f) for f in files], **summary}
+    print("RESULT " + json.dumps(result, ensure_ascii=False), flush=True)
     return 0
 
 

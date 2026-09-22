@@ -75,7 +75,8 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
             "de synthèse</b>.</p>"
             "<p>Dans l'ordre : MNT IGN, ① végétation (VegeVigie), ② changements (AlphaEarth), "
             "③ interface habitat-forêt (PAFF), ④ aptitude à l'écobuage, priorisation "
-            "écologique (Biotrame). Chaque analyse profite des précédentes : le MNT sert à "
+            "écologique (Biotrame), projection climatique à 10, 15, 20 et 30 ans. Chaque "
+            "analyse profite des précédentes : le MNT sert à "
             "l'écobuage et aux zones humides de Biotrame, la tendance et la sécheresse de la "
             "végétation nourrissent l'écobuage et Biotrame.</p>"
             "<p><b>Avant de lancer</b><br>Avoir lancé « 0 · Démarrer ici ▸ Vérifier et "
@@ -238,6 +239,11 @@ class DiagnosticCompletAlgorithm(QgsProcessingAlgorithm):
                     "MNT": out.get("OUTPUT") or out.get("MNT"),
                     "OUTPUT_FOLDER": str(root / "biotrame"),
                 },
+            ),
+            (
+                "Projection climatique 2035-2055",
+                "scrutech:projection_climat",
+                lambda out: {"OUTPUT_FOLDER": str(root / "projection")},
             ),
         ]
         multi = QgsProcessingMultiStepFeedback(len(steps) + 1, feedback)

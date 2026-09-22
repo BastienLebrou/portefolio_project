@@ -20,6 +20,7 @@ from .algorithms.mnt_aoi import MntFromAoiAlgorithm
 from .algorithms.ortho_aoi import OrthoFromAoiAlgorithm
 from .algorithms.paf_interface import InterfaceHabitatForetAlgorithm
 from .algorithms.paf_interface_aoi import InterfaceFromAoiAlgorithm
+from .algorithms.projection_aoi import ProjectionFromAoiAlgorithm
 from .algorithms.report_launch import ReportLaunchAlgorithm
 from .algorithms.setup_check import SetupCheckAlgorithm
 
@@ -49,6 +50,7 @@ class ScruTechProvider(QgsProcessingProvider):
         self.addAlgorithm(EcobuageAptitudeFromAoiAlgorithm())
         # 3 · Croiser et prioriser
         self.addAlgorithm(BiotramePriorityAlgorithm())
+        self.addAlgorithm(ProjectionFromAoiAlgorithm())
         # 4 · Consulter les résultats
         self.addAlgorithm(ReportLaunchAlgorithm())
         self.addAlgorithm(LoadCachedAlgorithm())

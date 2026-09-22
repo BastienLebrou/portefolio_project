@@ -243,7 +243,7 @@ def build_report(
         return next((lg for prefix, lg in legends.items() if path.name.startswith(prefix)), None)
 
     parts = _Parts()
-    for add in (_vegevigie, _paff, _ecobuage, _biotrame, _alphaearth):
+    for add in (_vegevigie, _paff, _ecobuage, _biotrame, _alphaearth, _projection):
         add(data, legend_for, parts)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -459,6 +459,83 @@ def _alphaearth(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None
     )
     lg = Legend("EXACT", [(1, colour, "changement marqué", 255)])
     parts.layers.append((layer, f"AlphaEarth : changements {year1}-{year2}", lg))
+
+
+_CLIMATE_LABELS = {
+    "jours_chauds": "Jours à plus de 30 °C par an",
+    "periode_seche": "Plus longue période sans pluie, en jours",
+    "jours_feu": "Jours propices aux feux par an",
+}
+
+
+def _projection(data: ReportInputs, legend_for: Callable, parts: _Parts) -> None:
+    if data.projection is None:
+        return
+    import json
+
+    summary = json.loads(data.projection.read_text(encoding="utf-8"))
+    horizons = sorted(summary["hazard_increase"], key=int)
+    last = horizons[-1]
+    sentences = []
+    for name, by_year in summary["indicators"].items():
+        path = ", ".join(f"{_num(by_year[y][0])} en {y}" for y in horizons)
+        low, high = by_year[last][1], by_year[last][2]
+        sentences.append(
+            f"{_CLIMATE_LABELS.get(name, name)} : {_num(by_year['2025'][0])} aujourd'hui, puis "
+            f"{path} (de {_num(low)} à {_num(high)} en {last} selon les modèles)."
+        )
+    hot = summary["indicators"].get("jours_chauds")
+    if hot:
+        parts.figures.append(
+            (
+                f"Climat en {last}",
+                f"jours à plus de 30 °C : {_num(hot['2025'][0])} aujourd'hui, "
+                f"{_num(hot[last][0])} en {last}",
+            )
+        )
+
+    folder = data.projection.parent
+    strong = {}
+    for year in ["2025", *horizons]:
+        tif = folder / f"exposition_{year}.tif"
+        if not tif.is_file() or (lg := legend_for(tif)) is None:
+            continue
+        shares = class_shares(_read(tif)[0], lg)
+        strong[year] = sum(shares[-2:])  # forte + très forte
+        name = "Exposition aujourd'hui" if year == "2025" else f"Exposition {year}"
+        parts.layers.append((_raster(tif, lg, name), name, lg))
+    if "2025" in strong and last in strong:
+        steps = ", ".join(f"{_pct(strong[y])} en {y}" for y in horizons if y in strong)
+        parts.figures.append(
+            (
+                "Zone la plus exposée",
+                f"forte ou très forte : {_pct(strong['2025'])} aujourd'hui, "
+                f"{_pct(strong[last])} en {last}",
+            )
+        )
+        sentences.append(
+            f"Part de la zone en exposition forte ou très forte : {_pct(strong['2025'])} "
+            f"aujourd'hui, puis {steps}. Ce sont les secteurs où la végétation est déjà "
+            "stressée ou en déclin, que le climat plus chaud et plus sec touchera en premier."
+        )
+    trend = next(iter(sorted(folder.glob("ndvi_tendance_*.tif"))), None)
+    if trend is not None and (lg := legend_for(trend)) is not None:
+        year = trend.stem.split("_")[-1]
+        shares = class_shares(_read(trend)[0], lg)
+        sentences.append(
+            f"Si la tendance observée se poursuit, le NDVI baisserait d'ici {year} sur "
+            f"{_pct(sum(shares[:2]))} des secteurs à tendance significative et augmenterait sur "
+            f"{_pct(sum(shares[-2:]))}."
+        )
+        name = f"NDVI {year} si la tendance continue"
+        parts.layers.append((_raster(trend, lg, name), name, lg))
+    sentences.append(
+        f"Méthode : projections climatiques CMIP6 de {len(summary['models'])} modèles au "
+        "centre de la zone (Open-Meteo, maille de 10 km, licence CC BY 4.0), recalées sur la "
+        "trajectoire de réchauffement de référence (TRACC : +2 °C en 2030 et +2,7 °C en 2050 "
+        "pour la France). Ce sont des ordres de grandeur, pas des prévisions."
+    )
+    parts.sentences.append(("Climat futur (projection)", sentences))
 
 
 def _colour(legend: Legend | None, default: str) -> str:

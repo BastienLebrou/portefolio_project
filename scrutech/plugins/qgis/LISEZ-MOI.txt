@@ -56,6 +56,20 @@ Cette clé est personnelle : ne la partagez pas et ne la rangez pas dans un doss
 ou partagé.
 
 
+Projection climatique à 10, 15, 20 et 30 ans
+--------------------------------------------
+Le diagnostic complet se termine par une projection : le climat de la zone en 2035, 2040, 2045
+et 2055 (jours à plus de 30 °C, plus longue période sans pluie, jours propices aux feux) et les
+secteurs qu'il touchera le plus. L'outil existe aussi seul : 3 · Croiser et prioriser ▸
+Projection climatique 2035-2055.
+Méthode : simulations climatiques de 4 modèles (CMIP6), recalées sur la trajectoire de
+réchauffement de référence française (TRACC). Ce sont des ordres de grandeur, pas des
+prévisions ; le climat est une valeur pour toute la zone (maille de 10 km).
+Données : Open-Meteo, licence CC BY 4.0, gratuit pour un usage non commercial seulement, et
+limité à environ 3 nouvelles zones par heure. Une zone déjà projetée, ou voisine à 10 km près,
+est gardée en cache et ne coûte rien.
+
+
 Installation minimale ou complète
 ---------------------------------
 - Minimale (par défaut) : tous les outils sauf GeoAI, environ 1 Go.
