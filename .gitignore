@@ -9,6 +9,7 @@
 !/assets/
 !/scripts/
 !/scrutech/
+!/veille-geoai/
 
 # Artefacts / environnements — jamais versionnés
 __pycache__/
