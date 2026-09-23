@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import geopandas as gpd
@@ -13,14 +12,12 @@ from shapely.geometry import LineString
 
 from vegevigie.report.html import build_report, class_shares, colorize, parse_qml
 
-_STYLES = Path(__file__).resolve().parents[3] / "plugins" / "qgis" / "scrutech" / "algorithms"
-
 
 def _plugin_styles():
-    spec = importlib.util.spec_from_file_location("_styles_for_report", _STYLES / "_styles.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """The QML styles the report and QGIS share (vegevigie.styles)."""
+    from vegevigie import styles
+
+    return styles
 
 
 def _tif(path: Path, values: np.ndarray) -> None:

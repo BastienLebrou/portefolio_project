@@ -64,6 +64,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_report(spec)
     if task == "projection":
         return _run_projection(spec)
+    if task == "diagnostic":
+        return _run_diagnostic(spec)
 
     zones = None
     if spec.get("zones_path"):
@@ -369,6 +371,212 @@ def _run_report(spec: dict) -> int:
         return 1
     print("RESULT " + json.dumps({"html_path": str(path), "tools": tools}), flush=True)
     return 0
+
+
+def _run_diagnostic(spec: dict) -> int:
+    """Every emprise analysis in a row, then the HTML report: the one-click diagnostic.
+
+    Engine-side so both front ends (the ScruTech desktop app and the QGIS plugin) share one
+    sequence. A failing step is skipped with its reason, never fatal: a missing GEE key must
+    not cost the rest.
+    """
+    from core.aoi import resolve_aoi
+    from core.storage import data_root
+
+    bbox = tuple(spec["bbox"])
+    root = Path(spec["out_folder"])
+    start, end = int(spec.get("start", 2020)), int(spec.get("end", 2025))
+    pixel = int(spec.get("resolution", 30))
+    hexagons = int(spec.get("hexagons", 8))
+    aoi_id = resolve_aoi(bbox).aoi_id
+    state: dict = {}
+    done: list[str] = []
+    skipped: dict[str, str] = {}
+
+    steps = [
+        ("MNT IGN de la zone", lambda: _step_mnt(bbox, root, pixel, state)),
+        (
+            "Végétation (VegeVigie)",
+            lambda: _step_vegevigie(spec, bbox, root, start, end, pixel, state),
+        ),
+        ("Changements (AlphaEarth)", lambda: _step_alphaearth(spec, bbox, root, start, end)),
+        ("Interface habitat-forêt (PAFF)", lambda: _step_paff(spec, bbox, root)),
+        ("Aptitude à l'écobuage", lambda: _step_ecobuage(spec, bbox, root, pixel, state)),
+        (
+            "Priorisation écologique (Biotrame)",
+            lambda: _step_biotrame(spec, bbox, root, hexagons, state),
+        ),
+        ("Projection climatique", lambda: _step_projection(spec, bbox, root, state)),
+    ]
+    for i, (label, run) in enumerate(steps):
+        print(f"PROGRESS {5 + int(85 * i / len(steps))} {label}…", flush=True)
+        try:
+            run()
+            done.append(label)
+        except Exception as exc:  # noqa: BLE001 — one failing step must not cost the rest
+            skipped[label] = str(exc).strip().splitlines()[0][:300]
+            print(f"{label} : étape sautée. {skipped[label]}", flush=True)
+
+    report_path = None
+    if done:
+        print("PROGRESS 92 Rapport de synthèse…", flush=True)
+        try:
+            from vegevigie.report.html import build_report
+
+            report_path, _tools = build_report(aoi_id, bbox, None, root / "rapport_diagnostic.html")
+        except Exception as exc:  # noqa: BLE001 — the layers are there even without the page
+            skipped["Rapport de synthèse"] = str(exc).strip()[:300]
+    result = {
+        "aoi_id": aoi_id,
+        "done": done,
+        "skipped": skipped,
+        "report_path": str(report_path) if report_path else None,
+        "paths": [str(p) for p in sorted(_cached_paths(aoi_id))],
+        "data_root": str(data_root()),
+    }
+    print(f"PROGRESS 100 Diagnostic : {len(done)} étape(s) sur {len(steps)}.", flush=True)
+    print("RESULT " + json.dumps(result, ensure_ascii=False), flush=True)
+    return 0
+
+
+def _cached_paths(aoi_id: str) -> list[Path]:
+    from core.storage import list_cached
+
+    return list_cached(aoi_id)
+
+
+def _step_mnt(bbox: tuple, root: Path, pixel: int, state: dict) -> None:
+    """The IGN DEM at 5 m when the zone allows it, else at the analysis pixel."""
+    from core.aoi import resolve_aoi
+    from core.sources import MNT_MAX_PX, fetch_mnt
+
+    minx, miny, maxx, maxy = resolve_aoi(bbox).to_l93().bounds
+    fits_5m = (maxx - minx) * (maxy - miny) / 25.0 <= MNT_MAX_PX
+    path, _info = fetch_mnt(
+        bbox,
+        root / "mnt" / "mnt.tif",
+        resolution=5.0 if fits_5m else float(pixel),
+        progress=_progress,
+    )
+    state["mnt"] = path
+
+
+def _step_vegevigie(spec, bbox, root, start, end, pixel, state) -> None:
+    from vegevigie.pipeline import build_settings, run_pipeline
+
+    zones = None
+    try:
+        from core.aoi import communes_in_aoi
+
+        zones = communes_in_aoi(bbox)
+        zones = None if zones.empty else zones
+    except Exception:  # noqa: BLE001 — ranking is a bonus
+        zones = None
+    settings = build_settings(
+        bbox,
+        start,
+        end,
+        resolution=pixel,
+        max_cloud_cover=spec.get("max_cloud"),
+        data_dir=root / "vegevigie",
+    )
+    result = run_pipeline(settings, zones=zones, progress=_progress)
+    maps = (result.trend_tif, result.trend_class_tif, result.stress_tif, result.break_tif)
+    _cache(spec, "vegevigie", [*maps, result.drought_tif, result.zonal_parquet])
+    state.update(
+        trend=result.trend_tif,
+        trend_class=result.trend_class_tif,
+        drought=result.drought_tif,
+        stress=result.stress_tif,
+    )
+
+
+def _step_alphaearth(spec, bbox, root, start, end) -> None:
+    import os
+
+    from alphaearth.pipeline import detect_change_for_aoi
+    from shapely.geometry import box, mapping
+
+    # The key as the front ends pass it, else the one saved in the user's folder.
+    key_file = Path.home() / ".scrutech" / "gee_key.json"
+    credentials = os.environ.get("SCRUTECH_GEE_CREDENTIALS") or (
+        key_file.read_text(encoding="utf-8") if key_file.is_file() else None
+    )
+    if credentials is None:
+        raise RuntimeError(
+            "Pas de clé Google Earth Engine : rangez-la dans ~/.scrutech/gee_key.json "
+            "(onglet Configuration) pour activer AlphaEarth."
+        )
+    _changed, geojson, _summary = detect_change_for_aoi(
+        mapping(box(*bbox)),
+        start,
+        end,
+        out_dir=root / "alphaearth",
+        credentials_json=credentials,
+        progress=_progress,
+    )
+    _cache(spec, "alphaearth", [geojson])
+
+
+def _step_paff(spec, bbox, root) -> None:
+    from vegevigie.interface import build_interface_from_aoi
+
+    line, zone, _metrics = build_interface_from_aoi(
+        bbox, out_dir=root / "paff", contact_m=50.0, progress=_progress
+    )
+    _cache(spec, "paf", [line.with_suffix(".geojson"), zone.with_suffix(".geojson")])
+
+
+def _step_ecobuage(spec, bbox, root, pixel, state) -> None:
+    from vegevigie.ecobuage_aoi import build_aptitude_from_aoi
+
+    aptitude, classes, _info = build_aptitude_from_aoi(
+        bbox,
+        state.get("mnt"),
+        out_dir=root / "ecobuage",
+        resolution=pixel,
+        veg_trend_tif=state.get("trend"),
+        veg_drought_tif=state.get("drought"),
+        progress=_progress,
+    )
+    _cache(spec, "ecobuage", [aptitude, classes])
+
+
+def _step_biotrame(spec, bbox, root, hexagons, state) -> None:
+    from vegevigie.biotrame_aoi import build_priority_mesh_from_aoi
+
+    _parquet, geojson, _info = build_priority_mesh_from_aoi(
+        bbox,
+        out_dir=root / "biotrame",
+        resolution=hexagons,
+        veg_trend_tif=state.get("trend"),
+        mnt_path=state.get("mnt"),
+        progress=_progress,
+    )
+    _cache(spec, "biotrame", [geojson])
+
+
+def _step_projection(spec, bbox, root, state) -> None:
+    from core.storage import data_root
+
+    from vegevigie.projection import build_projection
+
+    minx, miny, maxx, maxy = bbox
+    files, _summary = build_projection(
+        (miny + maxy) / 2,
+        (minx + maxx) / 2,
+        root / "projection",
+        stress_tif=state.get("stress"),
+        trend_tif=state.get("trend"),
+        trend_class_tif=state.get("trend_class"),
+        cache_dir=data_root() / "climat",
+        progress=_progress,
+    )
+    _cache(spec, "projection", list(files))
+
+
+def _progress(pct: int, msg: str) -> None:
+    print(f"PROGRESS {pct} {msg}", flush=True)
 
 
 def _run_projection(spec: dict) -> int:

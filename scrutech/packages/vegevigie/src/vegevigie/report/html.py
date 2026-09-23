@@ -219,7 +219,7 @@ class _Parts:
 def build_report(
     aoi_id: str,
     bbox: tuple[float, float, float, float],
-    styles: dict[str, str],
+    styles: dict[str, str] | None,
     out_path: str | Path,
     root: str | Path | None = None,
 ) -> tuple[Path, list[str]]:
@@ -235,7 +235,9 @@ def build_report(
             f"Aucune analyse enregistrée pour cette zone ({aoi_id}). Lancez d'abord un outil "
             "du groupe 2, ou reprenez exactement la même emprise que l'analyse."
         )
-    legends = {prefix: parse_qml(qml) for prefix, qml in styles.items()}
+    from vegevigie.styles import report_styles
+
+    legends = {prefix: parse_qml(qml) for prefix, qml in (styles or report_styles()).items()}
 
     def legend_for(path: Path | None) -> Legend | None:
         if path is None:

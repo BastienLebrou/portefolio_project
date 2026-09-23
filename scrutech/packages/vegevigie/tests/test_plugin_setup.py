@@ -1,12 +1,11 @@
 """QGIS plugin setup helpers (no QGIS needed): GEE key check, engine and Python discovery."""
 
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "plugins" / "qgis"))
-
-from scrutech.algorithms import _setup, _venv  # noqa: E402
+import engine_env as _setup  # noqa: E402 — the shared module, tested here
+from scrutech.algorithms import _setup as plugin_setup  # noqa: E402
+from scrutech.algorithms import _venv  # noqa: E402
 
 
 def test_gee_key_accepts_a_service_account() -> None:
@@ -130,3 +129,9 @@ def test_the_message_bar_shows_the_useful_line_of_a_failed_setup() -> None:
     # A multi-line error: its headline, not its last numbered step or indented command.
     steps = _setup.UV_MISSING.format(error="proxy")
     assert _setup.install_problem("Commande : x\n" + steps).startswith("Le programme « uv »")
+
+
+def test_the_plugin_re_exports_the_shared_module() -> None:
+    # The plugin bundles engine_env.py flat (package.py) and keeps the name its algorithms use.
+    assert plugin_setup.install_env is _setup.install_env
+    assert plugin_setup.USER_VENV == _setup.USER_VENV

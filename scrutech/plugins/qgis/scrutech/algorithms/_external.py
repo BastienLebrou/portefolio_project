@@ -16,18 +16,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-# QGIS sets these to its own runtime; they must NOT leak into an external interpreter
-# or they break its rasterio/pyproj/GDAL.
-_ENV_STRIP = (
-    "PYTHONHOME",
-    "PYTHONPATH",
-    "PYTHONSTARTUP",
-    "GDAL_DATA",
-    "GDAL_DRIVER_PATH",
-    "PROJ_LIB",
-    "PROJ_DATA",
-    "GEOTIFF_CSV",
-)
+from engine_env import ENV_STRIP as _ENV_STRIP
 
 
 def _stream(cmd: list[str], env: dict, feedback, on_line: Callable[[str], None]) -> int:

@@ -42,7 +42,13 @@ _SOURCE_IGNORE = shutil.ignore_patterns(
     ".gitignore",
 )
 # Single-module engines from sibling projects, bundled flat next to the plugin.
-EXTRA_MODULES = {"ecobuage": REPO_ROOT / "ecobuage" / "ecobuage.py"}
+EXTRA_MODULES = {
+    "ecobuage": REPO_ROOT / "ecobuage" / "ecobuage.py",
+    # Engine environment helpers, shared with the ScruTech desktop app (stdlib only).
+    "engine_env": REPO_ROOT / "engine-env" / "engine_env.py",
+    # QML styles, shared with the engine report and the desktop app.
+    "scrutech_styles": REPO_ROOT / "vegevigie" / "src" / "vegevigie" / "styles.py",
+}
 # Multi-file sibling engines bundled as a folder — code only (data/cache excluded);
 # the plugin runs them in an external Python via subprocess.
 # ponytail: sdbpi and mini_dc are hidden from the plugin, so nothing is bundled here; add
@@ -84,8 +90,8 @@ def bundle_extras() -> None:
         if not src.exists():
             print(f"Skipped '{name}' engine (not found at {src}) — its algorithm won't run.")
             continue
-        shutil.copy2(src, PLUGIN / src.name)
-        print(f"Bundled {name} -> {PLUGIN / src.name}")
+        shutil.copy2(src, PLUGIN / f"{name}.py")  # the import name, not the source file name
+        print(f"Bundled {name} -> {PLUGIN / f'{name}.py'}")
 
 
 def bundle_extra_dirs() -> None:

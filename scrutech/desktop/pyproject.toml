@@ -1,0 +1,45 @@
+[project]
+name = "scrutech-desktop"
+version = "0.1.0"
+description = "ScruTech desktop app: a library of geospatial applications, run outside QGIS."
+requires-python = ">=3.11"
+# The heavy geospatial stack never lives here: the engine runs in ~/.scrutech/venv, built by
+# engine_env and called as a subprocess, exactly as the QGIS plugin does.
+dependencies = [
+    "PySide6>=6.7",
+    "scrutech-engine-env",
+]
+
+[project.scripts]
+scrutech = "scrutech_desktop.app:main"
+
+[tool.uv.sources]
+scrutech-engine-env = { path = "../packages/engine-env", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scrutech_desktop"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["scrutech_desktop"]
+mypy_path = "src"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
