@@ -364,7 +364,11 @@ def _run_report(spec: dict) -> int:
     try:
         bbox = tuple(spec["bbox"])
         path, tools = build_report(
-            resolve_aoi(bbox).aoi_id, bbox, spec.get("styles", {}), Path(spec["out_path"])
+            resolve_aoi(bbox).aoi_id,
+            bbox,
+            spec.get("styles", {}),
+            Path(spec["out_path"]),
+            zone_name=spec.get("zone_name", ""),
         )
     except Exception as exc:  # noqa: BLE001 — report to the plugin, don't traceback-crash
         print("RESULT " + json.dumps({"error": str(exc)}), flush=True)
@@ -423,7 +427,13 @@ def _run_diagnostic(spec: dict) -> int:
         try:
             from vegevigie.report.html import build_report
 
-            report_path, _tools = build_report(aoi_id, bbox, None, root / "rapport_diagnostic.html")
+            report_path, _tools = build_report(
+                aoi_id,
+                bbox,
+                None,
+                root / "rapport_diagnostic.html",
+                zone_name=spec.get("zone_name", ""),
+            )
         except Exception as exc:  # noqa: BLE001 — the layers are there even without the page
             skipped["Rapport de synthèse"] = str(exc).strip()[:300]
     result = {

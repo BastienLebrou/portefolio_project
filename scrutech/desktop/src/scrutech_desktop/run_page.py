@@ -1,21 +1,24 @@
 """One application: its settings on the left, the map and its results on the right.
 
-The study area is whatever the map shows, so there is no extent to type. The run streams into
-the log, and the report of the zone opens in the same view when it is over.
+The study area is picked on the map — a commune searched by name, a rectangle drawn with the
+mouse, or coordinates typed in the panel — and falls back to whatever the map shows. The run
+streams into the log, and the report of the zone opens in the same view when it is over.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
@@ -25,14 +28,37 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import settings
+from . import communes, settings
 from .catalog import Application, Field
 from .engine import EngineRun
 from .map_view import MapView
 
+_BASEMAPS = (
+    "Plan (OpenStreetMap)",
+    "Plan IGN",
+    "Photographies aériennes (IGN)",
+    "Relief (OpenTopoMap)",
+)
+
+
+class _Search(QThread):
+    """The commune lookup, off the window thread so the interface never freezes."""
+
+    done = Signal(list, str)  # communes, error message ("" when all went well)
+
+    def __init__(self, name: str, parent=None) -> None:
+        super().__init__(parent)
+        self._name = name
+
+    def run(self) -> None:  # noqa: D102 — QThread API
+        try:
+            self.done.emit(communes.search(self._name), "")
+        except Exception as exc:  # noqa: BLE001 — shown to the user, never a crash
+            self.done.emit([], str(exc))
+
 
 class RunPage(QWidget):
-    """The page of one application: form, run, log, map and report."""
+    """The page of one application: zone, form, run, log, map and report."""
 
     needs_setup = Signal()
 
@@ -42,22 +68,27 @@ class RunPage(QWidget):
         self.run: EngineRun | None = None
         self.report: Path | None = None
         self.controls: dict[str, QWidget] = {}
+        self._search: _Search | None = None
 
+        self.view = MapView()
+        self._showing = "map"
         split = QSplitter(self)
         split.addWidget(self._panel())
         right = QWidget()
         right_box = QVBoxLayout(right)
         right_box.setContentsMargins(0, 0, 0, 0)
         right_box.setSpacing(8)
-        self.view = MapView()
         bar = QHBoxLayout()
+        self.basemap = QComboBox()
+        self.basemap.addItems(_BASEMAPS)
+        self.basemap.currentTextChanged.connect(self.view.set_basemap)
         self.map_button = QPushButton("Carte")
         self.report_button = QPushButton("Rapport")
         self.report_button.setEnabled(False)
-        self.map_button.clicked.connect(lambda: self.view.show_map())
+        self.map_button.clicked.connect(self._show_map)
         self.report_button.clicked.connect(self._show_report)
-        bar.addWidget(QLabel("La zone analysée est ce que montre la carte."))
-        bar.addStretch(1)
+        bar.addWidget(QLabel("Fond de carte"))
+        bar.addWidget(self.basemap, 1)
         bar.addWidget(self.map_button)
         bar.addWidget(self.report_button)
         right_box.addLayout(bar)
@@ -67,6 +98,8 @@ class RunPage(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(split)
+        # The rectangle lives in the page, so redraw it each time the map page is (re)loaded.
+        self.view.loadFinished.connect(self._on_view_loaded)
 
     # --- left panel ------------------------------------------------------------
     def _panel(self) -> QWidget:
@@ -82,6 +115,7 @@ class RunPage(QWidget):
         tagline.setWordWrap(True)
         box.addWidget(title)
         box.addWidget(tagline)
+        box.addWidget(self._zone_box())
 
         form = QFormLayout()
         form.setSpacing(8)
@@ -116,9 +150,138 @@ class RunPage(QWidget):
         box.addWidget(self.log, 1)
         return panel
 
+    def _zone_box(self) -> QWidget:
+        """Name the zone, find its commune, draw it, or type its coordinates."""
+        group = QWidget()
+        box = QVBoxLayout(group)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(6)
+        heading = QLabel("Zone d'étude")
+        heading.setObjectName("section")
+        box.addWidget(heading)
+
+        self.zone_name = QLineEdit()
+        self.zone_name.setPlaceholderText("Nom de la zone (titre du rapport)")
+        box.addWidget(self.zone_name)
+
+        line = QHBoxLayout()
+        self.commune_name = QLineEdit()
+        self.commune_name.setPlaceholderText("Commune…")
+        self.commune_name.returnPressed.connect(self._find_commune)
+        self.find_button = QPushButton("Chercher")
+        self.find_button.clicked.connect(self._find_commune)
+        line.addWidget(self.commune_name, 1)
+        line.addWidget(self.find_button)
+        box.addLayout(line)
+        self.results = QComboBox()
+        self.results.setVisible(False)
+        self.results.activated.connect(self._pick_commune)
+        box.addWidget(self.results)
+
+        tools = QHBoxLayout()
+        draw = QPushButton("Dessiner")
+        draw.setToolTip("Cliquez, puis tracez le rectangle de la zone sur la carte.")
+        draw.clicked.connect(self.view.start_draw)
+        whole = QPushButton("Toute la vue")
+        whole.setToolTip("La zone redevient ce que montre la carte.")
+        whole.clicked.connect(self._use_view)
+        read_back = QPushButton("Relever")
+        read_back.setToolTip("Recopier la zone de la carte dans les coordonnées ci-dessous.")
+        read_back.clicked.connect(lambda: self.view.extent(self._fill_bbox))
+        for button in (draw, whole, read_back):
+            tools.addWidget(button)
+        box.addLayout(tools)
+
+        grid = QGridLayout()
+        grid.setSpacing(6)
+        self.bbox: dict[str, QDoubleSpinBox] = {}
+        cells = (("Ouest", 0, 0), ("Sud", 0, 2), ("Est", 1, 0), ("Nord", 1, 2))
+        for label, row, column in cells:
+            spin = QDoubleSpinBox()
+            spin.setDecimals(5)
+            limit = 180.0 if label in ("Ouest", "Est") else 90.0
+            spin.setRange(-limit, limit)
+            spin.setAlignment(Qt.AlignmentFlag.AlignRight)
+            spin.setMinimumWidth(110)
+            spin.editingFinished.connect(self._apply_bbox)
+            self.bbox[label] = spin
+            grid.addWidget(QLabel(label), row, column)
+            grid.addWidget(spin, row, column + 1)
+        box.addLayout(grid)
+        saved = settings.last_extent()
+        if saved:
+            self._fill_bbox(saved)
+        return group
+
+    # --- zone ------------------------------------------------------------------
+    def _find_commune(self) -> None:
+        name = self.commune_name.text().strip()
+        if not name or self._search is not None:
+            return
+        self.find_button.setEnabled(False)
+        self._search = _Search(name, self)
+        self._search.done.connect(self._on_communes)
+        self._search.start()
+
+    def _on_communes(self, found: list, error: str) -> None:
+        self._search = None
+        self.find_button.setEnabled(True)
+        self.results.clear()
+        self.results.setVisible(bool(found))
+        if error:
+            self._say(f"Recherche de commune impossible : {error}")
+            return
+        if not found:
+            self._say("Aucune commune de ce nom.")
+            return
+        for commune in found:
+            self.results.addItem(commune.label, commune)
+        self._pick_commune(0)
+
+    def _pick_commune(self, index: int) -> None:
+        commune = self.results.itemData(index)
+        if commune is None:
+            return
+        self.view.show_commune(commune.contour)
+        self._fill_bbox(commune.bbox())
+        if not self.zone_name.text().strip():
+            self.zone_name.setText(commune.name)
+
+    def _use_view(self) -> None:
+        self.view.clear_zone()
+        self.view.extent(self._fill_bbox)
+
+    def _fill_bbox(self, bbox) -> None:
+        """Show a (west, south, east, north) in the coordinate fields."""
+        if bbox is None:
+            return
+        for label, value in zip(("Ouest", "Sud", "Est", "Nord"), bbox, strict=True):
+            spin = self.bbox[label]
+            spin.blockSignals(True)
+            spin.setValue(float(value))
+            spin.blockSignals(False)
+
+    def _typed_bbox(self) -> tuple[float, float, float, float]:
+        return tuple(self.bbox[k].value() for k in ("Ouest", "Sud", "Est", "Nord"))  # type: ignore[return-value]
+
+    def _apply_bbox(self) -> None:
+        """Edited coordinates move the rectangle on the map."""
+        west, south, east, north = self._typed_bbox()
+        if east > west and north > south:
+            self.view.set_zone((west, south, east, north))
+
+    def _show_map(self) -> None:
+        self._showing = "map"
+        self.view.show_map()
+
+    def _on_view_loaded(self, ok: bool) -> None:
+        if ok and self._showing == "map":
+            self._apply_bbox()
+
+    # --- running ---------------------------------------------------------------
     def values(self) -> dict:
         """What the form says, ready for the engine spec."""
-        out: dict = {}
+        out: dict = {"zone_name": self.zone_name.text().strip()}
         for field in self.app.fields:
             widget = self.controls[field.key]
             if isinstance(widget, QComboBox):
@@ -127,7 +290,6 @@ class RunPage(QWidget):
                 out[field.key] = widget.value()
         return out
 
-    # --- running ---------------------------------------------------------------
     def _start(self) -> None:
         python = settings.engine_python()
         if not python:
@@ -140,6 +302,7 @@ class RunPage(QWidget):
         if bbox is None:
             self._say("La carte n'est pas encore prête : réessayez dans un instant.")
             return
+        self._fill_bbox(bbox)
         settings.set_last_extent(bbox)
         folder = settings.run_folder(self.app.key, bbox)
         folder.mkdir(parents=True, exist_ok=True)
@@ -188,6 +351,7 @@ class RunPage(QWidget):
 
     def _show_report(self) -> None:
         if self.report is not None and self.report.is_file():
+            self._showing = "report"
             self.view.show_file(self.report)
 
     def _say(self, message: str) -> None:

@@ -222,10 +222,12 @@ def build_report(
     styles: dict[str, str] | None,
     out_path: str | Path,
     root: str | Path | None = None,
+    zone_name: str = "",
 ) -> tuple[Path, list[str]]:
     """Write the HTML report of an AOI; returns its path and the tools it covers.
 
-    ``styles`` maps an output-name prefix to its QML (the plugin's own styles).
+    ``styles`` maps an output-name prefix to its QML (the plugin's own styles), and ``zone_name``
+    titles the report when the user named the zone.
     """
     from core.storage import data_root
 
@@ -249,7 +251,7 @@ def build_report(
         add(data, legend_for, parts)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(_page(aoi_id, bbox, data, parts), encoding="utf-8")
+    out.write_text(_page(aoi_id, bbox, data, parts, zone_name), encoding="utf-8")
     return out, data.present()
 
 
@@ -613,7 +615,11 @@ def _map(bbox: tuple[float, float, float, float], parts: _Parts) -> str:
 
 
 def _page(
-    aoi_id: str, bbox: tuple[float, float, float, float], data: ReportInputs, parts: _Parts
+    aoi_id: str,
+    bbox: tuple[float, float, float, float],
+    data: ReportInputs,
+    parts: _Parts,
+    zone_name: str = "",
 ) -> str:
     import base64
 
@@ -677,7 +683,7 @@ def _page(
 <div class="logo">{logo}</div>
 <div class="title">
 <p class="eyebrow">Diagnostic de territoire</p>
-<h1>Rapport de la zone</h1>
+<h1>{e(_typo(zone_name)) if zone_name else 'Rapport de la zone'}</h1>
 <p class="meta">{e(zone)}</p>
 <p class="meta">{e(tools)}</p>
 </div>
