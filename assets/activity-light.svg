@@ -31,6 +31,6 @@
 <text x="745.577" y="228" font-size="11" fill="#898781" text-anchor="middle">sept.</text>
 <path d="M 766.12 206.00 V 62.00 Q 766.12 58.00 770.12 58.00 H 780.57 Q 784.57 58.00 784.57 62.00 V 206.00 Z" fill="#2a78d6"/>
 <text x="775.346" y="52" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">40</text>
-<path d="M 795.89 206.00 V 195.20 Q 795.89 191.20 799.89 191.20 H 810.34 Q 814.34 191.20 814.34 195.20 V 206.00 Z" fill="#2a78d6"/>
-<text x="805.115" y="185.2" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">4</text>
+<path d="M 795.89 206.00 V 180.40 Q 795.89 176.40 799.89 176.40 H 810.34 Q 814.34 176.40 814.34 180.40 V 206.00 Z" fill="#2a78d6"/>
+<text x="805.115" y="170.4" font-size="11" fill="#0b0b0b" font-weight="600" text-anchor="middle">8</text>
 </svg>
