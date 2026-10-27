@@ -2,6 +2,7 @@
 # Le reste du portfolio local peut contenir des dossiers à NE PAS publier.
 /*
 !/.gitignore
+!/LICENSE
 !/README.md
 !/GUIDE.md
 !/SECURITY.md
@@ -23,6 +24,10 @@ __pycache__/
 # Simulations financières — NE JAMAIS publier (privé)
 /analyse_financiere/
 /scrutech/data/
+
+# Paquet du plugin QGIS : construit par plugins/qgis/package.py, publié comme
+# asset de release — jamais versionné dans les sources.
+/scrutech/plugins/qgis/dist/
 
 # Généré par desktop/create_shortcut.py
 /scrutech/desktop/src/scrutech_desktop/assets/scrutech.ico

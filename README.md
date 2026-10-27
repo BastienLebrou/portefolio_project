@@ -234,6 +234,27 @@ du projet.
 
 </details>
 
+## Licence et données
+
+Le code est publié sous licence [Apache 2.0](LICENSE) : utilisation libre, y compris
+commerciale, à condition de citer l'origine et de conserver la notice.
+
+Les données, elles, gardent **chacune leur propre licence** — ScruTech ne les redistribue pas,
+il les interroge à la demande :
+
+| Source | Ce qu'elle apporte | Licence |
+| --- | --- | --- |
+| [IGN Géoplateforme](https://geoservices.ign.fr/) | MNT LiDAR HD / RGE ALTI, BD ORTHO, BD TOPO, cadastre | Licence ouverte Etalab 2.0 |
+| [geo.api.gouv.fr](https://geo.api.gouv.fr/) | Communes et contours administratifs | Licence ouverte Etalab 2.0 |
+| [Copernicus Sentinel-2](https://planetarycomputer.microsoft.com/) (via Planetary Computer) | Images satellites, séries NDVI | Licence Copernicus (libre, citation requise) |
+| [Open-Meteo CMIP6](https://open-meteo.com/) | Projections climatiques | **CC BY 4.0 — offre gratuite réservée à un usage non commercial** |
+| [Google Earth Engine](https://earthengine.google.com/) (AlphaEarth) | Plongements satellitaires annuels | Conditions Earth Engine, clé de service requise |
+| [Segment Anything](https://github.com/facebookresearch/segment-anything) (Meta) | Segmentation d'images, modèle téléchargé une fois | Apache 2.0 |
+
+> ⚠️ **Usage commercial** : l'outil de projection climatique s'appuie sur l'offre gratuite
+> d'Open-Meteo, limitée au non-commercial. Pour un usage professionnel, souscrivez leur offre
+> payante ou remplacez cette source — le reste de la chaîne n'a pas cette contrainte.
+
 ## Me contacter
 
 Je cherche un poste de **géomaticien** (Métropole de Lyon ou en télétravail). Discutons-en.
