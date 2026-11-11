@@ -13,14 +13,14 @@
 <text x="38" y="99" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">30</text>
 <line x1="46" y1="58.0" x2="388" y2="58.0" stroke="#2c2c2a" stroke-width="1"/>
 <text x="38" y="62" font-size="11" fill="#898781" text-anchor="end" font-variant-numeric="tabular-nums">40</text>
-<path d="M 58.43 206.00 V 80.50 Q 58.43 76.50 62.43 76.50 H 78.43 Q 82.43 76.50 82.43 80.50 V 206.00 Z" fill="#3987e5"/>
+<path d="M 58.43 206.00 V 76.80 Q 58.43 72.80 62.43 72.80 H 78.43 Q 82.43 72.80 82.43 76.80 V 206.00 Z" fill="#3987e5"/>
+<text x="70.4286" y="66.8" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">36</text>
 <text x="70.4286" y="228" font-size="11" fill="#898781" text-anchor="middle">Lun</text>
 <path d="M 107.29 206.00 V 80.50 Q 107.29 76.50 111.29 76.50 H 127.29 Q 131.29 76.50 131.29 80.50 V 206.00 Z" fill="#3987e5"/>
 <text x="119.286" y="228" font-size="11" fill="#898781" text-anchor="middle">Mar</text>
 <path d="M 156.14 206.00 V 124.90 Q 156.14 120.90 160.14 120.90 H 176.14 Q 180.14 120.90 180.14 124.90 V 206.00 Z" fill="#3987e5"/>
 <text x="168.143" y="228" font-size="11" fill="#898781" text-anchor="middle">Mer</text>
 <path d="M 205.00 206.00 V 76.80 Q 205.00 72.80 209.00 72.80 H 225.00 Q 229.00 72.80 229.00 76.80 V 206.00 Z" fill="#3987e5"/>
-<text x="217" y="66.8" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">36</text>
 <text x="217" y="228" font-size="11" fill="#898781" text-anchor="middle">Jeu</text>
 <path d="M 253.86 206.00 V 139.70 Q 253.86 135.70 257.86 135.70 H 273.86 Q 277.86 135.70 277.86 139.70 V 206.00 Z" fill="#3987e5"/>
 <text x="265.857" y="228" font-size="11" fill="#898781" text-anchor="middle">Ven</text>
