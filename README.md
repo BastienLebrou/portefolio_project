@@ -198,13 +198,13 @@ du projet.
 <!-- AUTO-STATS:START -->
 | 📦 Commits | 📅 Jours actifs | 🗂️ Projets |
 |:---:|:---:|:---:|
-| **163** | **64** | **1** |
+| **176** | **75** | **1** |
 
 | 🐍 Lignes de Python | ✅ Tests automatisés | 🥇 Langage principal |
 |:---:|:---:|:---:|
 | **29 922** | **206** | **Python (84,7 %)** |
 
-*Dernière mise à jour automatique : 25 octobre 2026 à 12:58 (heure de Paris) — commit `da30fd0`.*
+*Dernière mise à jour automatique : 15 novembre 2026 à 15:17 (heure de Paris) — commit `e964f71`.*
 <!-- AUTO-STATS:END -->
 
 <picture>
