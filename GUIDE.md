@@ -49,11 +49,13 @@ qu'il utilise.
 | **SDBPi** (bâtiments vides) | `applications/sdbpi/run_vacancy_analysis.py` | `config.py`, `network.py`, `processing.py`, `sources.py` |
 | **Mini data centers** (choix de sites) | `applications/mini-data-centers/outil/run_pipeline.py` | `config.py`, `database.py`, `pipeline.py`, `pipeline_checks.py` |
 | **Climate Risk** (fournisseurs, EUDR) | `applications/climate-risk-analyzer/` (plugin QGIS) | prototype |
+| **Biodiag** (diagnostic biodiversité par analyse de données d'une emprise) | `packages/biodiag/src/biodiag/biodiag_aoi.py` | `gbif.py`, `taxa.py`, `enjeux.py`, `environment.py`, `report.py`, `pdf.py` |
 
 *(Tous ces chemins sont sous `scrutech/`.)*
 
 SDBPi et Mini data centers ne sont **pas proposés dans l'extension QGIS** (masqués) : ils se
-lancent seulement en ligne de commande, avec leur script `run`.
+lancent seulement en ligne de commande, avec leur script `run`. **Biodiag** a sa propre commande
+(`biodiag <emprise>`, voir `packages/biodiag/README.md`) et n'est pas dans l'extension QGIS.
 
 ---
 

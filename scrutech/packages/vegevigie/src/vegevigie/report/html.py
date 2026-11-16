@@ -683,7 +683,7 @@ def _page(
 <div class="logo">{logo}</div>
 <div class="title">
 <p class="eyebrow">Diagnostic de territoire</p>
-<h1>{e(_typo(zone_name)) if zone_name else 'Rapport de la zone'}</h1>
+<h1>{e(_typo(zone_name)) if zone_name else "Rapport de la zone"}</h1>
 <p class="meta">{e(zone)}</p>
 <p class="meta">{e(tools)}</p>
 </div>

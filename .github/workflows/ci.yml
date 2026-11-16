@@ -52,3 +52,21 @@ jobs:
 
       - name: Tests — mini_dc
         run: uv run pytest ../../applications/mini-data-centers/outil/tests
+
+  # Biodiag has its own environment (fpdf2, folium, matplotlib): not part of the vegevigie hub.
+  biodiag:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scrutech/packages/biodiag
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "scrutech/packages/biodiag/uv.lock"
+      - run: uv python install 3.11
+      - run: uv sync --locked
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest
